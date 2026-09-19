@@ -11,7 +11,8 @@
 #      进度行与告警行（完整 verbose 输出落盘日志）
 #   2. clang-tidy 档: 检查集读仓库根 .clang-tidy（WarningsAsErrors=* 使告警即非零退出），
 #      分析 src/*.cpp（compile_commands.json 经 -p 指向仓库根），header-filter 限本仓库头，
-#      逐文件计数进度
+#      逐文件计数进度；扫描前探测已装 libstdc++ 并注入头路径，规避多 gcc 共存但缺
+#      libstdc++-*-dev 时 clang 误选不存在的标准库版本
 #   3. 任一工具告警 → 输出 [FAIL] 摘要并以非零码退出；全部零告警 → 输出 [PASS]
 #   4. 日志落盘: test/test_logs/<时间戳>/cppcheck.log + clang-tidy.log + summary.log
 # 依赖: cppcheck、clang-tidy（缺失时报错并给出安装提示）
@@ -22,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 usage() {
-    sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 0
 }
 
@@ -98,7 +99,33 @@ if [ ${RUN_CPPCHECK} -eq 1 ]; then
 fi
 
 # ---------- clang-tidy：src 编译单元 + 本仓库头，零告警验收（逐文件输出进度） ----------
+# libstdc++ 头路径探测与注入：clang 按"最新已装 GCC"探测标准库，多 gcc 版本共存且
+# 未装对应 libstdc++-*-dev 时（如 gcc-11/12 共存仅装 libstdc++-11-dev），会被误导到
+# 不存在的 /usr/include/c++/<ver>，导致全部标准库头 'file not found' 及连带假告警。
+# 按 /usr/lib/gcc/<triplet>/* 版本倒序探测首个真实存在的头目录，经 -isystem 注入
+# 三条标准路径；健康机器上注入路径与 clang 正常探测一致，无行为变化。
+STDLIB_INC_ARGS=()
+detect_stdlib() {
+    local triplet v
+    triplet="$(gcc -dumpmachine 2>/dev/null)"
+    if [ -n "${triplet}" ] && [ -d "/usr/lib/gcc/${triplet}" ]; then
+        for v in $(ls "/usr/lib/gcc/${triplet}" | sort -rV); do
+            if [ -d "/usr/include/c++/${v}" ]; then
+                STDLIB_INC_ARGS=(--extra-arg-before=-isystem "--extra-arg-before=/usr/include/c++/${v}" \
+                    --extra-arg-before=-isystem "--extra-arg-before=/usr/include/${triplet}/c++/${v}" \
+                    --extra-arg-before=-isystem "--extra-arg-before=/usr/include/c++/${v}/backward")
+                echo "-- clang-tidy: 注入 libstdc++-${v} 头路径（/usr/include/c++/${v}）"
+                return 0
+            fi
+        done
+    fi
+    echo "错误: 未找到可用的 libstdc++ C++ 头（/usr/include/c++/<版本>），请安装对应 dev 包:"
+    echo "  sudo apt-get install libstdc++-<gcc版本>-dev"
+    exit 1
+}
+
 if [ ${RUN_TIDY} -eq 1 ]; then
+    detect_stdlib
     TIDY_FILES=("${REPO_DIR}"/src/*.cpp)
     TIDY_TOTAL=${#TIDY_FILES[@]}
     echo "-- clang-tidy 扫描 src/*.cpp（共 ${TIDY_TOTAL} 个，检查集: 仓库根 .clang-tidy）..."
@@ -110,6 +137,7 @@ if [ ${RUN_TIDY} -eq 1 ]; then
         echo "-- [${TIDY_IDX}/${TIDY_TOTAL}] $(basename "${f}")"
         if ! clang-tidy -p "${REPO_DIR}" \
             --header-filter='.*/YomkPluginSystem/(include|src)/.*' \
+            "${STDLIB_INC_ARGS[@]}" \
             "${f}" >> "${TIDY_OUT}" 2>&1; then
             echo "    [FAIL] $(basename "${f}") 检出告警或编译错误"
             TIDY_FAIL=1
