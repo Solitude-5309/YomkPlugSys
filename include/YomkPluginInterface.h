@@ -13,8 +13,9 @@ extern "C"
 {
 #endif
 
-/* ABI 版本为独立常量，不与 project(VERSION) 绑定；仅当 YomkPluginMeta 布局或导出符号签名变化时才递增 */
-#define YOMKPLUGIN_ABI_VERSION 1
+/* ABI 版本为独立常量，不与 project(VERSION) 绑定；仅当 YomkPluginMeta 布局或导出符号签名变化时才递增。
+ * v2：实例接口虚表布局变化（删除 instanceId） */
+#define YOMKPLUGIN_ABI_VERSION 2
 
     /* 插件元数据（常量），由插件 meta 导出函数返回静态指针 */
     struct YomkPluginMeta
@@ -48,8 +49,6 @@ public:
     [[nodiscard]] virtual const char* instanceName() const = 0;
     /* 实例类型 */
     [[nodiscard]] virtual const char* instanceType() const = 0;
-    /* 业务 id：默认与 instanceName 一致；插件可覆写做业务定制，插件系统不解析、不做唯一性校验 */
-    [[nodiscard]] virtual const char* instanceId() const { return instanceName(); }
     /* 用户数据，默认为空 */
     void* userData = nullptr;
 };

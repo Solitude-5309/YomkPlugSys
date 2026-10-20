@@ -55,8 +55,6 @@ struct BuildReq
 struct InstanceInfo
 {
     std::string libId;
-    /* 业务 id，默认等于 instanceName，系统不解析 */
-    std::string instanceId;
     /* 系统唯一主键（同一插件内唯一） */
     std::string instanceName;
     std::string instanceType;

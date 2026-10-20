@@ -181,7 +181,9 @@ int main()
         }
     }
     check(registered, "B8 bad-create plugin still registered after failed build");
-    check(infoAllDump().find("BadCreateNull abi:1 alive:0") != std::string::npos,
+    check(
+        infoAllDump().find("BadCreateNull abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:0") !=
+            std::string::npos,
         "B9 /all libs section shows registered plugin with alive:0");
 
     writeManifest("b8.yomk", "#! yomk_plugin_system\nx1@libBadCreateThrow.so@inst.txt\n");

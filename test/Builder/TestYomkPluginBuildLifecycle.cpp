@@ -157,7 +157,6 @@ int main()
         !insts.empty() && insts[0].libId == "TestPlugin" && insts[0].instanceName == "s1-i1",
         "S1 instance libId and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
-    check(!insts.empty() && insts[0].instanceId == fp("inst.txt"), "S1 instanceId exposes transparent instance_file");
 
     std::vector<PluginMeta> metas = listPlugins();
     check(metas.size() == 1, "S1 exactly one plugin listed");

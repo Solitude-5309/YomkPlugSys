@@ -237,7 +237,9 @@ int main()
     check(metaOk, "M3 loader /meta deep-copied fields");
 
     resp = YOMK_REQUEST("/YomkPluginLoader/lib", YomkMkPtr(String, "TestPlugin"));
-    check(isOk(resp) && respString(resp) == "TestPlugin abi:1 alive:2", "M3 lib info line exact format");
+    check(
+        isOk(resp) && respString(resp) == "TestPlugin abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:2",
+        "M3 lib info line exact format");
     expectNo(
         YOMK_REQUEST("/YomkPluginLoader/lib", YomkMkPtr(String, "Nope")),
         "lib not loaded: Nope",
@@ -268,7 +270,7 @@ int main()
     /* ---------- M4 /all 一致性 ---------- */
     const std::string mgrAll = respString(YOMK_REQUEST("/YomkPluginManager/all", nullptr));
     check(
-        mgrAll.find("\n  e-a [demo] id:" + fp("inst.txt")) != std::string::npos,
+        mgrAll.find("\n  e-a [demo] userData:off") != std::string::npos,
         "M4 manager /all indented instance line");
     check(
         respString(YOMKPLUGIN_INFO_ALL()).find("TestPlugin [demo] v:0.0.1") != std::string::npos,

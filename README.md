@@ -82,7 +82,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 | 头文件 | 内容 |
 |--------|------|
-| `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、instanceId（业务字段，默认等于实例名，可覆写）、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
+| `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
 | `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 7 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_ALL / INFO_PLUGINS / INFO_INSTANCES / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
@@ -119,7 +119,6 @@ public:
     MyInstance(const std::string &name) : m_name(name) {}
     virtual const char *instanceName() const override { return m_name.c_str(); }
     virtual const char *instanceType() const override { return "demo"; }
-    /* instanceId 不覆写则默认等于 instanceName */
 
 private:
     std::string m_name; /* 返回的 const char* 必须在实例存活期内有效 */

@@ -338,7 +338,6 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                     InstanceInfo info;
                     info.libId = filter;
                     info.instanceName = instKv.first;
-                    info.instanceId = instKv.second->instanceId() ? instKv.second->instanceId() : "";
                     info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
                     infos.push_back(info);
                 }
@@ -353,7 +352,6 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                     InstanceInfo info;
                     info.libId = kv.first;
                     info.instanceName = instKv.first;
-                    info.instanceId = instKv.second->instanceId() ? instKv.second->instanceId() : "";
                     info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
                     infos.push_back(info);
                 }
@@ -472,6 +470,5 @@ std::string YomkPluginManager::instanceInfoLine(
     const std::string& instanceName, const std::shared_ptr<YomkPluginInterface>& inst) const
 {
     std::string type = inst->instanceType() ? inst->instanceType() : "";
-    std::string id = inst->instanceId() ? inst->instanceId() : "";
-    return instanceName + " [" + type + "] id:" + id + " userData:" + (inst->userData ? "on" : "off");
+    return instanceName + " [" + type + "] userData:" + (inst->userData ? "on" : "off");
 }

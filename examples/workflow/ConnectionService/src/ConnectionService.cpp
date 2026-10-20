@@ -16,7 +16,6 @@ public:
     virtual ~ConnectionServiceInstance() {}
     virtual const char* instanceName() const override { return m_name.c_str(); }
     virtual const char* instanceType() const override { return "workflow"; }
-    /* instanceId 不覆写，默认等于 instanceName */
 private:
     /* 宿主指定的实例名 */
     std::string m_name;
