@@ -20,7 +20,7 @@
 |-----|------|------|
 | `/YomkPluginSystemBuilder/build` | `BuildReq{workflowPath}` | 解析清单并组装插件系统，返回 `String` 汇总 `plugins:N instances:M` |
 | `/YomkPluginSystemBuilder/version` | 无 | 返回 `String` 扩展版本描述（值由 CMake 编译期注入，来源 `project(VERSION)`） |
-| `/YomkPluginSystemBuilder/all` | 无 | 内省：三段聚合 `== build ==` 构建状态 + `== plugins ==` 插件/实例 + `== libs ==` 已加载库；段转发失败降级 `[segment error]` 行，整体不失败 |
+| `/YomkPluginSystemBuilder/all` | 无 | 内省：三段聚合 `== build ==` 构建状态 + `== plugins ==` 插件/实例 + `== loaded plugins ==` 已加载插件；段转发失败降级 `[segment error]` 行，整体不失败 |
 | `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
 | `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
 | `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
@@ -50,13 +50,13 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 | URL | 入参 | 说明 |
 |-----|------|------|
-| `/YomkPluginLoader/loadLib` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
-| `/YomkPluginLoader/unloadLib` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
+| `/YomkPluginLoader/loadPlugin` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
+| `/YomkPluginLoader/unloadPlugin` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
 | `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
 | `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例，shared_ptr 绑定 delete_instance 为 deleter |
 | `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |
-| `/YomkPluginLoader/libs` | 无 | 内省：已加载库列表 |
-| `/YomkPluginLoader/lib` | String pluginName | 内省：单库元信息行 `pluginName abi:N alive:M` |
+| `/YomkPluginLoader/plugins` | 无 | 内省：已加载插件列表 |
+| `/YomkPluginLoader/plugin` | String pluginName | 内省：单插件元信息行 `pluginName abi:N alive:M` |
 | `/YomkPluginLoader/all` | 无 | 内省：全量 dump |
 
 ### /YomkPluginManager（数据层，10 个接口）
@@ -179,7 +179,7 @@ cmake --build test/build -j
 
 | 类型 | 产物 | 说明 |
 |---|---|---|
-| 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_LIBS/INFO_PLUGINS/INFO_ALL 等） |
+| 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_PLUGINS/INFO_INSTANCES/INFO_ALL 等） |
 | 测试插件库 | TestPlugin/libTestPlugin.so | 供测试程序 dlopen 加载的示例插件（不安装） |
 
 ### 2. 一键运行全量测试

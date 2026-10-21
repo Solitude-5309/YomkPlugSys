@@ -72,7 +72,7 @@ int main()
     check(all.find("== build ==") != std::string::npos, "INFO_ALL has '== build ==' section");
     check(all.find("manifest:-") != std::string::npos, "INFO_ALL empty-state manifest:-");
     check(all.find("== plugins ==") != std::string::npos, "INFO_ALL has '== plugins ==' section");
-    check(all.find("== libs ==") != std::string::npos, "INFO_ALL has '== libs ==' section");
+    check(all.find("== loaded plugins ==") != std::string::npos, "INFO_ALL has '== loaded plugins ==' section");
 
     resp = YOMKPLUGIN_INFO_PLUGINS();
     bool pluginsEmpty = false;

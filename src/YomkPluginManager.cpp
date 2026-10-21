@@ -27,7 +27,7 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         YomkUnPackPkgResponse(pkg, PluginPath, data);
 
         /* 锁外请求 Loader：dlopen + 符号解析 + abi/重名校验 + 登记句柄 */
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/loadLib", YomkMkPtr(PluginPath, data->d));
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/loadPlugin", YomkMkPtr(PluginPath, data->d));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;
@@ -43,7 +43,7 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         resp = YOMK_REQUEST("/YomkPluginLoader/meta", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
-            YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
+            YOMK_REQUEST("/YomkPluginLoader/unloadPlugin", YomkMkPtr(String, pluginName));
             return resp;
         }
         YomkUnPackPkg(resp.m_data, PluginMeta, metaPkg);
@@ -94,8 +94,8 @@ YomkResponse YomkPluginManager::tryUnload(YomkPkgPtr pkg)
                 return {YomkResponse::eNo, "plugin not loaded: " + pluginName};
             }
         }
-        /* 尝试卸载：委托 Loader /unloadLib 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者） */
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
+        /* 尝试卸载：委托 Loader /unloadPlugin 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者） */
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadPlugin", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;
@@ -139,7 +139,7 @@ YomkResponse YomkPluginManager::forceUnload(YomkPkgPtr pkg)
         /* 锁外析构全部实例（触发 delete_instance，代码在 so 中，必须先于 dlclose） */
         group.clear();
 
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadPlugin", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;

@@ -155,8 +155,8 @@ int main(int argc, char* argv[])
                 dump.find("== plugins ==") != std::string::npos &&
                 dump.find("ConnectionService [workflow]") != std::string::npos &&
                 dump.find("WorkspaceService [workflow]") != std::string::npos &&
-                dump.find("== libs ==") != std::string::npos && dump.find("libs:2") != std::string::npos,
-            "Builder /all aggregates build/plugins/libs");
+                dump.find("== loaded plugins ==") != std::string::npos && dump.find("plugins:2") != std::string::npos,
+            "Builder /all aggregates build/plugins/loaded plugins");
     }
 
     /* ---------- 用例5：重复构建（插件幂等跳过，重名实例按现有语义报错） ---------- */

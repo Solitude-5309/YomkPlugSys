@@ -43,7 +43,7 @@ public:
     int init() override;
 
 private:
-    struct LoadedLib
+    struct LoadedPlugin
     {
         void* handle = nullptr;
         YomkPluginMetaFunc metaFn = nullptr;
@@ -53,9 +53,9 @@ private:
 
     /* 请求接口 */
     /* PluginPath -> String pluginName */
-    YomkResponse loadLib(YomkPkgPtr pkg);
+    YomkResponse loadPlugin(YomkPkgPtr pkg);
     /* String pluginName -> ok（有存活实例拒绝） */
-    YomkResponse unloadLib(YomkPkgPtr pkg);
+    YomkResponse unloadPlugin(YomkPkgPtr pkg);
     /* String pluginName -> PluginMeta */
     YomkResponse meta(YomkPkgPtr pkg);
     /* CreateReq -> PluginInstance */
@@ -64,18 +64,18 @@ private:
     YomkResponse deleteInstance(YomkPkgPtr pkg);
     /* 内省接口 */
     /* -> StringArray */
-    YomkResponse infoLibs(YomkPkgPtr pkg);
+    YomkResponse infoPlugins(YomkPkgPtr pkg);
     /* String pluginName -> String 元信息行 */
-    YomkResponse infoLib(YomkPkgPtr pkg);
+    YomkResponse infoPlugin(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
     /* 内部辅助（调用方已持锁） */
     void purgeDead(const std::string& pluginName);
     int aliveCount(const std::string& pluginName);
-    std::string libInfoLine(const std::string& pluginName);
+    std::string pluginInfoLine(const std::string& pluginName);
     std::mutex m_mutex;
     /* 句柄表 */
-    std::map<std::string, LoadedLib> m_libs;
+    std::map<std::string, LoadedPlugin> m_plugins;
     /* 存活表 */
     std::map<std::string, std::vector<std::weak_ptr<YomkPluginInterface>>> m_alive;
 };

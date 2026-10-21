@@ -153,7 +153,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
 
         namespace fs = std::filesystem;
         /* 预查插件表：同一 so 已加载时幂等跳过 */
-        std::map<std::string, std::string> pathToLib;
+        std::map<std::string, std::string> pathToPlugin;
         resp = YOMK_REQUEST("/YomkPluginManager/list", nullptr);
         if (resp.m_status == YomkResponse::eOk)
         {
@@ -165,11 +165,11 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             }
             for (const auto& m : arr->d)
             {
-                pathToLib[m.libPath] = m.name;
+                pathToPlugin[m.libPath] = m.name;
             }
         }
 
-        std::set<std::string> loadedLibs;
+        std::set<std::string> loadedPlugins;
         std::vector<std::string> entryLines;
         size_t createdInstances = 0;
         for (const auto& entry : entries)
@@ -197,8 +197,8 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
 
             /* 加载插件（已加载则复用，幂等） */
             std::string pluginName;
-            auto it = pathToLib.find(soPath);
-            if (it != pathToLib.end())
+            auto it = pathToPlugin.find(soPath);
+            if (it != pathToPlugin.end())
             {
                 pluginName = it->second;
             }
@@ -221,9 +221,9 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
                     return {YomkResponse::eNo, msg};
                 }
                 pluginName = idPkg->d;
-                pathToLib[soPath] = pluginName;
+                pathToPlugin[soPath] = pluginName;
             }
-            loadedLibs.insert(pluginName);
+            loadedPlugins.insert(pluginName);
 
             /* 创建实例：实例文件路径作为 instanceFile 透传，不读取内容 */
             CreateReq createReq;
@@ -243,7 +243,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
         }
 
         std::string summary =
-            "plugins:" + std::to_string(loadedLibs.size()) + " instances:" + std::to_string(createdInstances);
+            "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
         recordBuild(req->d.workflowPath, "ok " + summary, entryLines);
         YOMK_INFO_TAG("YomkPluginSystemBuilder", "build: ", req->d.workflowPath, " ", summary);
         return {YomkResponse::eOk, "ok", YomkMkPtr(String, summary)};
@@ -310,7 +310,7 @@ YomkResponse YomkPluginSystemBuilder::infoAll(YomkPkgPtr pkg)
             dump += std::string("[segment error] ") + title + ": " + resp.m_msg;
         };
         appendSegment("plugins", "/YomkPluginManager/all");
-        appendSegment("libs", "/YomkPluginLoader/all");
+        appendSegment("loaded plugins", "/YomkPluginLoader/all");
         return {YomkResponse::eOk, "ok", YomkMkPtr(String, dump)};
     }
     catch (const std::exception& e)

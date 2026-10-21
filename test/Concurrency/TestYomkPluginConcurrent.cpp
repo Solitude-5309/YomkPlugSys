@@ -145,8 +145,8 @@ static YomkResponse destroyInst(const std::string& name)
     return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
 }
 
-/* 白盒：Loader /libs 已加载库列表（StringArray） */
-static std::vector<std::string> loaderLibs()
+/* 白盒：Loader /plugins 已加载插件列表（StringArray） */
+static std::vector<std::string> pluginLibs()
 {
     std::vector<std::string> out;
     YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/libs", YomkMkPtr(String, ""));
@@ -168,7 +168,7 @@ static bool c3MsgAllowed(const YomkResponse& r)
     return r.m_msg.find("plugin unloaded during create") != std::string::npos ||
            r.m_msg.find("duplicate instance name") != std::string::npos ||
            r.m_msg.find("plugin not loaded") != std::string::npos ||
-           r.m_msg.find("lib not loaded") != std::string::npos;
+           r.m_msg.find("plugin not loaded") != std::string::npos;
 }
 
 /* C4 快照自洽：/all 头部 instances:N == 明细行数（"\n  " 前缀计数），单锁快照内必须一致 */
@@ -353,7 +353,7 @@ int main()
                 {
                     std::this_thread::yield();
                 }
-                /* force_unload 锁外段窗口允许 create 继续登记（unloadLib 以 instances still
+                /* force_unload 锁外段窗口允许 create 继续登记（unloadPlugin 以 instances still
                  * alive 失败属合法竞争结果），重试强卸直至收敛：成功 UNLOAD 后 plugins 必空，
                  * 此后 create 全被拒，终态必空 */
                 for (int retry = 0; retry < 200; ++retry)
@@ -373,7 +373,7 @@ int main()
     }
     check(c3MsgBad.load() == 0, "C3 create results all in allowed message set");
     check(listInstances().empty(), "C3 terminal instances empty after unload race");
-    check(loaderLibs().empty(), "C3 terminal libs empty after unload race");
+    check(pluginLibs().empty(), "C3 terminal plugins empty after unload race");
     expectNo(YOMKPLUGIN_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "C3 double unload rejects");
 
     /* ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ---------- */

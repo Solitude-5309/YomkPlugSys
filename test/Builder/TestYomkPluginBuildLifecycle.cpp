@@ -232,16 +232,16 @@ int main()
         "S4 destroy for unload");
     check(isOk(YOMKPLUGIN_TRY_UNLOAD("TestPlugin")), "S4 try_unload ok after destroy");
     check(listPlugins().empty(), "S4 plugins empty after try_unload");
-    check(infoAllDump().find("libs:0") != std::string::npos, "S4 /all libs:0 after try_unload");
-    expectNo(YOMKPLUGIN_TRY_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S4 try_unload unknown lib");
+    check(infoAllDump().find("plugins:0") != std::string::npos, "S4 /all plugins:0 after try_unload");
+    expectNo(YOMKPLUGIN_TRY_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
     /* ---------- S5 unload 强卸含存活实例 ---------- */
     writeManifest("s5.yomk", "#! yomk_plugin_system\ns5-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("s5.yomk")), "plugins:1 instances:1", "S5 rebuild for force unload");
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
-    expectNo(YOMKPLUGIN_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown lib");
-    check(infoAllDump().find("libs:0") != std::string::npos, "S5 /all libs:0 after force unload");
+    expectNo(YOMKPLUGIN_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
+    check(infoAllDump().find("plugins:0") != std::string::npos, "S5 /all plugins:0 after force unload");
 
     /* ---------- S6 卸载后重载 ---------- */
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");

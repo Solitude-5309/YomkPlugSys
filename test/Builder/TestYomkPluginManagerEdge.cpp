@@ -236,17 +236,17 @@ int main()
     }
     check(metaOk, "M3 loader /meta deep-copied fields");
 
-    resp = YOMK_REQUEST("/YomkPluginLoader/lib", YomkMkPtr(String, "TestPlugin"));
+    resp = YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, "TestPlugin"));
     check(
         isOk(resp) && respString(resp) == "TestPlugin abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:2",
-        "M3 lib info line exact format");
+        "M3 plugin info line exact format");
     expectNo(
-        YOMK_REQUEST("/YomkPluginLoader/lib", YomkMkPtr(String, "Nope")),
-        "lib not loaded: Nope",
-        "M3 lib info unknown rejects");
+        YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, "Nope")),
+        "plugin not loaded: Nope",
+        "M3 plugin info unknown rejects");
 
-    resp = YOMK_REQUEST("/YomkPluginLoader/libs", nullptr);
-    bool libsBoth = false;
+    resp = YOMK_REQUEST("/YomkPluginLoader/plugins", nullptr);
+    bool pluginsBoth = false;
     if (isOk(resp))
     {
         YomkUnPackPkg(resp.m_data, StringArray, sa);
@@ -263,9 +263,9 @@ int main()
                 hasBad = true;
             }
         }
-        libsBoth = hasTest && hasBad;
+        pluginsBoth = hasTest && hasBad;
     }
-    check(libsBoth, "M3 libs list contains both registered libs");
+    check(pluginsBoth, "M3 plugins list contains both registered plugins");
 
     /* ---------- M4 /all 一致性 ---------- */
     const std::string mgrAll = respString(YOMK_REQUEST("/YomkPluginManager/all", nullptr));
@@ -317,8 +317,8 @@ int main()
         "M5 destroy long-file-path instance ok");
 
     /* ---------- M5.5 错误类型消息请求（闭环10 回归）：解包校验失败返回 eNo 而非崩溃 ---------- */
-    check(isNo(YOMK_REQUEST("/YomkPluginLoader/loadLib", YomkMkPtr(String, "wrong-type-probe"))),
-          "wrong-type msg to /YomkPluginLoader/loadLib returns eNo (no crash)");
+    check(isNo(YOMK_REQUEST("/YomkPluginLoader/loadPlugin", YomkMkPtr(String, "wrong-type-probe"))),
+          "wrong-type msg to /YomkPluginLoader/loadPlugin returns eNo (no crash)");
     check(isNo(YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(String, "wrong-type-probe"))),
           "wrong-type msg to /YomkPluginManager/create_instance returns eNo (no crash)");
     check(isNo(YOMK_REQUEST("/YomkPluginSystemBuilder/build", YomkMkPtr(String, "wrong-type-probe"))),
