@@ -317,8 +317,8 @@ int main()
         "M5 destroy long-file-path instance ok");
 
     /* ---------- M5.5 错误类型消息请求（闭环10 回归）：解包校验失败返回 eNo 而非崩溃 ---------- */
-    check(isNo(YOMK_REQUEST("/YomkPluginLoader/loadPlugin", YomkMkPtr(String, "wrong-type-probe"))),
-          "wrong-type msg to /YomkPluginLoader/loadPlugin returns eNo (no crash)");
+    check(isNo(YOMK_REQUEST("/YomkPluginLoader/load", YomkMkPtr(String, "wrong-type-probe"))),
+          "wrong-type msg to /YomkPluginLoader/load returns eNo (no crash)");
     check(isNo(YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(String, "wrong-type-probe"))),
           "wrong-type msg to /YomkPluginManager/create_instance returns eNo (no crash)");
     check(isNo(YOMK_REQUEST("/YomkPluginSystemBuilder/build", YomkMkPtr(String, "wrong-type-probe"))),

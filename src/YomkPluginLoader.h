@@ -53,9 +53,9 @@ private:
 
     /* 请求接口 */
     /* PluginPath -> String pluginName */
-    YomkResponse loadPlugin(YomkPkgPtr pkg);
+    YomkResponse load(YomkPkgPtr pkg);
     /* String pluginName -> ok（有存活实例拒绝） */
-    YomkResponse unloadPlugin(YomkPkgPtr pkg);
+    YomkResponse unload(YomkPkgPtr pkg);
     /* String pluginName -> PluginMeta */
     YomkResponse meta(YomkPkgPtr pkg);
     /* CreateReq -> PluginInstance */

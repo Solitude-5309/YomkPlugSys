@@ -353,7 +353,7 @@ int main()
                 {
                     std::this_thread::yield();
                 }
-                /* force_unload 锁外段窗口允许 create 继续登记（unloadPlugin 以 instances still
+                /* force_unload 锁外段窗口允许 create 继续登记（unload 以 instances still
                  * alive 失败属合法竞争结果），重试强卸直至收敛：成功 UNLOAD 后 plugins 必空，
                  * 此后 create 全被拒，终态必空 */
                 for (int retry = 0; retry < 200; ++retry)

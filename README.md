@@ -50,8 +50,8 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 | URL | 入参 | 说明 |
 |-----|------|------|
-| `/YomkPluginLoader/loadPlugin` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
-| `/YomkPluginLoader/unloadPlugin` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
+| `/YomkPluginLoader/load` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
+| `/YomkPluginLoader/unload` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
 | `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
 | `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例，shared_ptr 绑定 delete_instance 为 deleter |
 | `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |

@@ -11,8 +11,8 @@ YomkPluginLoader::YomkPluginLoader(YomkServer* server) : YomkService(server)
 
 int YomkPluginLoader::init()
 {
-    YomkInstallFunc("/loadPlugin", YomkPluginLoader::loadPlugin, PluginPath);
-    YomkInstallFunc("/unloadPlugin", YomkPluginLoader::unloadPlugin, String);
+    YomkInstallFunc("/load", YomkPluginLoader::load, PluginPath);
+    YomkInstallFunc("/unload", YomkPluginLoader::unload, String);
     YomkInstallFunc("/meta", YomkPluginLoader::meta, String);
     YomkInstallFunc("/create", YomkPluginLoader::create, CreateReq);
     YomkInstallFunc("/delete", YomkPluginLoader::deleteInstance, PluginInstance);
@@ -22,7 +22,7 @@ int YomkPluginLoader::init()
     return 0;
 }
 
-YomkResponse YomkPluginLoader::loadPlugin(YomkPkgPtr pkg)
+YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
 {
     try
     {
@@ -81,15 +81,15 @@ YomkResponse YomkPluginLoader::loadPlugin(YomkPkgPtr pkg)
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("loadPlugin exception: ") + e.what()};
+        return {YomkResponse::eNo, std::string("load exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "loadPlugin exception"};
+        return {YomkResponse::eNo, "load exception"};
     }
 }
 
-YomkResponse YomkPluginLoader::unloadPlugin(YomkPkgPtr pkg)
+YomkResponse YomkPluginLoader::unload(YomkPkgPtr pkg)
 {
     try
     {
@@ -117,16 +117,16 @@ YomkResponse YomkPluginLoader::unloadPlugin(YomkPkgPtr pkg)
              * 低频，锁内执行可接受 */
             dlclose(handle);
         }
-        YOMK_INFO_TAG("YomkPluginLoader", "unloadPlugin: ", pluginName);
+        YOMK_INFO_TAG("YomkPluginLoader", "unload: ", pluginName);
         return {YomkResponse::eOk, "ok", YomkMkPtr(String, "ok")};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("unloadPlugin exception: ") + e.what()};
+        return {YomkResponse::eNo, std::string("unload exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "unloadPlugin exception"};
+        return {YomkResponse::eNo, "unload exception"};
     }
 }
 
@@ -178,7 +178,7 @@ YomkResponse YomkPluginLoader::create(YomkPkgPtr pkg)
             {
                 return {YomkResponse::eNo, "plugin not loaded: " + req->d.pluginName};
             }
-            /* 插件工厂必须持锁调用：与 unloadPlugin 锁内 dlclose 互斥，否则锁外工厂调用
+            /* 插件工厂必须持锁调用：与 unload 锁内 dlclose 互斥，否则锁外工厂调用
              * 可能落在已 unmap 的插件代码上（段错误）。
              * 契约：createFn 为纯函数、不得回调宿主服务，锁内调用无死锁 */
             YomkPluginInterface* raw = it->second.createFn(req->d.instanceName.c_str(), req->d.instanceFile.c_str());
