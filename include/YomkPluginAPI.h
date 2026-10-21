@@ -55,6 +55,10 @@
 #define YOMKPLUGIN_INFO_PLUGIN_BY(instanceName) \
     YOMK_REQUEST("/YomkPluginSystemBuilder/plugin_by_instance", YomkMkPtr(String, instanceName))
 
+/* 内省：按实例名返回其创建时透传的实例文件内容（未知实例报错），返回 String */
+#define YOMKPLUGIN_INFO_INSTANCES_FILE(instanceName) \
+    YOMK_REQUEST("/YomkPluginSystemBuilder/instances_file", YomkMkPtr(String, instanceName))
+
 /* ------------------------- 版本 ------------------------- */
 
 /*

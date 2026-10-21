@@ -1,5 +1,8 @@
 #include "YomkPluginManager.h"
 
+#include <fstream>
+#include <iterator>
+
 YomkPluginManager::YomkPluginManager(YomkServer* server) : YomkService(server)
 {
     name("/YomkPluginManager");
@@ -17,6 +20,7 @@ int YomkPluginManager::init()
     YomkInstallFunc("/plugins", YomkPluginManager::infoPlugins);
     YomkInstallFunc("/plugin", YomkPluginManager::infoPlugin, String);
     YomkInstallFunc("/plugin_by_instance", YomkPluginManager::pluginByInstance, String);
+    YomkInstallFunc("/instances_file", YomkPluginManager::instancesFile, String);
     YomkInstallFunc("/all", YomkPluginManager::infoAll);
     return 0;
 }
@@ -123,7 +127,7 @@ YomkResponse YomkPluginManager::forceUnload(YomkPkgPtr pkg)
     {
         YomkUnPackPkgResponse(pkg, String, data);
         const std::string pluginName = data->d;
-        std::map<std::string, std::shared_ptr<YomkPluginInterface>> group;
+        std::map<std::string, InstanceRecord> group;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             if (!m_plugins.count(pluginName))
@@ -205,7 +209,7 @@ YomkResponse YomkPluginManager::createInstance(YomkPkgPtr pkg)
             /* 创建期间插件被卸载，inst 随响应销毁 */
             return {YomkResponse::eNo, "plugin unloaded during create: " + req->d.pluginName};
         }
-        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, inst).second)
+        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceFile}).second)
         {
             /* 并发兜底：创建期间同名实例已被登记 */
             return {YomkResponse::eNo, "duplicate instance name: " + req->d.instanceName};
@@ -236,7 +240,7 @@ YomkResponse YomkPluginManager::destroyInstance(YomkPkgPtr pkg)
                 auto jt = it->second.find(req->d.instanceName);
                 if (jt != it->second.end())
                 {
-                    inst = std::move(jt->second);
+                    inst = std::move(jt->second.inst);
                     it->second.erase(jt);
                 }
             }
@@ -353,6 +357,51 @@ YomkResponse YomkPluginManager::pluginByInstance(YomkPkgPtr pkg)
     }
 }
 
+/* 按实例名返回创建时透传的实例文件内容（未知实例/文件不可读拒绝） */
+YomkResponse YomkPluginManager::instancesFile(YomkPkgPtr pkg)
+{
+    try
+    {
+        YomkUnPackPkgResponse(pkg, String, data);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        bool found = false;
+        std::string instanceFile;
+        for (const auto& kv : m_instances)
+        {
+            auto it = kv.second.find(data->d);
+            if (it != kv.second.end())
+            {
+                found = true;
+                instanceFile = it->second.instanceFile;
+                break;
+            }
+        }
+        if (!found)
+        {
+            return {YomkResponse::eNo, "instance not found: " + data->d};
+        }
+        if (instanceFile.empty())
+        {
+            return {YomkResponse::eNo, "instance file not recorded: " + data->d};
+        }
+        std::ifstream in(instanceFile);
+        if (!in)
+        {
+            return {YomkResponse::eNo, "instance file not readable: " + instanceFile};
+        }
+        std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        return {YomkResponse::eOk, "ok", YomkMkPtr(String, content)};
+    }
+    catch (const std::exception& e)
+    {
+        return {YomkResponse::eNo, std::string("instances_file exception: ") + e.what()};
+    }
+    catch (...)
+    {
+        return {YomkResponse::eNo, "instances_file exception"};
+    }
+}
+
 YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
 {
     try
@@ -384,7 +433,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                     InstanceInfo info;
                     info.pluginName = filter;
                     info.instanceName = instKv.first;
-                    info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
+                    info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     infos.push_back(info);
                 }
             }
@@ -398,7 +447,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                     InstanceInfo info;
                     info.pluginName = kv.first;
                     info.instanceName = instKv.first;
-                    info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
+                    info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     infos.push_back(info);
                 }
             }
@@ -483,7 +532,7 @@ YomkResponse YomkPluginManager::infoAll(YomkPkgPtr pkg)
                 {
                     for (const auto& instKv : it->second)
                     {
-                        dump += "\n  " + instanceInfoLine(instKv.first, instKv.second);
+                        dump += "\n  " + instanceInfoLine(instKv.first, instKv.second.inst);
                     }
                 }
             }

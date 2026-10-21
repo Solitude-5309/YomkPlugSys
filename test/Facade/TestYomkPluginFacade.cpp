@@ -1,7 +1,7 @@
 /*
  * TestYomkPluginFacade：门面宏契约冒烟测试（闭环1）
  * 覆盖：门面服务注册、/version 契约与 YOMKPLUGIN_VERSION 宏输出、
- * 空态内省契约（INFO_BUILDER 空态默认值、INFO_PLUGIN_BY 未知实例拒绝、INFO_PLUGINS/INFO_INSTANCES 空数组）、
+ * 空态内省契约（INFO_BUILDER 空态默认值、INFO_PLUGIN_BY/INFO_INSTANCES_FILE 未知实例拒绝、INFO_PLUGINS/INFO_INSTANCES 空数组）、
  * BUILD 不存在清单失败路径。
  */
 #include <YomkPluginSystem/YomkPluginAPI.h>
@@ -79,6 +79,11 @@ int main()
     check(
         isNo(resp) && resp.m_msg == "instance not found: no-inst",
         "INFO_PLUGIN_BY empty-state rejects unknown instance");
+
+    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("no-inst");
+    check(
+        isNo(resp) && resp.m_msg == "instance not found: no-inst",
+        "INFO_INSTANCES_FILE empty-state rejects unknown instance");
 
     resp = YOMKPLUGIN_INFO_PLUGINS();
     bool pluginsEmpty = false;

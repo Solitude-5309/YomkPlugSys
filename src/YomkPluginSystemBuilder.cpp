@@ -45,6 +45,7 @@ int YomkPluginSystemBuilder::init()
     YomkInstallFunc("/plugins", YomkPluginSystemBuilder::plugins, String);
     YomkInstallFunc("/instances", YomkPluginSystemBuilder::instances, String);
     YomkInstallFunc("/plugin_by_instance", YomkPluginSystemBuilder::pluginByInstance, String);
+    YomkInstallFunc("/instances_file", YomkPluginSystemBuilder::instancesFile, String);
     YomkInstallFunc("/unload", YomkPluginSystemBuilder::unload, String);
     YomkInstallFunc("/try_unload", YomkPluginSystemBuilder::tryUnload, String);
     return 0;
@@ -347,6 +348,22 @@ YomkResponse YomkPluginSystemBuilder::pluginByInstance(YomkPkgPtr pkg)
     catch (...)
     {
         return {YomkResponse::eNo, "plugin_by_instance exception"};
+    }
+}
+
+YomkResponse YomkPluginSystemBuilder::instancesFile(YomkPkgPtr pkg)
+{
+    try
+    {
+        return YOMK_REQUEST("/YomkPluginManager/instances_file", pkg);
+    }
+    catch (const std::exception& e)
+    {
+        return {YomkResponse::eNo, std::string("instances_file exception: ") + e.what()};
+    }
+    catch (...)
+    {
+        return {YomkResponse::eNo, "instances_file exception"};
     }
 }
 

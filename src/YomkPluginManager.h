@@ -32,6 +32,14 @@ private:
         std::string path;
     };
 
+    /* 实例表记录：实例指针 + 创建时透传的实例文件路径（内省用） */
+    struct InstanceRecord
+    {
+        std::shared_ptr<YomkPluginInterface> inst;
+        /* 创建时透传的实例配置文件绝对路径（可为空：透传参数允许为空） */
+        std::string instanceFile;
+    };
+
     /* 请求接口 */
     /* PluginPath -> String pluginName */
     YomkResponse load(YomkPkgPtr pkg);
@@ -54,6 +62,8 @@ private:
     YomkResponse infoPlugin(YomkPkgPtr pkg);
     /* String instanceName -> PluginMeta（实例所属插件元数据，未知实例拒绝） */
     YomkResponse pluginByInstance(YomkPkgPtr pkg);
+    /* String instanceName -> String 实例文件内容（未知实例/文件不可读拒绝） */
+    YomkResponse instancesFile(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
 
@@ -66,5 +76,5 @@ private:
     /* 插件表：扁平 map，pluginName = meta.name */
     std::map<std::string, PluginRecord> m_plugins;
     /* 实例表：按插件分组的二级 map，Manager 是实例生命周期的唯一所有者 */
-    std::map<std::string, std::map<std::string, std::shared_ptr<YomkPluginInterface>>> m_instances;
+    std::map<std::string, std::map<std::string, InstanceRecord>> m_instances;
 };

@@ -2,7 +2,7 @@
  * ExampleYomkPluginSystemBuilder：YomkPluginSystem 入门示例
  *
  * 面向首次使用的用户，用 examples/workflow 的两个示例插件串起最常用接口：
- *   初始化 -> 构建插件工程 -> 内省（插件/实例/按插件过滤/按实例查插件/构建信息）-> 卸载
+ *   初始化 -> 构建插件工程 -> 内省（插件/实例/按插件过滤/按实例查插件/实例文件/构建信息）-> 卸载
  *
  * 每一步注释标明【接口 / 输入 / 输出】，运行即可观察实际结果：
  *   <安装路径>/bin/ExampleYomkPluginSystemBuilder
@@ -175,11 +175,28 @@ int main()
     std::cout << "  path: " << instMeta->d.path << std::endl;
     std::cout << "  description: " << instMeta->d.description << std::endl;
 
-    /* ---------- 7. 查询 Builder 构建信息 ----------
+    /* ---------- 7. 查看实例文件内容 ----------
+     * 接口：YOMKPLUGIN_INFO_INSTANCES_FILE(instanceName)
+     * 输入：instanceName（未知实例返回 eNo 并携带原因）
+     * 输出：String（该实例创建时透传的实例文件内容） */
+    section("7. 查看实例文件 YOMKPLUGIN_INFO_INSTANCES_FILE(\"ConnectionServiceIns\")");
+    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("ConnectionServiceIns");
+    if (!isOk(resp))
+    {
+        fail("查看实例文件", resp.m_msg);
+    }
+    YomkUnPackPkg(resp.m_data, String, fileContent);
+    if (!fileContent)
+    {
+        fail("查看实例文件", "响应数据缺失");
+    }
+    std::cout << fileContent->d << std::endl;
+
+    /* ---------- 8. 查询 Builder 构建信息 ----------
      * 接口：YOMKPLUGIN_INFO_BUILDER()
      * 输入：无
      * 输出：BuilderInfo（最近构建：清单条目/路径/结果/插件与实例数） */
-    section("7. Builder 构建信息 YOMKPLUGIN_INFO_BUILDER()");
+    section("8. Builder 构建信息 YOMKPLUGIN_INFO_BUILDER()");
     resp = YOMKPLUGIN_INFO_BUILDER();
     if (!isOk(resp))
     {
@@ -201,12 +218,12 @@ int main()
     std::cout << "  plugins:" << builder->d.plugins << std::endl;
     std::cout << "  instances:" << builder->d.instances << std::endl;
 
-    /* ---------- 8. 卸载插件（两种语义对比） ----------
+    /* ---------- 9. 卸载插件（两种语义对比） ----------
      * 接口：YOMKPLUGIN_TRY_UNLOAD(pluginName)  尝试卸载：有存活实例则拒绝（引用保护）
      * 接口：YOMKPLUGIN_UNLOAD(pluginName)      强制卸载：先销毁全部实例再卸载
      * 输入：pluginName
      * 输出：String(ok/msg) */
-    section("8. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
+    section("9. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
     resp = YOMKPLUGIN_TRY_UNLOAD("ConnectionService");
     std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.m_msg) << std::endl;
     resp = YOMKPLUGIN_UNLOAD("ConnectionService");

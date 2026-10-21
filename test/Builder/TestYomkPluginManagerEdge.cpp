@@ -244,6 +244,45 @@ int main()
         "instance not found: no-inst",
         "M2 INFO_PLUGIN_BY unknown instance rejects");
 
+    /* ---------- M2.7 宏门面：INFO_INSTANCES_FILE(instanceName) 返回实例文件内容 ---------- */
+    {
+        std::ofstream f(fp("mfile.txt"));
+        f << "line-one\nline-two";
+    }
+    CreateReq mfileReq;
+    mfileReq.pluginName = "TestPlugin";
+    mfileReq.instanceName = "e-mfile";
+    mfileReq.instanceFile = fp("mfile.txt");
+    check(
+        isOk(YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, mfileReq))),
+        "M2 create e-mfile for file introspection");
+    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("e-mfile");
+    check(isOk(resp) && respString(resp) == "line-one\nline-two", "M2 INFO_INSTANCES_FILE returns file content");
+    CreateReq nofileReq;
+    nofileReq.pluginName = "TestPlugin";
+    nofileReq.instanceName = "e-nofile";
+    check(
+        isOk(YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, nofileReq))),
+        "M2 create e-nofile with empty instanceFile");
+    expectNo(
+        YOMKPLUGIN_INFO_INSTANCES_FILE("e-nofile"),
+        "instance file not recorded: e-nofile",
+        "M2 INFO_INSTANCES_FILE empty instanceFile rejects");
+    expectNo(
+        YOMKPLUGIN_INFO_INSTANCES_FILE("no-inst"),
+        "instance not found: no-inst",
+        "M2 INFO_INSTANCES_FILE unknown instance rejects");
+    DestroyReq dr;
+    dr.pluginName = "TestPlugin";
+    dr.instanceName = "e-mfile";
+    check(
+        isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dr))),
+        "M2 cleanup e-mfile");
+    dr.instanceName = "e-nofile";
+    check(
+        isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dr))),
+        "M2 cleanup e-nofile");
+
     /* ---------- M3 内省行格式 ---------- */
     const std::string pluginLine =
         "TestPlugin [demo] v:0.0.1 author:Yomk path:" + fp("libTestPlugin.so") + " instances:2";
