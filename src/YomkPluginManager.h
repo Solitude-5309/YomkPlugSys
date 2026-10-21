@@ -52,6 +52,8 @@ private:
     YomkResponse infoPlugins(YomkPkgPtr pkg);
     /* String pluginName -> String 元信息行 */
     YomkResponse infoPlugin(YomkPkgPtr pkg);
+    /* String instanceName -> PluginMeta（实例所属插件元数据，未知实例拒绝） */
+    YomkResponse pluginByInstance(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
 

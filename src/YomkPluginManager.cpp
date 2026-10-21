@@ -16,6 +16,7 @@ int YomkPluginManager::init()
     YomkInstallFunc("/list_instances", YomkPluginManager::listInstances, String);
     YomkInstallFunc("/plugins", YomkPluginManager::infoPlugins);
     YomkInstallFunc("/plugin", YomkPluginManager::infoPlugin, String);
+    YomkInstallFunc("/plugin_by_instance", YomkPluginManager::pluginByInstance, String);
     YomkInstallFunc("/all", YomkPluginManager::infoAll);
     return 0;
 }
@@ -304,6 +305,51 @@ YomkResponse YomkPluginManager::list(YomkPkgPtr pkg)
     catch (...)
     {
         return {YomkResponse::eNo, "list exception"};
+    }
+}
+
+/* 按实例名反查所属插件元数据：遍历实例表二级 map 定位插件，再取插件表记录 */
+YomkResponse YomkPluginManager::pluginByInstance(YomkPkgPtr pkg)
+{
+    try
+    {
+        YomkUnPackPkgResponse(pkg, String, data);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::string pluginName;
+        for (const auto& kv : m_instances)
+        {
+            if (kv.second.count(data->d) != 0)
+            {
+                pluginName = kv.first;
+                break;
+            }
+        }
+        if (pluginName.empty())
+        {
+            return {YomkResponse::eNo, "instance not found: " + data->d};
+        }
+        auto it = m_plugins.find(pluginName);
+        if (it == m_plugins.end())
+        {
+            return {YomkResponse::eNo, "plugin not loaded: " + pluginName};
+        }
+        PluginMeta m;
+        m.abi_version = YOMKPLUGIN_ABI_VERSION;
+        m.name = it->second.name;
+        m.type = it->second.type;
+        m.version = it->second.version;
+        m.author = it->second.author;
+        m.description = it->second.description;
+        m.path = it->second.path;
+        return {YomkResponse::eOk, "ok", YomkMkPtr(PluginMeta, m)};
+    }
+    catch (const std::exception& e)
+    {
+        return {YomkResponse::eNo, std::string("plugin_by_instance exception: ") + e.what()};
+    }
+    catch (...)
+    {
+        return {YomkResponse::eNo, "plugin_by_instance exception"};
     }
 }
 

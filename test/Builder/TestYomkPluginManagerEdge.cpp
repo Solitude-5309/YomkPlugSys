@@ -230,6 +230,20 @@ int main()
         "plugin not loaded: NoSuch",
         "M2 INFO_INSTANCES_BY unknown plugin rejects");
 
+    /* ---------- M2.6 宏门面：INFO_PLUGIN_BY(instanceName) 反查所属插件 ---------- */
+    resp = YOMKPLUGIN_INFO_PLUGIN_BY("e-a");
+    bool byInstOk = false;
+    if (isOk(resp))
+    {
+        YomkUnPackPkg(resp.m_data, PluginMeta, pm);
+        byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
+    }
+    check(byInstOk, "M2 INFO_PLUGIN_BY instance lookup returns owner plugin meta");
+    expectNo(
+        YOMKPLUGIN_INFO_PLUGIN_BY("no-inst"),
+        "instance not found: no-inst",
+        "M2 INFO_PLUGIN_BY unknown instance rejects");
+
     /* ---------- M3 内省行格式 ---------- */
     const std::string pluginLine =
         "TestPlugin [demo] v:0.0.1 author:Yomk path:" + fp("libTestPlugin.so") + " instances:2";

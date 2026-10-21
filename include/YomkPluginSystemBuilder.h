@@ -46,6 +46,8 @@ private:
     YomkResponse plugins(YomkPkgPtr pkg);
     /* 代理 Manager /list_instances：[String pluginName] -> InstanceInfoArray 实例明细 */
     YomkResponse instances(YomkPkgPtr pkg);
+    /* 代理 Manager /plugin_by_instance：String instanceName -> PluginMeta 实例所属插件元数据 */
+    YomkResponse pluginByInstance(YomkPkgPtr pkg);
     /* 代理 Manager /force_unload：String pluginName -> ok 先销毁全部实例再卸载 */
     YomkResponse unload(YomkPkgPtr pkg);
     /* 代理 Manager /try_unload：String pluginName -> ok 有存活实例拒绝 */

@@ -23,6 +23,7 @@
 | `/YomkPluginSystemBuilder/builder` | 无 | 内省：`BuilderInfo` 最近构建信息（清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances） |
 | `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
 | `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
+| `/YomkPluginSystemBuilder/plugin_by_instance` | String instanceName | 内省：实例所属插件的元数据 `PluginMeta`（未知实例拒绝）（代理 Manager /plugin_by_instance） |
 | `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
 | `/YomkPluginSystemBuilder/try_unload` | String pluginName | 尝试卸载：有存活实例拒绝，插件保持加载（代理 Manager /try_unload） |
 
@@ -59,7 +60,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginLoader/plugin` | String pluginName | 内省：单插件元信息行 `pluginName abi:N alive:M` |
 | `/YomkPluginLoader/all` | 无 | 内省：全量 dump |
 
-### /YomkPluginManager（数据层，10 个接口）
+### /YomkPluginManager（数据层，11 个接口）
 
 | URL | 入参 | 说明 |
 |-----|------|------|
@@ -72,6 +73,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name/type/pluginName） |
 | `/YomkPluginManager/plugins` | 无 | 内省：插件列表 |
 | `/YomkPluginManager/plugin` | String pluginName | 内省：单插件元信息行 |
+| `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta` |
 | `/YomkPluginManager/all` | 无 | 内省：全量 dump（含实例明细） |
 
 所有功能函数均用三参 `YomkInstallFunc` 安装，服务器层 `/YomkServerInfo` 内省可见类型标记。
@@ -83,7 +85,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | 头文件 | 内容 |
 |--------|------|
 | `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
-| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 8 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_INSTANCES / INFO_INSTANCES_BY / VERSION） |
+| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 9 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_PLUGIN_BY / INFO_INSTANCES / INFO_INSTANCES_BY / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
 位于 `src/`、不随 install 分发的内部声明头（仅编译扩展内部可见）：
