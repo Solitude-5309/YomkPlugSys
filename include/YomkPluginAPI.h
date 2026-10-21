@@ -47,6 +47,10 @@
 /* 内省：实例明细列表，返回 InstanceInfoArray */
 #define YOMKPLUGIN_INFO_INSTANCES() YOMK_REQUEST("/YomkPluginSystemBuilder/instances", nullptr)
 
+/* 内省：指定插件下的实例明细列表（未知插件报错），返回 InstanceInfoArray */
+#define YOMKPLUGIN_INFO_INSTANCES_BY(pluginName) \
+    YOMK_REQUEST("/YomkPluginSystemBuilder/instances", YomkMkPtr(String, pluginName))
+
 /* ------------------------- 版本 ------------------------- */
 
 /*

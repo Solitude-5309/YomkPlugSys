@@ -216,6 +216,20 @@ int main()
     resp = YOMK_REQUEST("/YomkPluginSystemBuilder/plugins", YomkMkPtr(String, "TestPlugin"));
     check(isOk(resp), "M2 builder proxy /plugins filter hit");
 
+    /* ---------- M2.5 宏门面：INFO_INSTANCES_BY(pluginName) 与直调 filter 等价 ---------- */
+    resp = YOMKPLUGIN_INFO_INSTANCES_BY("TestPlugin");
+    bool macroHitTwo = false;
+    if (isOk(resp))
+    {
+        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        macroHitTwo = arr->d.size() == 2;
+    }
+    check(macroHitTwo, "M2 INFO_INSTANCES_BY filter hit returns 2 instances");
+    expectNo(
+        YOMKPLUGIN_INFO_INSTANCES_BY("NoSuch"),
+        "plugin not loaded: NoSuch",
+        "M2 INFO_INSTANCES_BY unknown plugin rejects");
+
     /* ---------- M3 内省行格式 ---------- */
     const std::string pluginLine =
         "TestPlugin [demo] v:0.0.1 author:Yomk path:" + fp("libTestPlugin.so") + " instances:2";

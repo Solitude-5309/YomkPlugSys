@@ -83,7 +83,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | 头文件 | 内容 |
 |--------|------|
 | `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
-| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 7 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_ALL / INFO_PLUGINS / INFO_INSTANCES / VERSION） |
+| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 8 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_ALL / INFO_PLUGINS / INFO_INSTANCES / INFO_INSTANCES_BY / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
 位于 `src/`、不随 install 分发的内部声明头（仅编译扩展内部可见）：
