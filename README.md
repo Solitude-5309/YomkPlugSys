@@ -42,7 +42,7 @@ ConnectionService@ConnectionService/lib/libConnectionService.so@ConnectionServic
 
 build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/YomkPluginManager/load` 加载（已加载幂等跳过）→ `/YomkPluginManager/create_instance` 按清单实例名创建。任一步失败返回 `eNo` 并指明清单行号。
 
-完整可构建示例见 `examples/workflow/`（两个示例插件模块 + 清单），配套演示程序见 `examples/ExampleYomkPluginSystemBuilder.cpp`（随扩展默认编译安装，运行可验证 workflow 构建）。
+完整可构建示例见 `examples/workflow/`（两个示例插件模块 + 清单），配套入门示例见 `examples/ExampleYomkPluginSystemBuilder.cpp`（随扩展默认编译安装，运行可逐步演示构建/内省/卸载全流程的接口输入与输出）。
 
 ## 内部服务接口（Builder 托管，扩展内部与白盒测试专用）
 

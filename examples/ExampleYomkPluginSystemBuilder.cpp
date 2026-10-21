@@ -1,40 +1,32 @@
+/*
+ * ExampleYomkPluginSystemBuilder：YomkPluginSystem 入门示例
+ *
+ * 面向首次使用的用户，用 examples/workflow 的两个示例插件串起最常用接口：
+ *   初始化 -> 构建插件工程 -> 内省（插件/实例/按插件过滤/全量聚合）-> 卸载
+ *
+ * 每一步注释标明【接口 / 输入 / 输出】，运行即可观察实际结果：
+ *   <安装路径>/bin/ExampleYomkPluginSystemBuilder
+ * 清单路径由 CMake 编译期注入（指向 examples/workflow/manifest.yomk）。
+ */
 #include <YomkPluginSystem/YomkPluginAPI.h>
 #include <YomkServer/YomkAPI.h>
 
+#include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
 
 using namespace yomk;
 
-static int g_pass = 0;
-static int g_fail = 0;
-
-static void check(bool ok, const std::string& desc)
+namespace
 {
-    if (ok)
-    {
-        g_pass++;
-        std::cout << "[PASS] " << desc << std::endl;
-    }
-    else
-    {
-        g_fail++;
-        std::cout << "[FAIL] " << desc << std::endl;
-    }
-}
-
-static bool isOk(const YomkResponse& r)
+bool isOk(const YomkResponse& r)
 {
     return r.m_status == YomkResponse::eOk;
 }
-static bool isNo(const YomkResponse& r)
-{
-    return r.m_status == YomkResponse::eNo;
-}
 
-static std::string respString(const YomkResponse& r)
+/* 解包 String 响应体（非 String 响应返回空串） */
+std::string respString(const YomkResponse& r)
 {
     if (r.m_data && r.m_data->name() == "String")
     {
@@ -47,174 +39,132 @@ static std::string respString(const YomkResponse& r)
     return "";
 }
 
-static int pluginCount()
+/* 打印分节标题 */
+void section(const std::string& title)
 {
-    YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (!isOk(resp))
-    {
-        return -1;
-    }
-    YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
-    if (!arr)
-    {
-        return -1;
-    }
-    return static_cast<int>(arr->d.size());
+    std::cout << "\n========== " << title << " ==========" << std::endl;
 }
 
-static int instanceCount()
+/* 请求失败统一提示并退出（入门示例遇错即停，便于定位问题） */
+void fail(const std::string& what, const YomkResponse& r)
 {
-    YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (!isOk(resp))
-    {
-        return -1;
-    }
-    YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
-    if (!arr)
-    {
-        return -1;
-    }
-    return static_cast<int>(arr->d.size());
+    std::cout << "[" << what << "] 失败: " << r.m_msg << std::endl;
+    std::exit(1);
 }
+}  // namespace
 
-static YomkResponse buildWorkflow(const std::string& workflowPath)
+int main()
 {
-    return YOMKPLUGIN_BUILD(workflowPath);
-}
-
-static void writeFile(const std::filesystem::path& p, const std::string& content)
-{
-    std::ofstream f(p);
-    f << content;
-}
-
-int main(int argc, char* argv[])
-{
+    /* ---------- 0. 初始化 ----------
+     * 接口：YOMK_INIT() + YOMK_NEW_SERVICE(服务类)
+     * 说明：只注册门面服务 YomkPluginSystemBuilder，机制层 Loader /
+     *       数据层 Manager 由其 init() 内部自动注册，用户无感知 */
     YOMK_INIT();
-    /* Loader/Manager 由 YomkPluginSystemBuilder::init 内部注册，用户仅注册门面服务 */
     YOMK_NEW_SERVICE(YomkPluginSystemBuilder);
 
-    namespace fs = std::filesystem;
     const std::string manifest = WORKFLOW_MANIFEST_PATH;
-    check(fs::is_regular_file(manifest), "locate workflow manifest (examples/workflow/manifest.yomk)");
 
-    /* ---------- 用例1：版本（YOMKPLUGIN_VERSION 一键查询并自动打印） ---------- */
+    /* ---------- 1. 查询扩展版本 ----------
+     * 接口：YOMKPLUGIN_VERSION()
+     * 输入：无
+     * 输出：无返回值，宏内部自动打印版本描述 */
+    section("1. 查询扩展版本 YOMKPLUGIN_VERSION()");
     YOMKPLUGIN_VERSION();
 
-    /* ---------- 用例2：清单路径不存在返回 eNo ---------- */
-    check(isNo(buildWorkflow("/nonexistent/no_such.yomk")), "build with nonexistent manifest returns eNo");
-
-    /* ---------- 用例3：正常构建（清单含格式标识、整行注释、空行） ----------
-     */
+    /* ---------- 2. 构建插件工程 ----------
+     * 接口：YOMKPLUGIN_BUILD(workflowPath)
+     * 输入：清单文件路径。清单格式：首行 #! yomk_plugin_system，
+     *       之后每行一个条目：实例名@动态库相对路径@实例文件相对路径
+     * 输出：String 汇总 "plugins:N instances:N"
+     * 副作用：逐条目加载插件 so 并创建实例（实例名取自清单条目） */
+    section("2. 构建插件工程 YOMKPLUGIN_BUILD(manifest)");
+    std::cout << "清单: " << manifest << std::endl;
+    YomkResponse resp = YOMKPLUGIN_BUILD(manifest);
+    if (!isOk(resp))
     {
-        YomkResponse resp = buildWorkflow(manifest);
-        check(isOk(resp) && respString(resp) == "plugins:2 instances:2", "build workflow ok (plugins:2 instances:2)");
+        fail("构建", resp);
     }
-    check(pluginCount() == 2, "plugin count == 2");
-    check(instanceCount() == 2, "instance count == 2");
+    std::cout << "输出: " << respString(resp) << std::endl;
 
-    /* 实例名/插件名与清单条目一致 */
+    /* ---------- 3. 查询插件列表 ----------
+     * 接口：YOMKPLUGIN_INFO_PLUGINS()
+     * 输入：无
+     * 输出：PluginMetaArray（插件元数据，来自插件导出的 yomk_plugin_meta） */
+    section("3. 插件列表 YOMKPLUGIN_INFO_PLUGINS()");
+    resp = YOMKPLUGIN_INFO_PLUGINS();
+    if (!isOk(resp))
     {
-        YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-        bool foundConn = false, foundWs = false;
-        if (isOk(resp))
-        {
-            YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
-            if (arr)
-            {
-                for (const auto& i : arr->d)
-                {
-                    if (i.pluginName == "ConnectionService" && i.instanceName == "ConnectionService" &&
-                        i.instanceType == "workflow")
-                    {
-                        foundConn = true;
-                    }
-                    if (i.pluginName == "WorkspaceService" && i.instanceName == "WorkspaceService" &&
-                        i.instanceType == "workflow")
-                    {
-                        foundWs = true;
-                    }
-                }
-            }
-        }
-        check(foundConn && foundWs, "instances named after manifest entries");
+        fail("查询插件", resp);
+    }
+    YomkUnPackPkg(resp.m_data, PluginMetaArray, metas);
+    for (const auto& m : metas->d)
+    {
+        std::cout << "  " << m.name << " [" << m.type << "] v:" << m.version << " author:" << m.author << std::endl;
     }
 
-    /* ---------- 用例4：内省 /all 聚合（构建 + 插件/实例 + 已加载库） ---------- */
+    /* ---------- 4. 查询实例列表 ----------
+     * 接口：YOMKPLUGIN_INFO_INSTANCES()
+     * 输入：无
+     * 输出：InstanceInfoArray（全量实例明细） */
+    section("4. 实例列表 YOMKPLUGIN_INFO_INSTANCES()");
+    resp = YOMKPLUGIN_INFO_INSTANCES();
+    if (!isOk(resp))
     {
-        std::string dump = respString(YOMKPLUGIN_INFO_ALL());
-        check(
-            dump.find("== build ==") != std::string::npos &&
-                dump.find("result:ok plugins:2 instances:2") != std::string::npos &&
-                dump.find("ConnectionService@ConnectionService/lib/"
-                          "libConnectionService.so@"
-                          "ConnectionService/instances/ConnectionService.txt") != std::string::npos &&
-                dump.find("WorkspaceService@WorkspaceService/lib/"
-                          "libWorkspaceService.so@"
-                          "WorkspaceService/instances/WorkspaceService.txt") != std::string::npos &&
-                dump.find("== plugins ==") != std::string::npos &&
-                dump.find("ConnectionService [workflow]") != std::string::npos &&
-                dump.find("WorkspaceService [workflow]") != std::string::npos &&
-                dump.find("== loaded plugins ==") != std::string::npos && dump.find("plugins:2") != std::string::npos,
-            "Builder /all aggregates build/plugins/loaded plugins");
+        fail("查询实例", resp);
+    }
+    YomkUnPackPkg(resp.m_data, InstanceInfoArray, instances);
+    for (const auto& i : instances->d)
+    {
+        std::cout << "  实例 " << i.instanceName << " <- 插件 " << i.pluginName << " [" << i.instanceType << "]"
+                  << std::endl;
     }
 
-    /* ---------- 用例5：重复构建（插件幂等跳过，重名实例按现有语义报错） ---------- */
+    /* ---------- 5. 按插件过滤实例 ----------
+     * 接口：YOMKPLUGIN_INFO_INSTANCES_BY(pluginName)
+     * 输入：pluginName（未知插件返回 eNo 并携带原因）
+     * 输出：InstanceInfoArray（仅该插件下的实例） */
+    section("5. 按插件过滤实例 YOMKPLUGIN_INFO_INSTANCES_BY(\"ConnectionService\")");
+    resp = YOMKPLUGIN_INFO_INSTANCES_BY("ConnectionService");
+    if (!isOk(resp))
     {
-        YomkResponse resp = buildWorkflow(manifest);
-        check(isNo(resp), "rebuild returns eNo (duplicate instances)");
-        check(pluginCount() == 2 && instanceCount() == 2, "rebuild keeps tables unchanged");
+        fail("过滤实例", resp);
+    }
+    YomkUnPackPkg(resp.m_data, InstanceInfoArray, filtered);
+    for (const auto& i : filtered->d)
+    {
+        std::cout << "  实例 " << i.instanceName << " <- 插件 " << i.pluginName << std::endl;
     }
 
-    /* ---------- 用例6：异常清单（临时目录构造） ---------- */
+    /* ---------- 6. 全量内省 ----------
+     * 接口：YOMKPLUGIN_INFO_ALL()
+     * 输入：无
+     * 输出：String 三段聚合 dump（== build == 最近构建状态
+     *       + == plugins == 插件/实例 + == loaded plugins == 已加载插件） */
+    section("6. 全量内省 YOMKPLUGIN_INFO_ALL()");
+    std::cout << respString(YOMKPLUGIN_INFO_ALL()) << std::endl;
+
+    /* ---------- 7. 卸载插件（两种语义对比） ----------
+     * 接口：YOMKPLUGIN_TRY_UNLOAD(pluginName)  尝试卸载：有存活实例则拒绝（引用保护）
+     * 接口：YOMKPLUGIN_UNLOAD(pluginName)      强制卸载：先销毁全部实例再卸载
+     * 输入：pluginName
+     * 输出：String(ok/msg) */
+    section("7. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
+    resp = YOMKPLUGIN_TRY_UNLOAD("ConnectionService");
+    std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.m_msg) << std::endl;
+    resp = YOMKPLUGIN_UNLOAD("ConnectionService");
+    if (!isOk(resp))
     {
-        fs::path tmp = fs::temp_directory_path() / "yomk_builder_test";
-        fs::remove_all(tmp);
-        fs::create_directories(tmp / "moduleA" / "instances");
-        writeFile(tmp / "moduleA" / "instances" / "a.txt", "name: a\n");
-
-        /* 缺失首行格式标识（条目本身合法，仅标识缺失） */
-        writeFile(tmp / "case_marker.yomk", "inst-a@moduleA/libmoduleA.so@moduleA/instances/a.txt\n");
-        check(isNo(buildWorkflow((tmp / "case_marker.yomk").string())), "manifest without format marker returns eNo");
-
-        /* 段数不足 */
-        writeFile(tmp / "case_segment.yomk", "#! yomk_plugin_system\nonly.two\n");
-        check(
-            isNo(buildWorkflow((tmp / "case_segment.yomk").string())), "manifest with wrong segment count returns eNo");
-
-        /* 绝对路径拒绝 */
-        writeFile(tmp / "case_abs.yomk", "#! yomk_plugin_system\ninst-a@/abs/lib.so@a.txt\n");
-        check(isNo(buildWorkflow((tmp / "case_abs.yomk").string())), "manifest with absolute lib path returns eNo");
-
-        /* 实例文件缺失 */
-        writeFile(
-            tmp / "case_instance.yomk",
-            "#! "
-            "yomk_plugin_system\ninst-a@moduleA/libmoduleA.so@moduleA/"
-            "instances/missing.txt\n");
-        check(
-            isNo(buildWorkflow((tmp / "case_instance.yomk").string())),
-            "manifest with missing instance file returns eNo");
-
-        /* 缺 so */
-        writeFile(
-            tmp / "case_so.yomk",
-            "#! "
-            "yomk_plugin_system\ninst-a@moduleA/libmoduleA.so@moduleA/"
-            "instances/a.txt\n");
-        check(isNo(buildWorkflow((tmp / "case_so.yomk").string())), "manifest with missing plugin lib returns eNo");
-
-        fs::remove_all(tmp);
+        fail("卸载 ConnectionService", resp);
     }
+    std::cout << "UNLOAD ConnectionService: ok" << std::endl;
+    resp = YOMKPLUGIN_UNLOAD("WorkspaceService");
+    if (!isOk(resp))
+    {
+        fail("卸载 WorkspaceService", resp);
+    }
+    std::cout << "UNLOAD WorkspaceService: ok" << std::endl;
 
-    /* ---------- 清理 ---------- */
-    check(isOk(YOMKPLUGIN_UNLOAD("ConnectionService")), "force_unload ConnectionService");
-    check(isOk(YOMKPLUGIN_UNLOAD("WorkspaceService")), "force_unload WorkspaceService");
-    check(pluginCount() == 0 && instanceCount() == 0, "tables empty after cleanup");
-
-    std::cout << "\n========== Test Summary ==========" << std::endl;
-    std::cout << "PASS: " << g_pass << std::endl;
-    std::cout << "FAIL: " << g_fail << std::endl;
-
-    return g_fail > 0 ? 1 : 0;
+    section("示例结束");
+    std::cout << "全部接口演示完毕，系统已复位（0 插件 0 实例）。" << std::endl;
+    return 0;
 }
