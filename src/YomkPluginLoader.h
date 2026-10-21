@@ -32,8 +32,8 @@ using YomkPluginDeleteInstanceFunc = void (*)(YomkPluginInterface* instance);
 /*
  * YomkPluginLoader：插件加载机制层
  * 纯加载机制，不登记插件、不拥有实例、不管命名。仅持有两种机制状态：
- *  - 句柄表：libId -> { dlopen 句柄, 三个导出函数指针 }（dlclose 的唯一凭据）
- *  - 实例存活表：libId -> weak_ptr 列表（仅判活不延长生命周期，作用等同引用计数保护）
+ *  - 句柄表：pluginName -> { dlopen 句柄, 三个导出函数指针 }（dlclose 的唯一凭据）
+ *  - 实例存活表：pluginName -> weak_ptr 列表（仅判活不延长生命周期，作用等同引用计数保护）
  */
 class YomkPluginLoader : public YomkService
 {
@@ -52,11 +52,11 @@ private:
     };
 
     /* 请求接口 */
-    /* PluginPath -> String libId */
+    /* PluginPath -> String pluginName */
     YomkResponse loadLib(YomkPkgPtr pkg);
-    /* String libId -> ok（有存活实例拒绝） */
+    /* String pluginName -> ok（有存活实例拒绝） */
     YomkResponse unloadLib(YomkPkgPtr pkg);
-    /* String libId -> PluginMeta */
+    /* String pluginName -> PluginMeta */
     YomkResponse meta(YomkPkgPtr pkg);
     /* CreateReq -> PluginInstance */
     YomkResponse create(YomkPkgPtr pkg);
@@ -65,14 +65,14 @@ private:
     /* 内省接口 */
     /* -> StringArray */
     YomkResponse infoLibs(YomkPkgPtr pkg);
-    /* String libId -> String 元信息行 */
+    /* String pluginName -> String 元信息行 */
     YomkResponse infoLib(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
     /* 内部辅助（调用方已持锁） */
-    void purgeDead(const std::string& libId);
-    int aliveCount(const std::string& libId);
-    std::string libInfoLine(const std::string& libId);
+    void purgeDead(const std::string& pluginName);
+    int aliveCount(const std::string& pluginName);
+    std::string libInfoLine(const std::string& pluginName);
     std::mutex m_mutex;
     /* 句柄表 */
     std::map<std::string, LoadedLib> m_libs;

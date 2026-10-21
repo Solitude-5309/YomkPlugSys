@@ -130,7 +130,7 @@ static std::vector<PluginMeta> listPlugins()
 static YomkResponse createInst(const std::string& name)
 {
     CreateReq req;
-    req.libId = "TestPlugin";
+    req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceFile = fp("inst.txt");
     return YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, req));
@@ -140,7 +140,7 @@ static YomkResponse createInst(const std::string& name)
 static YomkResponse destroyInst(const std::string& name)
 {
     DestroyReq req;
-    req.libId = "TestPlugin";
+    req.pluginName = "TestPlugin";
     req.instanceName = name;
     return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
 }

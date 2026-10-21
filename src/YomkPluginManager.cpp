@@ -32,18 +32,18 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         {
             return resp;
         }
-        YomkUnPackPkg(resp.m_data, String, libIdPkg);
-        if (!libIdPkg)
+        YomkUnPackPkg(resp.m_data, String, pluginNamePkg);
+        if (!pluginNamePkg)
         {
             return {YomkResponse::eNo, "load: invalid loader response"};
         }
-        const std::string libId = libIdPkg->d;
+        const std::string pluginName = pluginNamePkg->d;
 
         /* 锁外请求 meta（Loader 不缓存，实时调 meta 导出函数） */
-        resp = YOMK_REQUEST("/YomkPluginLoader/meta", YomkMkPtr(String, libId));
+        resp = YOMK_REQUEST("/YomkPluginLoader/meta", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
-            YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, libId));
+            YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
             return resp;
         }
         YomkUnPackPkg(resp.m_data, PluginMeta, metaPkg);
@@ -61,15 +61,15 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         rec.libPath = data->d.path;
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_plugins.count(libId))
+        if (m_plugins.count(pluginName))
         {
             /* 并发竞争兜底：正常路径 Loader 已拒绝重名 */
-            return {YomkResponse::eNo, "plugin already loaded: " + libId};
+            return {YomkResponse::eNo, "plugin already loaded: " + pluginName};
         }
-        m_plugins[libId] = rec;
-        /* 保证实例组存在，不变量：实例表外层 libId 必在插件表中 */
-        m_instances[libId];
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, libId)};
+        m_plugins[pluginName] = rec;
+        /* 保证实例组存在，不变量：实例表外层 pluginName 必在插件表中 */
+        m_instances[pluginName];
+        return {YomkResponse::eOk, "ok", YomkMkPtr(String, pluginName)};
     }
     catch (const std::exception& e)
     {
@@ -86,24 +86,24 @@ YomkResponse YomkPluginManager::tryUnload(YomkPkgPtr pkg)
     try
     {
         YomkUnPackPkgResponse(pkg, String, data);
-        const std::string libId = data->d;
+        const std::string pluginName = data->d;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            if (!m_plugins.count(libId))
+            if (!m_plugins.count(pluginName))
             {
-                return {YomkResponse::eNo, "plugin not loaded: " + libId};
+                return {YomkResponse::eNo, "plugin not loaded: " + pluginName};
             }
         }
         /* 尝试卸载：委托 Loader /unloadLib 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者） */
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, libId));
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;
         }
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_instances.erase(libId);
-        m_plugins.erase(libId);
-        YOMK_INFO_TAG("YomkPluginManager", "try_unload: ", libId, " ok");
+        m_instances.erase(pluginName);
+        m_plugins.erase(pluginName);
+        YOMK_INFO_TAG("YomkPluginManager", "try_unload: ", pluginName, " ok");
         return {YomkResponse::eOk, "ok", YomkMkPtr(String, "ok")};
     }
     catch (const std::exception& e)
@@ -121,15 +121,15 @@ YomkResponse YomkPluginManager::forceUnload(YomkPkgPtr pkg)
     try
     {
         YomkUnPackPkgResponse(pkg, String, data);
-        const std::string libId = data->d;
+        const std::string pluginName = data->d;
         std::map<std::string, std::shared_ptr<YomkPluginInterface>> group;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            if (!m_plugins.count(libId))
+            if (!m_plugins.count(pluginName))
             {
-                return {YomkResponse::eNo, "plugin not loaded: " + libId};
+                return {YomkResponse::eNo, "plugin not loaded: " + pluginName};
             }
-            auto it = m_instances.find(libId);
+            auto it = m_instances.find(pluginName);
             if (it != m_instances.end())
             {
                 group = std::move(it->second);
@@ -139,14 +139,14 @@ YomkResponse YomkPluginManager::forceUnload(YomkPkgPtr pkg)
         /* 锁外析构全部实例（触发 delete_instance，代码在 so 中，必须先于 dlclose） */
         group.clear();
 
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, libId));
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/unloadLib", YomkMkPtr(String, pluginName));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;
         }
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_plugins.erase(libId);
-        YOMK_INFO_TAG("YomkPluginManager", "force_unload: ", libId, " ok");
+        m_plugins.erase(pluginName);
+        YOMK_INFO_TAG("YomkPluginManager", "force_unload: ", pluginName, " ok");
         return {YomkResponse::eOk, "ok", YomkMkPtr(String, "ok")};
     }
     catch (const std::exception& e)
@@ -170,11 +170,11 @@ YomkResponse YomkPluginManager::createInstance(YomkPkgPtr pkg)
         }
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            if (!m_plugins.count(req->d.libId))
+            if (!m_plugins.count(req->d.pluginName))
             {
-                return {YomkResponse::eNo, "plugin not loaded: " + req->d.libId};
+                return {YomkResponse::eNo, "plugin not loaded: " + req->d.pluginName};
             }
-            auto it = m_instances.find(req->d.libId);
+            auto it = m_instances.find(req->d.pluginName);
             if (it != m_instances.end() && it->second.count(req->d.instanceName))
             {
                 return {YomkResponse::eNo, "duplicate instance name: " + req->d.instanceName};
@@ -199,12 +199,12 @@ YomkResponse YomkPluginManager::createInstance(YomkPkgPtr pkg)
         }
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_plugins.count(req->d.libId))
+        if (!m_plugins.count(req->d.pluginName))
         {
             /* 创建期间插件被卸载，inst 随响应销毁 */
-            return {YomkResponse::eNo, "plugin unloaded during create: " + req->d.libId};
+            return {YomkResponse::eNo, "plugin unloaded during create: " + req->d.pluginName};
         }
-        if (!m_instances[req->d.libId].emplace(req->d.instanceName, inst).second)
+        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, inst).second)
         {
             /* 并发兜底：创建期间同名实例已被登记 */
             return {YomkResponse::eNo, "duplicate instance name: " + req->d.instanceName};
@@ -229,7 +229,7 @@ YomkResponse YomkPluginManager::destroyInstance(YomkPkgPtr pkg)
         std::shared_ptr<YomkPluginInterface> inst;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            auto it = m_instances.find(req->d.libId);
+            auto it = m_instances.find(req->d.pluginName);
             if (it != m_instances.end())
             {
                 auto jt = it->second.find(req->d.instanceName);
@@ -242,7 +242,7 @@ YomkResponse YomkPluginManager::destroyInstance(YomkPkgPtr pkg)
         }
         if (!inst)
         {
-            return {YomkResponse::eNo, "instance not found: " + req->d.libId + "/" + req->d.instanceName};
+            return {YomkResponse::eNo, "instance not found: " + req->d.pluginName + "/" + req->d.instanceName};
         }
         /* 锁外 reset，自动触发 delete_instance */
         inst.reset();
@@ -262,7 +262,7 @@ YomkResponse YomkPluginManager::list(YomkPkgPtr pkg)
 {
     try
     {
-        /* 可选入参：指定 libId 只返回单个插件 */
+        /* 可选入参：指定 pluginName 只返回单个插件 */
         std::string filter;
         if (pkg)
         {
@@ -311,7 +311,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
 {
     try
     {
-        /* 可选入参：指定 libId 只返回该插件的实例 */
+        /* 可选入参：指定 pluginName 只返回该插件的实例 */
         std::string filter;
         if (pkg)
         {
@@ -336,7 +336,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                 for (const auto& instKv : it->second)
                 {
                     InstanceInfo info;
-                    info.libId = filter;
+                    info.pluginName = filter;
                     info.instanceName = instKv.first;
                     info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
                     infos.push_back(info);
@@ -350,7 +350,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                 for (const auto& instKv : kv.second)
                 {
                     InstanceInfo info;
-                    info.libId = kv.first;
+                    info.pluginName = kv.first;
                     info.instanceName = instKv.first;
                     info.instanceType = instKv.second->instanceType() ? instKv.second->instanceType() : "";
                     infos.push_back(info);
@@ -454,15 +454,15 @@ YomkResponse YomkPluginManager::infoAll(YomkPkgPtr pkg)
     }
 }
 
-std::string YomkPluginManager::pluginInfoLine(const std::string& libId, const PluginRecord& rec) const
+std::string YomkPluginManager::pluginInfoLine(const std::string& pluginName, const PluginRecord& rec) const
 {
     size_t instanceCount = 0;
-    auto it = m_instances.find(libId);
+    auto it = m_instances.find(pluginName);
     if (it != m_instances.end())
     {
         instanceCount = it->second.size();
     }
-    return libId + " [" + rec.type + "] v:" + rec.version + " author:" + rec.author + " path:" + rec.libPath +
+    return pluginName + " [" + rec.type + "] v:" + rec.version + " author:" + rec.author + " path:" + rec.libPath +
            " instances:" + std::to_string(instanceCount);
 }
 

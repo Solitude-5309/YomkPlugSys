@@ -149,7 +149,7 @@ int main()
 
     /* ---------- M1 create/destroy 入参边界 ---------- */
     CreateReq emptyName;
-    emptyName.libId = "TestPlugin";
+    emptyName.pluginName = "TestPlugin";
     emptyName.instanceName = "";
     emptyName.instanceFile = fp("inst.txt");
     expectNo(
@@ -157,21 +157,21 @@ int main()
         "instance name required",
         "M1 create with empty name rejects");
     CreateReq emptyLib;
-    emptyLib.libId = "";
+    emptyLib.pluginName = "";
     emptyLib.instanceName = "e-x";
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, emptyLib)),
         "plugin not loaded: ",
-        "M1 create with empty libId rejects");
+        "M1 create with empty pluginName rejects");
     CreateReq unknownLib;
-    unknownLib.libId = "NoSuch";
+    unknownLib.pluginName = "NoSuch";
     unknownLib.instanceName = "e-x";
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, unknownLib)),
         "plugin not loaded: NoSuch",
-        "M1 create with unknown libId rejects");
+        "M1 create with unknown pluginName rejects");
     DestroyReq emptyDestroy;
-    emptyDestroy.libId = "";
+    emptyDestroy.pluginName = "";
     emptyDestroy.instanceName = "";
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, emptyDestroy)),
@@ -279,7 +279,7 @@ int main()
     /* ---------- M5 超长输入边界 ---------- */
     const std::string longName(4096, 'x');
     CreateReq longNameReq;
-    longNameReq.libId = "TestPlugin";
+    longNameReq.pluginName = "TestPlugin";
     longNameReq.instanceName = longName;
     longNameReq.instanceFile = fp("inst.txt");
     check(
@@ -295,7 +295,7 @@ int main()
     }
     check(longVisible, "M5 4096-char name visible in list");
     DestroyReq dn;
-    dn.libId = "TestPlugin";
+    dn.pluginName = "TestPlugin";
     dn.instanceName = longName;
     check(
         isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dn))),
@@ -303,14 +303,14 @@ int main()
 
     const std::string longFile = fp(std::string(8000, 'f') + ".txt");
     CreateReq longFileReq;
-    longFileReq.libId = "TestPlugin";
+    longFileReq.pluginName = "TestPlugin";
     longFileReq.instanceName = "e-longfile";
     longFileReq.instanceFile = longFile;
     check(
         isOk(YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, longFileReq))),
         "M5 create with ~8KB instance file path ok");
     DestroyReq df;
-    df.libId = "TestPlugin";
+    df.pluginName = "TestPlugin";
     df.instanceName = "e-longfile";
     check(
         isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, df))),

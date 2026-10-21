@@ -154,8 +154,8 @@ int main()
     std::vector<InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
     check(
-        !insts.empty() && insts[0].libId == "TestPlugin" && insts[0].instanceName == "s1-i1",
-        "S1 instance libId and name");
+        !insts.empty() && insts[0].pluginName == "TestPlugin" && insts[0].instanceName == "s1-i1",
+        "S1 instance pluginName and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
 
     std::vector<PluginMeta> metas = listPlugins();
@@ -191,7 +191,7 @@ int main()
 
     /* ---------- S3 create 重名与 destroy 重建（白盒 URL） ---------- */
     CreateReq dupReq;
-    dupReq.libId = "TestPlugin";
+    dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
     dupReq.instanceFile = fp("inst.txt");
     expectNo(
@@ -200,7 +200,7 @@ int main()
         "S3 direct create duplicate rejects");
 
     DestroyReq dreq;
-    dreq.libId = "TestPlugin";
+    dreq.pluginName = "TestPlugin";
     dreq.instanceName = "s2-i1";
     check(
         isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq))), "S3 destroy s2-i1 ok");
@@ -213,7 +213,7 @@ int main()
         "instance not found: TestPlugin/s1-i1",
         "S3 destroy nonexistent rejects");
     CreateReq reReq;
-    reReq.libId = "TestPlugin";
+    reReq.pluginName = "TestPlugin";
     reReq.instanceName = "s1-i1";
     reReq.instanceFile = fp("inst.txt");
     check(

@@ -196,11 +196,11 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             }
 
             /* 加载插件（已加载则复用，幂等） */
-            std::string libId;
+            std::string pluginName;
             auto it = pathToLib.find(soPath);
             if (it != pathToLib.end())
             {
-                libId = it->second;
+                pluginName = it->second;
             }
             else
             {
@@ -220,14 +220,14 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
                     recordBuild(req->d.workflowPath, msg, entryLines);
                     return {YomkResponse::eNo, msg};
                 }
-                libId = idPkg->d;
-                pathToLib[soPath] = libId;
+                pluginName = idPkg->d;
+                pathToLib[soPath] = pluginName;
             }
-            loadedLibs.insert(libId);
+            loadedLibs.insert(pluginName);
 
             /* 创建实例：实例文件路径作为 instanceFile 透传，不读取内容 */
             CreateReq createReq;
-            createReq.libId = libId;
+            createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
             createReq.instanceFile = instancePath;
             resp = YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, createReq));
@@ -239,7 +239,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             }
             ++createdInstances;
             entryLines.push_back(
-                entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceFile + " -> " + libId + " ok");
+                entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceFile + " -> " + pluginName + " ok");
         }
 
         std::string summary =

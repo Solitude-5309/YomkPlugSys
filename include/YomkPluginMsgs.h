@@ -33,7 +33,7 @@ struct PluginMeta
 
 struct CreateReq
 {
-    std::string libId;
+    std::string pluginName;
     /* 调用方指定的实例名，同一插件内唯一 */
     std::string instanceName;
     /* 透传参数：允许为空，插件系统不读不解析 */
@@ -42,7 +42,7 @@ struct CreateReq
 
 struct DestroyReq
 {
-    std::string libId;
+    std::string pluginName;
     std::string instanceName;
 };
 
@@ -54,7 +54,7 @@ struct BuildReq
 
 struct InstanceInfo
 {
-    std::string libId;
+    std::string pluginName;
     /* 系统唯一主键（同一插件内唯一） */
     std::string instanceName;
     std::string instanceType;

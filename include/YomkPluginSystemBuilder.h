@@ -43,13 +43,13 @@ private:
     /* -> String 三段聚合：== build == 最近构建状态 + == plugins == 插件/实例
      * + == libs == 已加载库（后两段转发 Manager/Loader /all，段失败降级） */
     YomkResponse infoAll(YomkPkgPtr pkg);
-    /* 代理 Manager /list：[String libId] -> PluginMetaArray 插件列表 */
+    /* 代理 Manager /list：[String pluginName] -> PluginMetaArray 插件列表 */
     YomkResponse plugins(YomkPkgPtr pkg);
-    /* 代理 Manager /list_instances：[String libId] -> InstanceInfoArray 实例明细 */
+    /* 代理 Manager /list_instances：[String pluginName] -> InstanceInfoArray 实例明细 */
     YomkResponse instances(YomkPkgPtr pkg);
-    /* 代理 Manager /force_unload：String libId -> ok 先销毁全部实例再卸载 */
+    /* 代理 Manager /force_unload：String pluginName -> ok 先销毁全部实例再卸载 */
     YomkResponse unload(YomkPkgPtr pkg);
-    /* 代理 Manager /try_unload：String libId -> ok 有存活实例拒绝 */
+    /* 代理 Manager /try_unload：String pluginName -> ok 有存活实例拒绝 */
     YomkResponse tryUnload(YomkPkgPtr pkg);
 
     /* 清单解析：首行须为格式标识 #! yomk_plugin_system；# 注释忽略（整行/行内），

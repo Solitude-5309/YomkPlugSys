@@ -124,12 +124,12 @@ int main(int argc, char* argv[])
             {
                 for (const auto& i : arr->d)
                 {
-                    if (i.libId == "ConnectionService" && i.instanceName == "ConnectionService" &&
+                    if (i.pluginName == "ConnectionService" && i.instanceName == "ConnectionService" &&
                         i.instanceType == "workflow")
                     {
                         foundConn = true;
                     }
-                    if (i.libId == "WorkspaceService" && i.instanceName == "WorkspaceService" &&
+                    if (i.pluginName == "WorkspaceService" && i.instanceName == "WorkspaceService" &&
                         i.instanceType == "workflow")
                     {
                         foundWs = true;

@@ -167,7 +167,7 @@ int main()
     writeManifest("r1.yomk", "#! yomk_plugin_system\nr-a@libTestPlugin.so@inst.txt\nr-b@libTestPlugin.so@inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("r1.yomk")), "plugins:1 instances:2", "R1 build two instances baseline");
 
-    /* 同路径重复 load：Manager /load 透传 Loader 按 libId 判重 */
+    /* 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重 */
     YomkPkgPtr samePath = YomkMkPtr(PluginPath, PluginPath{fp("libTestPlugin.so")});
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/load", samePath),
@@ -192,7 +192,7 @@ int main()
 
     /* ---------- R2 alive 计数时序：destroy 后经 purgeDead 递减 ---------- */
     DestroyReq dreq;
-    dreq.libId = "TestPlugin";
+    dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
     check(isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq))), "R2 destroy r-b ok");
     check(libLine().find(" alive:1") != std::string::npos, "R2 /lib alive:1 after destroy r-b");

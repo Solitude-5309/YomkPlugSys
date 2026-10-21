@@ -33,35 +33,35 @@ private:
     };
 
     /* 请求接口 */
-    /* PluginPath -> String libId */
+    /* PluginPath -> String pluginName */
     YomkResponse load(YomkPkgPtr pkg);
-    /* String libId -> ok（有存活实例失败） */
+    /* String pluginName -> ok（有存活实例失败） */
     YomkResponse tryUnload(YomkPkgPtr pkg);
-    /* String libId -> ok（直接删所有实例） */
+    /* String pluginName -> ok（直接删所有实例） */
     YomkResponse forceUnload(YomkPkgPtr pkg);
     /* CreateReq -> InstanceInfo */
     YomkResponse createInstance(YomkPkgPtr pkg);
     /* DestroyReq -> ok */
     YomkResponse destroyInstance(YomkPkgPtr pkg);
-    /* [String libId] -> PluginMetaArray */
+    /* [String pluginName] -> PluginMetaArray */
     YomkResponse list(YomkPkgPtr pkg);
-    /* [String libId] -> InstanceInfoArray */
+    /* [String pluginName] -> InstanceInfoArray */
     YomkResponse listInstances(YomkPkgPtr pkg);
     /* 内省接口 */
     /* -> StringArray */
     YomkResponse infoPlugins(YomkPkgPtr pkg);
-    /* String libId -> String 元信息行 */
+    /* String pluginName -> String 元信息行 */
     YomkResponse infoPlugin(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
 
     /* 内省行格式化（调用方已持锁） */
-    std::string pluginInfoLine(const std::string& libId, const PluginRecord& rec) const;
+    std::string pluginInfoLine(const std::string& pluginName, const PluginRecord& rec) const;
     std::string instanceInfoLine(
         const std::string& instanceName, const std::shared_ptr<YomkPluginInterface>& inst) const;
 
     std::mutex m_mutex;
-    /* 插件表：扁平 map，libId = meta.name */
+    /* 插件表：扁平 map，pluginName = meta.name */
     std::map<std::string, PluginRecord> m_plugins;
     /* 实例表：按插件分组的二级 map，Manager 是实例生命周期的唯一所有者 */
     std::map<std::string, std::map<std::string, std::shared_ptr<YomkPluginInterface>>> m_instances;

@@ -21,10 +21,10 @@
 | `/YomkPluginSystemBuilder/build` | `BuildReq{workflowPath}` | 解析清单并组装插件系统，返回 `String` 汇总 `plugins:N instances:M` |
 | `/YomkPluginSystemBuilder/version` | 无 | 返回 `String` 扩展版本描述（值由 CMake 编译期注入，来源 `project(VERSION)`） |
 | `/YomkPluginSystemBuilder/all` | 无 | 内省：三段聚合 `== build ==` 构建状态 + `== plugins ==` 插件/实例 + `== libs ==` 已加载库；段转发失败降级 `[segment error]` 行，整体不失败 |
-| `/YomkPluginSystemBuilder/plugins` | 无 / String libId | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
-| `/YomkPluginSystemBuilder/instances` | 无 / String libId | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
-| `/YomkPluginSystemBuilder/unload` | String libId | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
-| `/YomkPluginSystemBuilder/try_unload` | String libId | 尝试卸载：有存活实例拒绝，插件保持加载（代理 Manager /try_unload） |
+| `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
+| `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
+| `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
+| `/YomkPluginSystemBuilder/try_unload` | String pluginName | 尝试卸载：有存活实例拒绝，插件保持加载（代理 Manager /try_unload） |
 
 清单文件（如 `examples/workflow/manifest.yomk`）首行必须为格式标识 `#! yomk_plugin_system`（`.yomk` 后缀文件因用处不同格式各异，以首行标识区分；缺失、不在首行或不匹配则解析失败并报错），其后每行一个条目，格式为 `实例名@动态库相对路径@实例配置文件相对路径`（`@` 分隔三段，后两段均为相对清单所在目录的完整路径）：
 
@@ -50,13 +50,13 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 | URL | 入参 | 说明 |
 |-----|------|------|
-| `/YomkPluginLoader/loadLib` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 libId（= meta.name） |
-| `/YomkPluginLoader/unloadLib` | String libId | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
-| `/YomkPluginLoader/meta` | String libId | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
-| `/YomkPluginLoader/create` | `CreateReq{libId, instanceName, instanceFile}` | 调插件工厂创建实例，shared_ptr 绑定 delete_instance 为 deleter |
+| `/YomkPluginLoader/loadLib` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
+| `/YomkPluginLoader/unloadLib` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
+| `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
+| `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例，shared_ptr 绑定 delete_instance 为 deleter |
 | `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |
 | `/YomkPluginLoader/libs` | 无 | 内省：已加载库列表 |
-| `/YomkPluginLoader/lib` | String libId | 内省：单库元信息行 `libId abi:N alive:M` |
+| `/YomkPluginLoader/lib` | String pluginName | 内省：单库元信息行 `pluginName abi:N alive:M` |
 | `/YomkPluginLoader/all` | 无 | 内省：全量 dump |
 
 ### /YomkPluginManager（数据层，10 个接口）
@@ -64,14 +64,14 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | URL | 入参 | 说明 |
 |-----|------|------|
 | `/YomkPluginManager/load` | `PluginPath{path}` | 加载并登记插件表；仅加载与登记，不自动建实例 |
-| `/YomkPluginManager/try_unload` | String libId | 尝试卸载：有存活实例（含 Manager 之外的持有者）返回 eNo，插件保持加载 |
-| `/YomkPluginManager/force_unload` | String libId | 强制卸载：先删除该插件全部实例，再卸载 |
-| `/YomkPluginManager/create_instance` | `CreateReq{libId, instanceName, instanceFile}` | 按 instanceName 创建并登记实例（同插件内重名返回 eNo） |
-| `/YomkPluginManager/destroy_instance` | `DestroyReq{libId, instanceName}` | 销毁指定实例 |
-| `/YomkPluginManager/list` | 无 / String libId | 插件表 `PluginMetaArray` |
-| `/YomkPluginManager/list_instances` | 无 / String libId | 实例表 `InstanceInfoArray`（id/name/type/libId） |
+| `/YomkPluginManager/try_unload` | String pluginName | 尝试卸载：有存活实例（含 Manager 之外的持有者）返回 eNo，插件保持加载 |
+| `/YomkPluginManager/force_unload` | String pluginName | 强制卸载：先删除该插件全部实例，再卸载 |
+| `/YomkPluginManager/create_instance` | `CreateReq{pluginName, instanceName, instanceFile}` | 按 instanceName 创建并登记实例（同插件内重名返回 eNo） |
+| `/YomkPluginManager/destroy_instance` | `DestroyReq{pluginName, instanceName}` | 销毁指定实例 |
+| `/YomkPluginManager/list` | 无 / String pluginName | 插件表 `PluginMetaArray` |
+| `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name/type/pluginName） |
 | `/YomkPluginManager/plugins` | 无 | 内省：插件列表 |
-| `/YomkPluginManager/plugin` | String libId | 内省：单插件元信息行 |
+| `/YomkPluginManager/plugin` | String pluginName | 内省：单插件元信息行 |
 | `/YomkPluginManager/all` | 无 | 内省：全量 dump（含实例明细） |
 
 所有功能函数均用三参 `YomkInstallFunc` 安装，服务器层 `/YomkServerInfo` 内省可见类型标记。
