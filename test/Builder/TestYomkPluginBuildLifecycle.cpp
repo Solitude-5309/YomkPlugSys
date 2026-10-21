@@ -166,7 +166,7 @@ int main()
     check(
         !metas.empty() && metas[0].author == "Yomk" && metas[0].abi_version == YOMKPLUGIN_ABI_VERSION,
         "S1 plugin meta author and abi version");
-    check(!metas.empty() && metas[0].libPath == fp("libTestPlugin.so"), "S1 plugin meta libPath");
+    check(!metas.empty() && metas[0].path == fp("libTestPlugin.so"), "S1 plugin meta path");
 
     YomkResponse resp = YOMK_REQUEST("/YomkPluginSystemBuilder/plugins", YomkMkPtr(String, "TestPlugin"));
     bool filtered = false;

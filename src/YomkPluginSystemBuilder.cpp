@@ -165,7 +165,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             }
             for (const auto& m : arr->d)
             {
-                pathToPlugin[m.libPath] = m.name;
+                pathToPlugin[m.path] = m.name;
             }
         }
 

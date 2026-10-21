@@ -58,7 +58,7 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         rec.version = metaPkg->d.version;
         rec.author = metaPkg->d.author;
         rec.description = metaPkg->d.description;
-        rec.libPath = data->d.path;
+        rec.path = data->d.path;
 
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_plugins.count(pluginName))
@@ -288,7 +288,7 @@ YomkResponse YomkPluginManager::list(YomkPkgPtr pkg)
             m.version = kv.second.version;
             m.author = kv.second.author;
             m.description = kv.second.description;
-            m.libPath = kv.second.libPath;
+            m.path = kv.second.path;
             metas.push_back(m);
         }
         if (!filter.empty() && metas.empty())
@@ -462,7 +462,7 @@ std::string YomkPluginManager::pluginInfoLine(const std::string& pluginName, con
     {
         instanceCount = it->second.size();
     }
-    return pluginName + " [" + rec.type + "] v:" + rec.version + " author:" + rec.author + " path:" + rec.libPath +
+    return pluginName + " [" + rec.type + "] v:" + rec.version + " author:" + rec.author + " path:" + rec.path +
            " instances:" + std::to_string(instanceCount);
 }
 

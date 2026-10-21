@@ -29,7 +29,7 @@ private:
         std::string author;
         std::string description;
         /* so 文件路径 */
-        std::string libPath;
+        std::string path;
     };
 
     /* 请求接口 */

@@ -46,9 +46,9 @@ void section(const std::string& title)
 }
 
 /* 请求失败统一提示并退出（入门示例遇错即停，便于定位问题） */
-void fail(const std::string& what, const YomkResponse& r)
+void fail(const std::string& what, const std::string& reason)
 {
-    std::cout << "[" << what << "] 失败: " << r.m_msg << std::endl;
+    std::cout << "[" << what << "] 失败: " << reason << std::endl;
     std::exit(1);
 }
 }  // namespace
@@ -82,7 +82,7 @@ int main()
     YomkResponse resp = YOMKPLUGIN_BUILD(manifest);
     if (!isOk(resp))
     {
-        fail("构建", resp);
+        fail("构建", resp.m_msg);
     }
     std::cout << "输出: " << respString(resp) << std::endl;
 
@@ -94,12 +94,22 @@ int main()
     resp = YOMKPLUGIN_INFO_PLUGINS();
     if (!isOk(resp))
     {
-        fail("查询插件", resp);
+        fail("查询插件", resp.m_msg);
     }
     YomkUnPackPkg(resp.m_data, PluginMetaArray, metas);
+    if (!metas)
+    {
+        fail("查询插件", "响应数据缺失");
+    }
     for (const auto& m : metas->d)
     {
-        std::cout << "  " << m.name << " [" << m.type << "] v:" << m.version << " author:" << m.author << std::endl;
+        std::cout << m.name << std::endl;
+        std::cout << "  abi_version: " << m.abi_version << std::endl;
+        std::cout << "  type: " << m.type << std::endl;
+        std::cout << "  version: " << m.version << std::endl;
+        std::cout << "  author: " << m.author << std::endl;
+        std::cout << "  path: " << m.path << std::endl;
+        std::cout << "  description: " << m.description << std::endl;
     }
 
     /* ---------- 4. 查询实例列表 ----------
@@ -110,13 +120,16 @@ int main()
     resp = YOMKPLUGIN_INFO_INSTANCES();
     if (!isOk(resp))
     {
-        fail("查询实例", resp);
+        fail("查询实例", resp.m_msg);
     }
     YomkUnPackPkg(resp.m_data, InstanceInfoArray, instances);
+    if (!instances)
+    {
+        fail("查询实例", "响应数据缺失");
+    }
     for (const auto& i : instances->d)
     {
-        std::cout << "  实例 " << i.instanceName << " <- 插件 " << i.pluginName << " [" << i.instanceType << "]"
-                  << std::endl;
+        std::cout << i.instanceName << " --> " << i.pluginName << std::endl;
     }
 
     /* ---------- 5. 按插件过滤实例 ----------
@@ -127,12 +140,16 @@ int main()
     resp = YOMKPLUGIN_INFO_INSTANCES_BY("ConnectionService");
     if (!isOk(resp))
     {
-        fail("过滤实例", resp);
+        fail("过滤实例", resp.m_msg);
     }
     YomkUnPackPkg(resp.m_data, InstanceInfoArray, filtered);
+    if (!filtered)
+    {
+        fail("过滤实例", "响应数据缺失");
+    }
     for (const auto& i : filtered->d)
     {
-        std::cout << "  实例 " << i.instanceName << " <- 插件 " << i.pluginName << std::endl;
+        std::cout << i.instanceName << " --> " << i.pluginName << std::endl;
     }
 
     /* ---------- 6. 全量内省 ----------
@@ -154,13 +171,13 @@ int main()
     resp = YOMKPLUGIN_UNLOAD("ConnectionService");
     if (!isOk(resp))
     {
-        fail("卸载 ConnectionService", resp);
+        fail("卸载 ConnectionService", resp.m_msg);
     }
     std::cout << "UNLOAD ConnectionService: ok" << std::endl;
     resp = YOMKPLUGIN_UNLOAD("WorkspaceService");
     if (!isOk(resp))
     {
-        fail("卸载 WorkspaceService", resp);
+        fail("卸载 WorkspaceService", resp.m_msg);
     }
     std::cout << "UNLOAD WorkspaceService: ok" << std::endl;
 

@@ -28,7 +28,7 @@ struct PluginMeta
     std::string author;
     std::string description;
     /* so 文件路径（Manager 登记时补充） */
-    std::string libPath;
+    std::string path;
 };
 
 struct CreateReq
