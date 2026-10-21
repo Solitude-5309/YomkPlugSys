@@ -2,13 +2,14 @@
  * TestYomkPluginManifest：清单解析全面测试（闭环2）
  * 经 YOMKPLUGIN_BUILD 触达 parseManifest 全分支：路径预检、首行格式标识、
  * 注释与空行、@ 切分与空段、绝对路径拒绝、行号计数、合法条目接受，
- * 并对账 /all 段1（recordBuild 侧效：manifest/result/entryLines）。
+ * 并对账 /builder（recordBuild 侧效：manifest 条目/path/result/计数）。
  * 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，
  * 直接运行也不污染当前目录）；插件 so 符号链接进夹具目录满足相对路径契约。
  */
 #include <YomkPluginSystem/YomkPluginAPI.h>
 #include <YomkServer/YomkAPI.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -119,10 +120,19 @@ static void linkPlugin()
     }
 }
 
-/* /all 全文（对账 recordBuild 侧效） */
-static std::string infoAllDump()
+/* 最近构建信息（对账 recordBuild 侧效） */
+static BuilderInfo builderInfo()
 {
-    return respString(YOMKPLUGIN_INFO_ALL());
+    YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
+    if (resp.m_status == YomkResponse::eOk)
+    {
+        YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+        if (info)
+        {
+            return info->d;
+        }
+    }
+    return BuilderInfo{};
 }
 
 int main()
@@ -215,34 +225,38 @@ int main()
     writeManifest("m-g5.yomk", "#! yomk_plugin_system\nmy inst@libTestPlugin.so@inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g5.yomk")), "plugins:1 instances:1", "G5 space in instance name accepts");
 
-    /* ---------- H /all 段1对账（recordBuild 侧效） ---------- */
-    const std::string dump = infoAllDump();
+    /* ---------- H /builder 对账（recordBuild 侧效） ---------- */
+    const BuilderInfo dump = builderInfo();
     check(
-        dump.find("manifest:" + fp("m-g5.yomk") + " result:ok plugins:1 instances:1") != std::string::npos,
-        "H1 /all shows manifest and ok result");
+        dump.path == fp("m-g5.yomk") && dump.result == "ok" && dump.plugins == 1 && dump.instances == 1,
+        "H1 /builder shows manifest path and ok result");
     check(
-        dump.find("my inst@libTestPlugin.so@inst.txt -> TestPlugin ok") != std::string::npos,
-        "H2 /all keeps entry lines of latest build");
+        std::find(dump.manifest.begin(), dump.manifest.end(), "my inst@libTestPlugin.so@inst.txt") !=
+            dump.manifest.end(),
+        "H2 /builder keeps entry lines of latest build");
 
     writeManifest("m-hfail.yomk", "#! yomk_plugin_system\n@lib@file\n");
     expectNo(YOMKPLUGIN_BUILD(fp("m-hfail.yomk")), emptyErr, "H3 failure build eNo");
+    const BuilderInfo hfail = builderInfo();
     check(
-        infoAllDump().find("manifest:" + fp("m-hfail.yomk") + " result:manifest line 2: empty segment") !=
-            std::string::npos,
-        "H4 /all records failure result");
+        hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: empty segment" && hfail.plugins == 0 &&
+            hfail.instances == 0 && hfail.manifest.empty(),
+        "H4 /builder records failure result");
 
     writeManifest(
         "m-part.yomk",
         "#! yomk_plugin_system\ngood1@libTestPlugin.so@inst.txt\nbad2@libTestPlugin.so@missing_inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("m-part.yomk")), "manifest line 3: instance file not found", "H5 partial build fails");
-    const std::string partDump = infoAllDump();
+    const BuilderInfo partDump = builderInfo();
     check(
-        partDump.find("manifest:" + fp("m-part.yomk") + " result:manifest line 3: instance file not found") !=
-            std::string::npos,
-        "H6 /all records partial failure");
+        partDump.path == fp("m-part.yomk") &&
+            partDump.result == "manifest line 3: instance file not found: " + fp("missing_inst.txt") &&
+            partDump.plugins == 1 && partDump.instances == 1,
+        "H6 /builder records partial failure with partial counts");
     check(
-        partDump.find("good1@libTestPlugin.so@inst.txt -> TestPlugin ok") != std::string::npos,
-        "H7 /all keeps completed entry lines");
+        std::find(partDump.manifest.begin(), partDump.manifest.end(), "good1@libTestPlugin.so@inst.txt") !=
+            partDump.manifest.end(),
+        "H7 /builder keeps completed entry lines");
 
     /* ---------- 清理现场 ---------- */
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");

@@ -207,9 +207,9 @@ int main()
         writeManifest("s200.yomk", oss.str());
     }
     check(isOk(YOMKPLUGIN_BUILD(fp("s200.yomk"))), "S0 build 200-entry manifest ok");
-    check(
-        respString(YOMKPLUGIN_INFO_ALL()).find("plugins:1 instances:200") != std::string::npos,
-        "S0 summary plugins:1 instances:200");
+    YomkResponse s0Info = YOMKPLUGIN_INFO_BUILDER();
+    YomkUnPackPkg(s0Info.m_data, BuilderInfo, s0Builder);
+    check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
     /* ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ---------- */
     const auto s1Start = std::chrono::steady_clock::now();

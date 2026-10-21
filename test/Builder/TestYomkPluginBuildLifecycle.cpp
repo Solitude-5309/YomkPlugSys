@@ -125,12 +125,6 @@ static std::vector<PluginMeta> listPlugins()
     return out;
 }
 
-/* /all 全文（对账侧效） */
-static std::string infoAllDump()
-{
-    return respString(YOMKPLUGIN_INFO_ALL());
-}
-
 int main()
 {
     YOMK_INIT();
@@ -185,9 +179,7 @@ int main()
         YOMKPLUGIN_BUILD(fp("s2dup.yomk")),
         "manifest line 2: create failed: duplicate instance name: s1-i1",
         "S2 duplicate instance name through build");
-    check(
-        infoAllDump().find("plugins:1 instances:2") != std::string::npos,
-        "S2 /all section2 counts conserved (2 instances)");
+    check(listInstances().size() == 2, "S2 two instances alive after dup-build failure");
 
     /* ---------- S3 create 重名与 destroy 重建（白盒 URL） ---------- */
     CreateReq dupReq;
@@ -232,7 +224,6 @@ int main()
         "S4 destroy for unload");
     check(isOk(YOMKPLUGIN_TRY_UNLOAD("TestPlugin")), "S4 try_unload ok after destroy");
     check(listPlugins().empty(), "S4 plugins empty after try_unload");
-    check(infoAllDump().find("plugins:0") != std::string::npos, "S4 /all plugins:0 after try_unload");
     expectNo(YOMKPLUGIN_TRY_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
     /* ---------- S5 unload 强卸含存活实例 ---------- */
@@ -241,7 +232,6 @@ int main()
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
     expectNo(YOMKPLUGIN_UNLOAD("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
-    check(infoAllDump().find("plugins:0") != std::string::npos, "S5 /all plugins:0 after force unload");
 
     /* ---------- S6 卸载后重载 ---------- */
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");

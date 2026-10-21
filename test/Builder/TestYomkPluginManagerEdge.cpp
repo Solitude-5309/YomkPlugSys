@@ -286,9 +286,6 @@ int main()
     check(
         mgrAll.find("\n  e-a [demo] userData:off") != std::string::npos,
         "M4 manager /all indented instance line");
-    check(
-        respString(YOMKPLUGIN_INFO_ALL()).find("TestPlugin [demo] v:0.0.1") != std::string::npos,
-        "M4 builder /all section2 contains plugin line format");
 
     /* ---------- M5 超长输入边界 ---------- */
     const std::string longName(4096, 'x');

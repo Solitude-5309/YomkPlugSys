@@ -428,7 +428,7 @@ int main()
                         }
                         /* 门面内省三连：churn 期间恒 eOk */
                         if (!isOk(YOMKPLUGIN_INFO_PLUGINS()) || !isOk(YOMKPLUGIN_INFO_INSTANCES()) ||
-                            !isOk(YOMKPLUGIN_INFO_ALL()))
+                            !isOk(YOMKPLUGIN_INFO_BUILDER()))
                         {
                             ++c4FacadeBad;
                         }

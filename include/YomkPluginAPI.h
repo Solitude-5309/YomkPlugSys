@@ -38,8 +38,8 @@
 /* 尝试卸载插件库：有存活实例则拒绝，返回 String(ok/msg) */
 #define YOMKPLUGIN_TRY_UNLOAD(pluginName) YOMK_REQUEST("/YomkPluginSystemBuilder/try_unload", YomkMkPtr(String, pluginName))
 
-/* 内省：三段聚合（== build == 构建状态 + == plugins == 插件/实例 + == loaded plugins == 已加载插件），返回 String */
-#define YOMKPLUGIN_INFO_ALL() YOMK_REQUEST("/YomkPluginSystemBuilder/all", nullptr)
+/* 内省：Builder 最近构建信息（清单条目/路径/结果/插件与实例数），返回 BuilderInfo */
+#define YOMKPLUGIN_INFO_BUILDER() YOMK_REQUEST("/YomkPluginSystemBuilder/builder", nullptr)
 
 /* 内省：插件列表，返回 PluginMetaArray */
 #define YOMKPLUGIN_INFO_PLUGINS() YOMK_REQUEST("/YomkPluginSystemBuilder/plugins", nullptr)

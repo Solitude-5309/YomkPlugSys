@@ -60,6 +60,20 @@ struct InstanceInfo
     std::string instanceType;
 };
 
+struct BuilderInfo
+{
+    /* 最近构建的清单条目行（实例名@动态库相对路径@实例文件相对路径） */
+    std::vector<std::string> manifest;
+    /* 最近构建的清单路径（空 = 尚未构建） */
+    std::string path;
+    /* 最近构建结果："ok" 或失败原因（空 = 尚未构建） */
+    std::string result;
+    /* 最近构建加载的插件数 */
+    int plugins = 0;
+    /* 最近构建创建的实例数 */
+    int instances = 0;
+};
+
 // clang-format off
 /* 定义完所有数据类后统一注册 YomkMsg（数组类直接以 std::vector 为 DataType，同框架内置 StringArray 风格） */
 YomkMsg(PluginPath, PluginPath, d)
@@ -68,6 +82,7 @@ YomkMsg(CreateReq, CreateReq, d)
 YomkMsg(DestroyReq, DestroyReq, d)
 YomkMsg(BuildReq, BuildReq, d)
 YomkMsg(InstanceInfo, InstanceInfo, d)
+YomkMsg(BuilderInfo, BuilderInfo, d)
 YomkMsg(std::vector<PluginMeta>, PluginMetaArray, d)
 YomkMsg(std::vector<InstanceInfo>, InstanceInfoArray, d)
 

@@ -1,7 +1,7 @@
 /*
  * TestYomkPluginFacade：门面宏契约冒烟测试（闭环1）
  * 覆盖：门面服务注册、/version 契约与 YOMKPLUGIN_VERSION 宏输出、
- * 空态内省契约（INFO_ALL 三段头 + manifest:-、INFO_PLUGINS/INFO_INSTANCES 空数组）、
+ * 空态内省契约（INFO_BUILDER 空态默认值、INFO_PLUGINS/INFO_INSTANCES 空数组）、
  * BUILD 不存在清单失败路径。
  */
 #include <YomkPluginSystem/YomkPluginAPI.h>
@@ -66,13 +66,14 @@ int main()
     YOMKPLUGIN_VERSION();
 
     /* ---------- 空态内省契约 ---------- */
-    resp = YOMKPLUGIN_INFO_ALL();
-    check(isOk(resp), "INFO_ALL returns eOk");
-    const std::string all = respString(resp);
-    check(all.find("== build ==") != std::string::npos, "INFO_ALL has '== build ==' section");
-    check(all.find("manifest:-") != std::string::npos, "INFO_ALL empty-state manifest:-");
-    check(all.find("== plugins ==") != std::string::npos, "INFO_ALL has '== plugins ==' section");
-    check(all.find("== loaded plugins ==") != std::string::npos, "INFO_ALL has '== loaded plugins ==' section");
+    resp = YOMKPLUGIN_INFO_BUILDER();
+    check(isOk(resp), "INFO_BUILDER returns eOk");
+    YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+    check(info != nullptr, "INFO_BUILDER unpacks BuilderInfo");
+    check(
+        info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
+            info->d.manifest.empty(),
+        "INFO_BUILDER empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
     resp = YOMKPLUGIN_INFO_PLUGINS();
     bool pluginsEmpty = false;

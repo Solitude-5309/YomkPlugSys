@@ -8,6 +8,7 @@
 #include <YomkPluginSystem/YomkPluginAPI.h>
 #include <YomkServer/YomkAPI.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -108,9 +109,19 @@ static std::vector<PluginMeta> listPlugins()
     return out;
 }
 
-static std::string infoAllDump()
+/* 最近构建信息（对账 recordBuild 侧效） */
+static BuilderInfo builderInfo()
 {
-    return respString(YOMKPLUGIN_INFO_ALL());
+    YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
+    if (resp.m_status == YomkResponse::eOk)
+    {
+        YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+        if (info)
+        {
+            return info->d;
+        }
+    }
+    return BuilderInfo{};
 }
 
 int main()
@@ -181,10 +192,11 @@ int main()
         }
     }
     check(registered, "B8 bad-create plugin still registered after failed build");
+    YomkResponse b9Lib = YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, std::string("BadCreateNull")));
     check(
-        infoAllDump().find("BadCreateNull abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:0") !=
+        respString(b9Lib).find("BadCreateNull abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:0") !=
             std::string::npos,
-        "B9 /all libs section shows registered plugin with alive:0");
+        "B9 loader plugin info shows registered plugin with alive:0");
 
     writeManifest("b8.yomk", "#! yomk_plugin_system\nx1@libBadCreateThrow.so@inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("b8.yomk")), "manifest line 2: create failed: create exception: bad create boom",
@@ -194,8 +206,11 @@ int main()
     writeManifest("b9.yomk", "#! yomk_plugin_system\ntp1@libTestPlugin.so@inst.txt\nx1@libBadNoSymbol.so@inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("b9.yomk")), "manifest line 3: load failed: missing plugin export symbols",
         "B11 build stops at failed line 3");
-    check(infoAllDump().find("tp1@libTestPlugin.so@inst.txt -> TestPlugin ok") != std::string::npos,
-        "B12 /all keeps earlier successful entry lines");
+    const BuilderInfo b12Info = builderInfo();
+    const bool b12Kept =
+        std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "tp1@libTestPlugin.so@inst.txt") !=
+        b12Info.manifest.end();
+    check(b12Kept, "B12 builder info keeps earlier successful entry lines");
 
     /* ---------- 清理现场 ---------- */
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");

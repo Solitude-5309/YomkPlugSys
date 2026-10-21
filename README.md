@@ -20,7 +20,7 @@
 |-----|------|------|
 | `/YomkPluginSystemBuilder/build` | `BuildReq{workflowPath}` | 解析清单并组装插件系统，返回 `String` 汇总 `plugins:N instances:M` |
 | `/YomkPluginSystemBuilder/version` | 无 | 返回 `String` 扩展版本描述（值由 CMake 编译期注入，来源 `project(VERSION)`） |
-| `/YomkPluginSystemBuilder/all` | 无 | 内省：三段聚合 `== build ==` 构建状态 + `== plugins ==` 插件/实例 + `== loaded plugins ==` 已加载插件；段转发失败降级 `[segment error]` 行，整体不失败 |
+| `/YomkPluginSystemBuilder/builder` | 无 | 内省：`BuilderInfo` 最近构建信息（清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances） |
 | `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
 | `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
 | `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
@@ -83,7 +83,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | 头文件 | 内容 |
 |--------|------|
 | `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
-| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 8 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_ALL / INFO_PLUGINS / INFO_INSTANCES / INFO_INSTANCES_BY / VERSION） |
+| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 8 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_INSTANCES / INFO_INSTANCES_BY / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
 位于 `src/`、不随 install 分发的内部声明头（仅编译扩展内部可见）：
@@ -179,7 +179,7 @@ cmake --build test/build -j
 
 | 类型 | 产物 | 说明 |
 |---|---|---|
-| 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_PLUGINS/INFO_INSTANCES/INFO_ALL 等） |
+| 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_PLUGINS/INFO_INSTANCES/INFO_BUILDER 等） |
 | 测试插件库 | TestPlugin/libTestPlugin.so | 供测试程序 dlopen 加载的示例插件（不安装） |
 
 ### 2. 一键运行全量测试

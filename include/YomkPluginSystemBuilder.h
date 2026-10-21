@@ -40,9 +40,8 @@ private:
     /* 无 -> String 扩展版本号 */
     YomkResponse version(YomkPkgPtr pkg);
     /* 内省接口 */
-    /* -> String 三段聚合：== build == 最近构建状态 + == plugins == 插件/实例
-     * + == loaded plugins == 已加载插件（后两段转发 Manager/Loader /all，段失败降级） */
-    YomkResponse infoAll(YomkPkgPtr pkg);
+    /* -> BuilderInfo 最近构建信息（清单条目/路径/结果/插件与实例数） */
+    YomkResponse infoBuilder(YomkPkgPtr pkg);
     /* 代理 Manager /list：[String pluginName] -> PluginMetaArray 插件列表 */
     YomkResponse plugins(YomkPkgPtr pkg);
     /* 代理 Manager /list_instances：[String pluginName] -> InstanceInfoArray 实例明细 */
@@ -59,13 +58,21 @@ private:
 
     /* 记录最近一次构建状态（内省用） */
     void recordBuild(
-        const std::string& manifest, const std::string& result, const std::vector<std::string>& entryLines);
+        const std::string& manifest,
+        const std::string& result,
+        size_t plugins,
+        size_t instances,
+        const std::vector<std::string>& entryLines);
 
     std::mutex m_mutex;
     /* 最近一次构建的清单路径 */
     std::string m_lastManifest;
-    /* 最近一次构建结果（成功汇总 / 失败原因） */
+    /* 最近一次构建结果（"ok" / 失败原因） */
     std::string m_lastResult;
-    /* 成功条目的解析明细 */
+    /* 最近一次构建加载的插件数 */
+    int m_lastPlugins = 0;
+    /* 最近一次构建创建的实例数 */
+    int m_lastInstances = 0;
+    /* 成功条目的清单行（实例名@动态库相对路径@实例文件相对路径） */
     std::vector<std::string> m_lastEntries;
 };

@@ -2,7 +2,7 @@
  * ExampleYomkPluginSystemBuilder：YomkPluginSystem 入门示例
  *
  * 面向首次使用的用户，用 examples/workflow 的两个示例插件串起最常用接口：
- *   初始化 -> 构建插件工程 -> 内省（插件/实例/按插件过滤/全量聚合）-> 卸载
+ *   初始化 -> 构建插件工程 -> 内省（插件/实例/按插件过滤/构建信息）-> 卸载
  *
  * 每一步注释标明【接口 / 输入 / 输出】，运行即可观察实际结果：
  *   <安装路径>/bin/ExampleYomkPluginSystemBuilder
@@ -152,13 +152,31 @@ int main()
         std::cout << i.instanceName << " --> " << i.pluginName << std::endl;
     }
 
-    /* ---------- 6. 全量内省 ----------
-     * 接口：YOMKPLUGIN_INFO_ALL()
+    /* ---------- 6. 查询 Builder 构建信息 ----------
+     * 接口：YOMKPLUGIN_INFO_BUILDER()
      * 输入：无
-     * 输出：String 三段聚合 dump（== build == 最近构建状态
-     *       + == plugins == 插件/实例 + == loaded plugins == 已加载插件） */
-    section("6. 全量内省 YOMKPLUGIN_INFO_ALL()");
-    std::cout << respString(YOMKPLUGIN_INFO_ALL()) << std::endl;
+     * 输出：BuilderInfo（最近构建：清单条目/路径/结果/插件与实例数） */
+    section("6. Builder 构建信息 YOMKPLUGIN_INFO_BUILDER()");
+    resp = YOMKPLUGIN_INFO_BUILDER();
+    if (!isOk(resp))
+    {
+        fail("查询构建信息", resp.m_msg);
+    }
+    YomkUnPackPkg(resp.m_data, BuilderInfo, builder);
+    if (!builder)
+    {
+        fail("查询构建信息", "响应数据缺失");
+    }
+    std::cout << "builder" << std::endl;
+    std::cout << "  manifest:" << std::endl;
+    for (const auto& line : builder->d.manifest)
+    {
+        std::cout << "    " << line << std::endl;
+    }
+    std::cout << "  path: " << builder->d.path << std::endl;
+    std::cout << "  result:" << builder->d.result << std::endl;
+    std::cout << "  plugins:" << builder->d.plugins << std::endl;
+    std::cout << "  instances:" << builder->d.instances << std::endl;
 
     /* ---------- 7. 卸载插件（两种语义对比） ----------
      * 接口：YOMKPLUGIN_TRY_UNLOAD(pluginName)  尝试卸载：有存活实例则拒绝（引用保护）
