@@ -56,6 +56,12 @@ YomkResponse YomkPluginManager::load(YomkPkgPtr pkg)
         {
             return {YomkResponse::eNo, "load: invalid meta response"};
         }
+        if (metaPkg->d.name.find('.') != std::string::npos)
+        {
+            /* 限定名 = 插件名.实例名，插件名含 '.' 会破坏限定名全局唯一性 */
+            YOMK_REQUEST("/YomkPluginLoader/unload", YomkMkPtr(String, pluginName));
+            return {YomkResponse::eNo, "plugin name must not contain '.'"};
+        }
 
         PluginRecord rec;
         rec.name = metaPkg->d.name;
@@ -186,8 +192,10 @@ YomkResponse YomkPluginManager::createInstance(YomkPkgPtr pkg)
             }
         }
 
-        /* 锁外请求 Loader 创建实例 */
-        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/create", YomkMkPtr(CreateReq, req->d));
+        /* 锁外请求 Loader 创建实例：传限定名（插件名.实例名，全局唯一），插件以此作为实例身份 */
+        CreateReq loaderReq = req->d;
+        loaderReq.instanceName = qualifiedName(req->d.pluginName, req->d.instanceName);
+        YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/create", YomkMkPtr(CreateReq, loaderReq));
         if (resp.m_status != YomkResponse::eOk)
         {
             return resp;
@@ -319,10 +327,16 @@ YomkResponse YomkPluginManager::pluginByInstance(YomkPkgPtr pkg)
     {
         YomkUnPackPkgResponse(pkg, String, data);
         std::lock_guard<std::mutex> lock(m_mutex);
+        /* 输入为限定名（插件名.实例名）：按插件组前缀匹配 + 组内裸名查找，不做字符串反解析 */
         std::string pluginName;
         for (const auto& kv : m_instances)
         {
-            if (kv.second.count(data->d) != 0)
+            const std::string prefix = kv.first + ".";
+            if (data->d.rfind(prefix, 0) != 0)
+            {
+                continue;
+            }
+            if (kv.second.count(data->d.substr(prefix.size())) != 0)
             {
                 pluginName = kv.first;
                 break;
@@ -364,11 +378,17 @@ YomkResponse YomkPluginManager::instancesFile(YomkPkgPtr pkg)
     {
         YomkUnPackPkgResponse(pkg, String, data);
         std::lock_guard<std::mutex> lock(m_mutex);
+        /* 输入为限定名（插件名.实例名）：按插件组前缀匹配 + 组内裸名查找 */
         bool found = false;
         std::string instanceFile;
         for (const auto& kv : m_instances)
         {
-            auto it = kv.second.find(data->d);
+            const std::string prefix = kv.first + ".";
+            if (data->d.rfind(prefix, 0) != 0)
+            {
+                continue;
+            }
+            auto it = kv.second.find(data->d.substr(prefix.size()));
             if (it != kv.second.end())
             {
                 found = true;
@@ -432,7 +452,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                 {
                     InstanceInfo info;
                     info.pluginName = filter;
-                    info.instanceName = instKv.first;
+                    info.instanceName = qualifiedName(filter, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     infos.push_back(info);
                 }
@@ -446,7 +466,7 @@ YomkResponse YomkPluginManager::listInstances(YomkPkgPtr pkg)
                 {
                     InstanceInfo info;
                     info.pluginName = kv.first;
-                    info.instanceName = instKv.first;
+                    info.instanceName = qualifiedName(kv.first, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     infos.push_back(info);
                 }
@@ -532,7 +552,7 @@ YomkResponse YomkPluginManager::infoAll(YomkPkgPtr pkg)
                 {
                     for (const auto& instKv : it->second)
                     {
-                        dump += "\n  " + instanceInfoLine(instKv.first, instKv.second.inst);
+                        dump += "\n  " + instanceInfoLine(qualifiedName(kv.first, instKv.first), instKv.second.inst);
                     }
                 }
             }
@@ -566,4 +586,9 @@ std::string YomkPluginManager::instanceInfoLine(
 {
     std::string type = inst->instanceType() ? inst->instanceType() : "";
     return instanceName + " [" + type + "] userData:" + (inst->userData ? "on" : "off");
+}
+
+std::string YomkPluginManager::qualifiedName(const std::string& pluginName, const std::string& instanceName)
+{
+    return pluginName + "." + instanceName;
 }

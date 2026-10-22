@@ -1,7 +1,7 @@
 /*
  * TestYomkPluginBadPlugin：坏插件失败路径测试（闭环4）
  * 覆盖宿主加载/创建全部失败分支：缺符号、元数据三类（null meta/null name/空名）、
- * abi 不匹配、垃圾 so（dlopen 失败）、create 返回 nullptr、create 抛异常；
+ * abi 不匹配、插件名含 '.'、垃圾 so（dlopen 失败）、create 返回 nullptr、create 抛异常；
  * 以及坏 create 后插件仍注册的内省侧效、部分成功后前序条目保留。
  * 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
  */
@@ -140,6 +140,7 @@ int main()
     linkLib(BAD_NULL_META_PATH, "libBadNullMeta.so");
     linkLib(BAD_NULL_NAME_PATH, "libBadNullName.so");
     linkLib(BAD_EMPTY_NAME_PATH, "libBadEmptyName.so");
+    linkLib(BAD_DOT_NAME_PATH, "libBadDotName.so");
     linkLib(BAD_ABI_PATH, "libBadAbi.so");
     linkLib(BAD_CREATE_NULL_PATH, "libBadCreateNull.so");
     linkLib(BAD_CREATE_THROW_PATH, "libBadCreateThrow.so");
@@ -211,6 +212,13 @@ int main()
         std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "tp1@libTestPlugin.so@inst.txt") !=
         b12Info.manifest.end();
     check(b12Kept, "B12 builder info keeps earlier successful entry lines");
+
+    /* ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ---------- */
+    writeManifest("b13.yomk", "#! yomk_plugin_system\nbd1@libBadDotName.so@inst.txt\n");
+    expectNo(
+        YOMKPLUGIN_BUILD(fp("b13.yomk")),
+        "load failed: plugin name must not contain '.'",
+        "B13 dot in plugin name rejects");
 
     /* ---------- 清理现场 ---------- */
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");

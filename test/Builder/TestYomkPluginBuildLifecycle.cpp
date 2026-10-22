@@ -148,7 +148,7 @@ int main()
     std::vector<InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
     check(
-        !insts.empty() && insts[0].pluginName == "TestPlugin" && insts[0].instanceName == "s1-i1",
+        !insts.empty() && insts[0].pluginName == "TestPlugin" && insts[0].instanceName == "TestPlugin.s1-i1",
         "S1 instance pluginName and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
 
@@ -237,7 +237,7 @@ int main()
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("s6.yomk")), "plugins:1 instances:1", "S6 reload after unload ok");
     insts = listInstances();
-    check(insts.size() == 1 && insts[0].instanceName == "s6-i1", "S6 instance back after reload");
+    check(insts.size() == 1 && insts[0].instanceName == "TestPlugin.s6-i1", "S6 instance back after reload");
 
     /* ---------- S7 缺文件行号错误 ---------- */
     writeManifest("s7a.yomk", "#! yomk_plugin_system\ns7-i1@no_such.so@inst.txt\n");

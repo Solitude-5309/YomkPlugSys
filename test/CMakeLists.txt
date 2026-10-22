@@ -46,6 +46,7 @@ set(BAD_PLUGINS
     BadAbi
     BadCreateNull
     BadCreateThrow
+    BadDotName
 )
 foreach(bad ${BAD_PLUGINS})
     add_library(${bad} MODULE BadPlugin/${bad}.cpp)
@@ -63,6 +64,7 @@ target_compile_definitions(TestYomkPluginBadPlugin PRIVATE
     BAD_ABI_PATH="$<TARGET_FILE:BadAbi>"
     BAD_CREATE_NULL_PATH="$<TARGET_FILE:BadCreateNull>"
     BAD_CREATE_THROW_PATH="$<TARGET_FILE:BadCreateThrow>"
+    BAD_DOT_NAME_PATH="$<TARGET_FILE:BadDotName>"
 )
 target_link_libraries(TestYomkPluginBadPlugin PRIVATE YomkPluginSystem::YomkPluginSystem YomkServer::YomkServer)
 
@@ -70,6 +72,7 @@ target_link_libraries(TestYomkPluginBadPlugin PRIVATE YomkPluginSystem::YomkPlug
 add_executable(TestYomkPluginManagerEdge Builder/TestYomkPluginManagerEdge.cpp)
 target_compile_definitions(TestYomkPluginManagerEdge PRIVATE
     TEST_PLUGIN_BUILD_PATH="$<TARGET_FILE:TestPlugin>"
+    SECOND_PLUGIN_BUILD_PATH="$<TARGET_FILE:SecondPlugin>"
     BAD_CREATE_NULL_PATH="$<TARGET_FILE:BadCreateNull>"
 )
 target_link_libraries(TestYomkPluginManagerEdge PRIVATE YomkPluginSystem::YomkPluginSystem YomkServer::YomkServer)

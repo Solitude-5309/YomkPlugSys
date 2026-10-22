@@ -16,7 +16,7 @@ using namespace yomk;
  *   YomkPluginInterface *yomk_plugin_create_instance(const char *instance_name, const char *instance_file);
  *   void yomk_plugin_delete_instance(YomkPluginInterface *instance);  内部 delete
  *
- * instance_name 为宿主指定的实例名，插件须以传入名称作为实例名。
+ * instance_name 为宿主指定的实例限定名（插件名.实例名，全局唯一），插件须以传入名称作为实例名。
  * instance_file 为透传参数（允许传空），插件系统不读不解析，由插件实现自行决定是否使用。
  * 所有导出函数在插件侧 try/catch，异常时 create 返回 nullptr。
  */

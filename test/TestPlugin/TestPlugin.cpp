@@ -1,7 +1,7 @@
 /*
  * TestPlugin：插件系统示例插件
  * 演示完整 ABI 契约：meta 常量导出 + 实例工厂 + 实例删除。
- * instance_name 由宿主创建实例时指定（同一插件内唯一），
+ * instance_name 由宿主创建实例时指定（限定名 插件名.实例名，全局唯一），
  * instance_file 独立透传，两者互不影响。
  */
 #include <YomkPluginSystem/YomkPluginAPI.h>
@@ -18,7 +18,7 @@ public:
     virtual const char* instanceType() const override { return "demo"; }
 
 private:
-    /* 宿主指定的实例名 */
+    /* 宿主指定的实例限定名 */
     std::string m_name;
     /* 透传实例文件，插件自行决定是否使用 */
     std::string m_instanceFile;

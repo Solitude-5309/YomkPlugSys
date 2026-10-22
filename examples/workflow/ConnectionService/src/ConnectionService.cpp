@@ -17,7 +17,7 @@ public:
     virtual const char* instanceName() const override { return m_name.c_str(); }
     virtual const char* instanceType() const override { return "workflow"; }
 private:
-    /* 宿主指定的实例名 */
+    /* 宿主指定的实例限定名 */
     std::string m_name;
     /* 透传实例文件，插件自行决定是否使用 */
     std::string m_instanceFile;

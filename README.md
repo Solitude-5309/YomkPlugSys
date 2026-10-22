@@ -23,12 +23,12 @@
 | `/YomkPluginSystemBuilder/builder` | 无 | 内省：`BuilderInfo` 最近构建信息（清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances） |
 | `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
 | `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
-| `/YomkPluginSystemBuilder/plugin_by_instance` | String instanceName | 内省：实例所属插件的元数据 `PluginMeta`（未知实例拒绝）（代理 Manager /plugin_by_instance） |
-| `/YomkPluginSystemBuilder/instances_file` | String instanceName | 内省：实例文件内容 `String`（创建时透传的实例配置文件；未知实例/文件不可读拒绝）（代理 Manager /instances_file） |
+| `/YomkPluginSystemBuilder/plugin_by_instance` | String instanceName | 内省：实例所属插件的元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`；未知实例拒绝）（代理 Manager /plugin_by_instance） |
+| `/YomkPluginSystemBuilder/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`；创建时透传的实例配置文件，未知实例/文件不可读拒绝）（代理 Manager /instances_file） |
 | `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
 | `/YomkPluginSystemBuilder/try_unload` | String pluginName | 尝试卸载：有存活实例拒绝，插件保持加载（代理 Manager /try_unload） |
 
-清单文件（如 `examples/workflow/manifest.yomk`）首行必须为格式标识 `#! yomk_plugin_system`（`.yomk` 后缀文件因用处不同格式各异，以首行标识区分；缺失、不在首行或不匹配则解析失败并报错），其后每行一个条目，格式为 `实例名@动态库相对路径@实例配置文件相对路径`（`@` 分隔三段，后两段均为相对清单所在目录的完整路径）：
+清单文件（如 `examples/workflow/manifest.yomk`）首行必须为格式标识 `#! yomk_plugin_system`（`.yomk` 后缀文件因用处不同格式各异，以首行标识区分；缺失、不在首行或不匹配则解析失败并报错），其后每行一个条目，格式为 `实例名@动态库相对路径@实例配置文件相对路径`（`@` 分隔三段，后两段均为相对清单所在目录的完整路径；实例名为裸名，同插件内唯一，系统登记与内省时自动拼接插件名为全局唯一限定名 `插件名.实例名`）：
 
 ```
 #! yomk_plugin_system
@@ -42,7 +42,7 @@ ConnectionService@ConnectionService/lib/libConnectionService.so@ConnectionServic
 - 实例配置文件的绝对路径作为 `instanceFile` 透传给插件工厂（不读取内容）
 - `<模块>/lib/`、`<模块>/instances/` 仅为示例工程的目录组织约定，Builder 不强制
 
-build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/YomkPluginManager/load` 加载（已加载幂等跳过）→ `/YomkPluginManager/create_instance` 按清单实例名创建。任一步失败返回 `eNo` 并指明清单行号。
+build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/YomkPluginManager/load` 加载（已加载幂等跳过）→ `/YomkPluginManager/create_instance` 按清单实例名创建（登记为限定名 `插件名.实例名`）。任一步失败返回 `eNo` 并指明清单行号。
 
 完整可构建示例见 `examples/workflow/`（两个示例插件模块 + 清单），配套入门示例见 `examples/ExampleYomkPluginSystemBuilder.cpp`（随扩展默认编译安装，运行可逐步演示构建/内省/卸载全流程的接口输入与输出）。
 
@@ -55,7 +55,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginLoader/load` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
 | `/YomkPluginLoader/unload` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
 | `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
-| `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例，shared_ptr 绑定 delete_instance 为 deleter |
+| `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例（instanceName 为限定名 `插件名.实例名`），shared_ptr 绑定 delete_instance 为 deleter |
 | `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |
 | `/YomkPluginLoader/plugins` | 无 | 内省：已加载插件列表 |
 | `/YomkPluginLoader/plugin` | String pluginName | 内省：单插件元信息行 `pluginName abi:N alive:M` |
@@ -68,14 +68,14 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginManager/load` | `PluginPath{path}` | 加载并登记插件表；仅加载与登记，不自动建实例 |
 | `/YomkPluginManager/try_unload` | String pluginName | 尝试卸载：有存活实例（含 Manager 之外的持有者）返回 eNo，插件保持加载 |
 | `/YomkPluginManager/force_unload` | String pluginName | 强制卸载：先删除该插件全部实例，再卸载 |
-| `/YomkPluginManager/create_instance` | `CreateReq{pluginName, instanceName, instanceFile}` | 按 instanceName 创建并登记实例（同插件内重名返回 eNo） |
+| `/YomkPluginManager/create_instance` | `CreateReq{pluginName, instanceName, instanceFile}` | 按 instanceName（裸名）创建并登记为限定名 `插件名.实例名`（同插件内重名拒绝；不同插件允许同名，限定名全局唯一） |
 | `/YomkPluginManager/destroy_instance` | `DestroyReq{pluginName, instanceName}` | 销毁指定实例 |
 | `/YomkPluginManager/list` | 无 / String pluginName | 插件表 `PluginMetaArray` |
-| `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name/type/pluginName） |
+| `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name 为限定名 `插件名.实例名`/type/pluginName） |
 | `/YomkPluginManager/plugins` | 无 | 内省：插件列表 |
 | `/YomkPluginManager/plugin` | String pluginName | 内省：单插件元信息行 |
-| `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta` |
-| `/YomkPluginManager/instances_file` | String instanceName | 内省：实例文件内容 `String` |
+| `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`） |
+| `/YomkPluginManager/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`） |
 | `/YomkPluginManager/all` | 无 | 内省：全量 dump（含实例明细） |
 
 所有功能函数均用三参 `YomkInstallFunc` 安装，服务器层 `/YomkServerInfo` 内省可见类型标记。
@@ -86,7 +86,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 | 头文件 | 内容 |
 |--------|------|
-| `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
+| `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（全局唯一限定名 插件名.实例名，系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
 | `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 10 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_PLUGIN_BY / INFO_INSTANCES / INFO_INSTANCES_BY / INFO_INSTANCES_FILE / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
@@ -107,7 +107,7 @@ YomkPluginInterface *yomk_plugin_create_instance(const char *instance_name, cons
 void yomk_plugin_delete_instance(YomkPluginInterface *instance);                  // 内部 delete
 ```
 
-`instance_name` 为宿主指定的实例名（同一插件内唯一），插件须以传入名称作为实例名。`instance_file` 为透传参数：插件系统不读不解析，原样传给插件工厂，由插件实现自行决定是否使用（允许传空）。实例文件的设计与自动化编排由独立的构建服务负责，不在本扩展范围内。
+`instance_name` 为宿主指定的实例限定名 `插件名.实例名`（全局唯一），插件须以传入名称作为实例名。`instance_file` 为透传参数：插件系统不读不解析，原样传给插件工厂，由插件实现自行决定是否使用（允许传空）。实例文件的设计与自动化编排由独立的构建服务负责，不在本扩展范围内。
 
 ## 插件开发指南
 

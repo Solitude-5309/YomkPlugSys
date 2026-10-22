@@ -34,7 +34,7 @@ struct PluginMeta
 struct CreateReq
 {
     std::string pluginName;
-    /* 调用方指定的实例名，同一插件内唯一 */
+    /* 调用方指定的实例名（裸名，同一插件内唯一）；Manager 创建时拼接限定名 插件名.实例名 传给插件 */
     std::string instanceName;
     /* 透传参数：允许为空，插件系统不读不解析 */
     std::string instanceFile;
@@ -55,7 +55,7 @@ struct BuildReq
 struct InstanceInfo
 {
     std::string pluginName;
-    /* 系统唯一主键（同一插件内唯一） */
+    /* 全局唯一限定名：插件名.实例名 */
     std::string instanceName;
     std::string instanceType;
 };

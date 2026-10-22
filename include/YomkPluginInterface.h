@@ -44,7 +44,7 @@ class YomkPluginInterface
 {
 public:
     virtual ~YomkPluginInterface() = default;
-    /* 实例名：插件系统唯一主键（登记/重名校验/查找/销毁均基于它），由宿主创建实例时指定；
+    /* 实例名：全局唯一限定名 插件名.实例名（宿主创建实例时拼接指定，登记/查找/内省均基于它）；
      * 返回指针须在实例存活期内有效 */
     [[nodiscard]] virtual const char* instanceName() const = 0;
     /* 实例类型 */

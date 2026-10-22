@@ -47,7 +47,7 @@ private:
     YomkResponse tryUnload(YomkPkgPtr pkg);
     /* String pluginName -> ok（直接删所有实例） */
     YomkResponse forceUnload(YomkPkgPtr pkg);
-    /* CreateReq -> InstanceInfo */
+    /* CreateReq -> InstanceInfo（instanceName 为限定名 插件名.实例名） */
     YomkResponse createInstance(YomkPkgPtr pkg);
     /* DestroyReq -> ok */
     YomkResponse destroyInstance(YomkPkgPtr pkg);
@@ -60,12 +60,15 @@ private:
     YomkResponse infoPlugins(YomkPkgPtr pkg);
     /* String pluginName -> String 元信息行 */
     YomkResponse infoPlugin(YomkPkgPtr pkg);
-    /* String instanceName -> PluginMeta（实例所属插件元数据，未知实例拒绝） */
+    /* String 限定名实例名（插件名.实例名）-> PluginMeta（实例所属插件元数据，未知实例拒绝） */
     YomkResponse pluginByInstance(YomkPkgPtr pkg);
-    /* String instanceName -> String 实例文件内容（未知实例/文件不可读拒绝） */
+    /* String 限定名实例名（插件名.实例名）-> String 实例文件内容（未知实例/文件不可读拒绝） */
     YomkResponse instancesFile(YomkPkgPtr pkg);
     /* -> String 全量 dump */
     YomkResponse infoAll(YomkPkgPtr pkg);
+
+    /* 限定名 = 插件名.实例名（插件名全局唯一且不含 '.'，限定名全局唯一） */
+    static std::string qualifiedName(const std::string& pluginName, const std::string& instanceName);
 
     /* 内省行格式化（调用方已持锁） */
     std::string pluginInfoLine(const std::string& pluginName, const PluginRecord& rec) const;
@@ -75,6 +78,6 @@ private:
     std::mutex m_mutex;
     /* 插件表：扁平 map，pluginName = meta.name */
     std::map<std::string, PluginRecord> m_plugins;
-    /* 实例表：按插件分组的二级 map，Manager 是实例生命周期的唯一所有者 */
+    /* 实例表：按插件分组的二级 map（内层键为裸实例名，插件内唯一），Manager 是实例生命周期的唯一所有者 */
     std::map<std::string, std::map<std::string, InstanceRecord>> m_instances;
 };

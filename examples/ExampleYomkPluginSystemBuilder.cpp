@@ -162,10 +162,10 @@ int main()
 
     /* ---------- 6. 按实例查所属插件 ----------
      * 接口：YOMKPLUGIN_INFO_PLUGIN_BY(instanceName)
-     * 输入：instanceName（步骤 4 列出的任一实例名，未知实例返回 eNo 并携带原因）
+     * 输入：instanceName（限定名 插件名.实例名，取步骤 4 列出的任一实例名，未知实例返回 eNo 并携带原因）
      * 输出：PluginMeta（该实例所属插件的元数据） */
-    section("6. 按实例查插件 YOMKPLUGIN_INFO_PLUGIN_BY(\"ConnectionServiceIns\")");
-    resp = YOMKPLUGIN_INFO_PLUGIN_BY("ConnectionServiceIns");
+    section("6. 按实例查插件 YOMKPLUGIN_INFO_PLUGIN_BY(\"ConnectionService.ConnectionServiceIns\")");
+    resp = YOMKPLUGIN_INFO_PLUGIN_BY("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.m_msg);
@@ -185,10 +185,10 @@ int main()
 
     /* ---------- 7. 查看实例文件内容 ----------
      * 接口：YOMKPLUGIN_INFO_INSTANCES_FILE(instanceName)
-     * 输入：instanceName（未知实例返回 eNo 并携带原因）
+     * 输入：instanceName（限定名 插件名.实例名，未知实例返回 eNo 并携带原因）
      * 输出：String（该实例创建时透传的实例文件内容） */
-    section("7. 查看实例文件 YOMKPLUGIN_INFO_INSTANCES_FILE(\"ConnectionServiceIns\")");
-    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("ConnectionServiceIns");
+    section("7. 查看实例文件 YOMKPLUGIN_INFO_INSTANCES_FILE(\"ConnectionService.ConnectionServiceIns\")");
+    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
         fail("查看实例文件", resp.m_msg);
