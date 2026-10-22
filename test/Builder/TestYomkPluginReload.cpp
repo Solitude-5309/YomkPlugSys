@@ -125,25 +125,6 @@ static std::vector<PluginMeta> listPlugins()
     return out;
 }
 
-/* 白盒：Loader /plugins 已加载插件列表（StringArray） */
-static std::vector<std::string> pluginLibs()
-{
-    std::vector<std::string> out;
-    YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/plugins", YomkMkPtr(String, ""));
-    if (resp.m_status == YomkResponse::eOk)
-    {
-        YomkUnPackPkg(resp.m_data, StringArray, arr);
-        out = arr->d;
-    }
-    return out;
-}
-
-/* 白盒：Loader /plugin 单插件内省行（<id> abi:<n> alive:<n>） */
-static std::string pluginLine()
-{
-    return respString(YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, "TestPlugin")));
-}
-
 int main()
 {
     YOMK_INIT();
@@ -181,29 +162,26 @@ int main()
         "plugin already loaded: TestPlugin",
         "R1 load copy so with same meta rejects");
 
-    /* 失败路径无状态污染：/plugins 仍恰 1 条，alive 计数不变 */
-    std::vector<std::string> names = pluginLibs();
+    /* 失败路径无状态污染：插件表仍恰 1 条，实例仍 2 个 */
+    std::vector<PluginMeta> names = listPlugins();
     check(
-        names.size() == 1 && !names.empty() && names[0] == "TestPlugin",
-        "R1 /plugins still exactly one TestPlugin after rejected loads");
-    check(
-        pluginLine().find("TestPlugin abi:") == 0 && pluginLine().find(" alive:2") != std::string::npos,
-        "R1 /plugin alive:2 unchanged after rejected loads");
+        names.size() == 1 && !names.empty() && names[0].name == "TestPlugin",
+        "R1 manager list still exactly one TestPlugin after rejected loads");
+    check(listInstances().size() == 2, "R1 instances still two after rejected loads");
 
-    /* ---------- R2 alive 计数时序：destroy 后经 purgeDead 递减 ---------- */
+    /* ---------- R2 存活表递减：destroy 后引用保护随之解除 ---------- */
     DestroyReq dreq;
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
     check(isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq))), "R2 destroy r-b ok");
-    check(pluginLine().find(" alive:1") != std::string::npos, "R2 /plugin alive:1 after destroy r-b");
+    expectNo(YOMKPLUGIN_TRY_UNLOAD("TestPlugin"), "instances still alive", "R2 try_unload rejects after destroy r-b");
     dreq.instanceName = "r-a";
     check(isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq))), "R2 destroy r-a ok");
-    check(pluginLine().find(" alive:0") != std::string::npos, "R2 /plugin alive:0 after destroy r-a");
     check(listInstances().empty(), "R2 instances empty after all destroys");
 
     /* ---------- R3 空卸与重载循环 ---------- */
     check(isOk(YOMKPLUGIN_TRY_UNLOAD("TestPlugin")), "R3 try_unload ok while alive:0");
-    check(pluginLibs().empty(), "R3 /plugins empty after try_unload");
+    check(listPlugins().empty(), "R3 plugins empty after try_unload");
     expectNo(YOMKPLUGIN_TRY_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "R3 try_unload again rejects");
     expectNo(
         YOMKPLUGIN_UNLOAD("TestPlugin"),
@@ -231,10 +209,10 @@ int main()
         "yomk_plugin_system\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
         "inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("r4.yomk")), "plugins:1 instances:3", "R4 build three instances");
-    check(pluginLine().find(" alive:3") != std::string::npos, "R4 /plugin alive:3");
+    expectNo(YOMKPLUGIN_TRY_UNLOAD("TestPlugin"), "instances still alive", "R4 try_unload rejects while three alive");
     check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "R4 force unload with three alive instances ok");
     check(listInstances().empty(), "R4 instances destroyed by force unload");
-    check(pluginLibs().empty(), "R4 /plugins empty after force unload");
+    check(listPlugins().empty(), "R4 plugins empty after force unload");
 
     /* ---------- R5 终态清零 ---------- */
     check(listPlugins().empty(), "R5 plugins empty at end");

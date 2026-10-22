@@ -56,22 +56,15 @@ private:
     /* [String pluginName] -> InstanceInfoArray */
     YomkResponse listInstances(YomkPkgPtr pkg);
     /* 内省接口 */
-    /* -> StringArray */
-    YomkResponse infoPlugins(YomkPkgPtr pkg);
-    /* String pluginName -> String 元信息行 */
-    YomkResponse infoPlugin(YomkPkgPtr pkg);
     /* String 限定名实例名（插件名.实例名）-> PluginMeta（实例所属插件元数据，未知实例拒绝） */
     YomkResponse pluginByInstance(YomkPkgPtr pkg);
     /* String 限定名实例名（插件名.实例名）-> String 实例文件内容（未知实例/文件不可读拒绝） */
     YomkResponse instancesFile(YomkPkgPtr pkg);
-    /* -> String 全量 dump */
-    YomkResponse infoAll(YomkPkgPtr pkg);
 
     /* 限定名 = 插件名.实例名（插件名全局唯一且不含 '.'，限定名全局唯一） */
     static std::string qualifiedName(const std::string& pluginName, const std::string& instanceName);
 
     /* 内省行格式化（调用方已持锁） */
-    std::string pluginInfoLine(const std::string& pluginName, const PluginRecord& rec) const;
     std::string instanceInfoLine(
         const std::string& instanceName, const std::shared_ptr<YomkPluginInterface>& inst) const;
 

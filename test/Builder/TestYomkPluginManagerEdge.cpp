@@ -2,8 +2,7 @@
  * TestYomkPluginManagerEdge：Manager 边界与内省细节测试（闭环5）
  * 白盒 URL 直调 YomkPluginManager 与 YomkPluginLoader 系列接口，覆盖：
  * create/destroy 入参边界、list/list_instances filter 三态（未知/命中/已注册零实例）、
- * 内省行格式（pluginInfoLine/instanceInfoLine/libInfoLine）、Loader meta 深拷贝、
- * Manager all 与 Builder all 段2 一致、超长输入边界。
+ * instanceInfoLine 内省行、Loader meta 深拷贝、插件注册列表、跨插件同名实例、超长输入边界。
  * 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
  */
 #include <YomkPluginSystem/YomkPluginAPI.h>
@@ -284,16 +283,7 @@ int main()
         isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dr))),
         "M2 cleanup e-nofile");
 
-    /* ---------- M3 内省行格式 ---------- */
-    const std::string pluginLine =
-        "TestPlugin [demo] v:0.0.1 author:Yomk path:" + fp("libTestPlugin.so") + " instances:2";
-    resp = YOMK_REQUEST("/YomkPluginManager/plugin", YomkMkPtr(String, "TestPlugin"));
-    check(isOk(resp) && respString(resp) == pluginLine, "M3 plugin info line exact format");
-    expectNo(
-        YOMK_REQUEST("/YomkPluginManager/plugin", YomkMkPtr(String, "Nope")),
-        "plugin not loaded: Nope",
-        "M3 plugin info unknown rejects");
-
+    /* ---------- M3 内省格式与列表 ---------- */
     resp = YOMK_REQUEST("/YomkPluginLoader/meta", YomkMkPtr(String, "TestPlugin"));
     bool metaOk = false;
     if (isOk(resp))
@@ -304,42 +294,20 @@ int main()
     }
     check(metaOk, "M3 loader /meta deep-copied fields");
 
-    resp = YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, "TestPlugin"));
-    check(
-        isOk(resp) && respString(resp) == "TestPlugin abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:2",
-        "M3 plugin info line exact format");
-    expectNo(
-        YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, "Nope")),
-        "plugin not loaded: Nope",
-        "M3 plugin info unknown rejects");
-
-    resp = YOMK_REQUEST("/YomkPluginLoader/plugins", nullptr);
-    bool pluginsBoth = false;
-    if (isOk(resp))
+    bool hasTest = false;
+    bool hasBad = false;
+    for (const auto& m : listPlugins())
     {
-        YomkUnPackPkg(resp.m_data, StringArray, sa);
-        bool hasTest = false;
-        bool hasBad = false;
-        for (const auto& s : sa->d)
+        if (m.name == "TestPlugin")
         {
-            if (s == "TestPlugin")
-            {
-                hasTest = true;
-            }
-            if (s == "BadCreateNull")
-            {
-                hasBad = true;
-            }
+            hasTest = true;
         }
-        pluginsBoth = hasTest && hasBad;
+        if (m.name == "BadCreateNull")
+        {
+            hasBad = true;
+        }
     }
-    check(pluginsBoth, "M3 plugins list contains both registered plugins");
-
-    /* ---------- M4 /all 一致性 ---------- */
-    const std::string mgrAll = respString(YOMK_REQUEST("/YomkPluginManager/all", nullptr));
-    check(
-        mgrAll.find("\n  TestPlugin.e-a [demo] userData:off") != std::string::npos,
-        "M4 manager /all indented instance line");
+    check(hasTest && hasBad, "M3 plugins list contains both registered plugins");
 
     /* ---------- M5 超长输入边界 ---------- */
     const std::string longName(4096, 'x');

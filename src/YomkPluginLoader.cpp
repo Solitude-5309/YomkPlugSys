@@ -16,9 +16,6 @@ int YomkPluginLoader::init()
     YomkInstallFunc("/meta", YomkPluginLoader::meta, String);
     YomkInstallFunc("/create", YomkPluginLoader::createInstance, CreateReq);
     YomkInstallFunc("/delete", YomkPluginLoader::deleteInstance, PluginInstance);
-    YomkInstallFunc("/plugins", YomkPluginLoader::infoPlugins);
-    YomkInstallFunc("/plugin", YomkPluginLoader::infoPlugin, String);
-    YomkInstallFunc("/all", YomkPluginLoader::infoAll);
     return 0;
 }
 
@@ -225,77 +222,6 @@ YomkResponse YomkPluginLoader::deleteInstance(YomkPkgPtr pkg)
     }
 }
 
-YomkResponse YomkPluginLoader::infoPlugins(YomkPkgPtr pkg)
-{
-    try
-    {
-        std::vector<std::string> ids;
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            for (const auto& kv : m_plugins)
-            {
-                ids.push_back(kv.first);
-            }
-        }
-        return {YomkResponse::eOk, "ok", YomkMkPtr(StringArray, ids)};
-    }
-    catch (const std::exception& e)
-    {
-        return {YomkResponse::eNo, std::string("libs exception: ") + e.what()};
-    }
-    catch (...)
-    {
-        return {YomkResponse::eNo, "libs exception"};
-    }
-}
-
-YomkResponse YomkPluginLoader::infoPlugin(YomkPkgPtr pkg)
-{
-    try
-    {
-        YomkUnPackPkgResponse(pkg, String, data);
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_plugins.count(data->d))
-        {
-            return {YomkResponse::eNo, "plugin not loaded: " + data->d};
-        }
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, pluginInfoLine(data->d))};
-    }
-    catch (const std::exception& e)
-    {
-        return {YomkResponse::eNo, std::string("lib exception: ") + e.what()};
-    }
-    catch (...)
-    {
-        return {YomkResponse::eNo, "lib exception"};
-    }
-}
-
-YomkResponse YomkPluginLoader::infoAll(YomkPkgPtr pkg)
-{
-    try
-    {
-        std::string dump;
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            dump = "plugins:" + std::to_string(m_plugins.size());
-            for (const auto& kv : m_plugins)
-            {
-                dump += "\n" + pluginInfoLine(kv.first);
-            }
-        }
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, dump)};
-    }
-    catch (const std::exception& e)
-    {
-        return {YomkResponse::eNo, std::string("all exception: ") + e.what()};
-    }
-    catch (...)
-    {
-        return {YomkResponse::eNo, "all exception"};
-    }
-}
-
 void YomkPluginLoader::purgeDead(const std::string& pluginName)
 {
     auto it = m_alive.find(pluginName);
@@ -313,20 +239,4 @@ int YomkPluginLoader::aliveCount(const std::string& pluginName)
 {
     auto it = m_alive.find(pluginName);
     return it == m_alive.end() ? 0 : static_cast<int>(it->second.size());
-}
-
-std::string YomkPluginLoader::pluginInfoLine(const std::string& pluginName)
-{
-    purgeDead(pluginName);
-    int abi = 0;
-    auto it = m_plugins.find(pluginName);
-    if (it != m_plugins.end() && it->second.metaFn)
-    {
-        const YomkPluginMeta* meta = it->second.metaFn();
-        if (meta)
-        {
-            abi = meta->abi_version;
-        }
-    }
-    return pluginName + " abi:" + std::to_string(abi) + " alive:" + std::to_string(aliveCount(pluginName));
 }

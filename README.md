@@ -48,7 +48,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 
 ## 内部服务接口（Builder 托管，扩展内部与白盒测试专用）
 
-### /YomkPluginLoader（机制层，8 个接口）
+### /YomkPluginLoader（机制层，5 个接口）
 
 | URL | 入参 | 说明 |
 |-----|------|------|
@@ -57,11 +57,8 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
 | `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例（instanceName 为限定名 `插件名.实例名`），shared_ptr 绑定 delete_instance 为 deleter |
 | `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |
-| `/YomkPluginLoader/plugins` | 无 | 内省：已加载插件列表 |
-| `/YomkPluginLoader/plugin` | String pluginName | 内省：单插件元信息行 `pluginName abi:N alive:M` |
-| `/YomkPluginLoader/all` | 无 | 内省：全量 dump |
 
-### /YomkPluginManager（数据层，11 个接口）
+### /YomkPluginManager（数据层，9 个接口）
 
 | URL | 入参 | 说明 |
 |-----|------|------|
@@ -72,11 +69,8 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginManager/destroy_instance` | `DestroyReq{pluginName, instanceName}` | 销毁指定实例 |
 | `/YomkPluginManager/list` | 无 / String pluginName | 插件表 `PluginMetaArray` |
 | `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name 为限定名 `插件名.实例名`/type/pluginName） |
-| `/YomkPluginManager/plugins` | 无 | 内省：插件列表 |
-| `/YomkPluginManager/plugin` | String pluginName | 内省：单插件元信息行 |
 | `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`） |
 | `/YomkPluginManager/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`） |
-| `/YomkPluginManager/all` | 无 | 内省：全量 dump（含实例明细） |
 
 所有功能函数均用三参 `YomkInstallFunc` 安装，服务器层 `/YomkServerInfo` 内省可见类型标记。
 

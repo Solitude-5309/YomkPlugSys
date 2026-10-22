@@ -140,19 +140,6 @@ static YomkResponse destroyInst(const std::string& name)
     return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
 }
 
-/* 白盒：Loader /plugins 已加载插件列表（StringArray） */
-static std::vector<std::string> pluginLibs()
-{
-    std::vector<std::string> out;
-    YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/libs", YomkMkPtr(String, ""));
-    if (resp.m_status == YomkResponse::eOk)
-    {
-        YomkUnPackPkg(resp.m_data, StringArray, arr);
-        out = arr->d;
-    }
-    return out;
-}
-
 /* S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
 static bool s4MsgAllowed(const YomkResponse& r)
 {
@@ -234,7 +221,7 @@ int main()
     check(churnOk == 250, "S1 250 churn rounds all ok (unload+build)");
     check(spotBad == 0, "S1 spot checks instances==200 all pass");
     check(
-        isOk(YOMKPLUGIN_UNLOAD("TestPlugin")) && listInstances().empty() && pluginLibs().empty(),
+        isOk(YOMKPLUGIN_UNLOAD("TestPlugin")) && listInstances().empty() && listPlugins().empty(),
         "S1 final unload leaves zero residue");
 
     /* ---------- S2 2000 对 create/destroy ---------- */
@@ -349,7 +336,7 @@ int main()
     }
     check(s4MsgBad.load() == 0, "S4 create results all in allowed message set");
     check(
-        listInstances().empty() && pluginLibs().empty(),
+        listInstances().empty() && listPlugins().empty(),
         "S4 terminal instances and plugins empty after retry convergence");
     expectNo(YOMKPLUGIN_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "S4 double unload rejects");
 

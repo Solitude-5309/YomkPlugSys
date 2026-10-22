@@ -44,19 +44,6 @@ static bool isNo(const YomkResponse& r)
     return r.m_status == YomkResponse::eNo;
 }
 
-static std::string respString(const YomkResponse& r)
-{
-    if (r.m_data && r.m_data->name() == "String")
-    {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
-        if (p)
-        {
-            return p->d;
-        }
-    }
-    return "";
-}
-
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
@@ -193,11 +180,6 @@ int main()
         }
     }
     check(registered, "B8 bad-create plugin still registered after failed build");
-    YomkResponse b9Lib = YOMK_REQUEST("/YomkPluginLoader/plugin", YomkMkPtr(String, std::string("BadCreateNull")));
-    check(
-        respString(b9Lib).find("BadCreateNull abi:" + std::to_string(YOMKPLUGIN_ABI_VERSION) + " alive:0") !=
-            std::string::npos,
-        "B9 loader plugin info shows registered plugin with alive:0");
 
     writeManifest("b8.yomk", "#! yomk_plugin_system\nx1@libBadCreateThrow.so@inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("b8.yomk")), "manifest line 2: create failed: create exception: bad create boom",

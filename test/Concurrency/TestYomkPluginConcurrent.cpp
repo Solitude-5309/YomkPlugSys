@@ -145,19 +145,6 @@ static YomkResponse destroyInst(const std::string& name)
     return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
 }
 
-/* 白盒：Loader /plugins 已加载插件列表（StringArray） */
-static std::vector<std::string> pluginLibs()
-{
-    std::vector<std::string> out;
-    YomkResponse resp = YOMK_REQUEST("/YomkPluginLoader/libs", YomkMkPtr(String, ""));
-    if (resp.m_status == YomkResponse::eOk)
-    {
-        YomkUnPackPkg(resp.m_data, StringArray, arr);
-        out = arr->d;
-    }
-    return out;
-}
-
 /* C3 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
 static bool c3MsgAllowed(const YomkResponse& r)
 {
@@ -169,34 +156,6 @@ static bool c3MsgAllowed(const YomkResponse& r)
            r.m_msg.find("duplicate instance name") != std::string::npos ||
            r.m_msg.find("plugin not loaded") != std::string::npos ||
            r.m_msg.find("plugin not loaded") != std::string::npos;
-}
-
-/* C4 快照自洽：/all 头部 instances:N == 明细行数（"\n  " 前缀计数），单锁快照内必须一致 */
-static bool managerAllConsistent(const std::string& dump)
-{
-    static const std::string tag = " instances:";
-    size_t pos = dump.find(tag);
-    if (pos == std::string::npos)
-    {
-        return false;
-    }
-    pos += tag.size();
-    size_t end = pos;
-    while (end < dump.size() && isdigit(static_cast<unsigned char>(dump[end])))
-    {
-        ++end;
-    }
-    if (end == pos)
-    {
-        return false;
-    }
-    const int declared = std::stoi(dump.substr(pos, end - pos));
-    int lines = 0;
-    for (size_t p = dump.find("\n  "); p != std::string::npos; p = dump.find("\n  ", p + 1))
-    {
-        ++lines;
-    }
-    return declared == lines;
 }
 
 int main()
@@ -373,7 +332,7 @@ int main()
     }
     check(c3MsgBad.load() == 0, "C3 create results all in allowed message set");
     check(listInstances().empty(), "C3 terminal instances empty after unload race");
-    check(pluginLibs().empty(), "C3 terminal plugins empty after unload race");
+    check(listPlugins().empty(), "C3 terminal plugins empty after unload race");
     expectNo(YOMKPLUGIN_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "C3 double unload rejects");
 
     /* ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ---------- */
@@ -386,7 +345,6 @@ int main()
     std::atomic<int> c4CreateOk{0};
     std::atomic<int> c4CreateFail{0};
     std::atomic<int> c4DestroyOk{0};
-    std::atomic<int> c4AllBad{0};
     std::atomic<int> c4FacadeBad{0};
     {
         std::vector<std::thread> pool;
@@ -420,12 +378,6 @@ int main()
                 {
                     while (!c4Done.load())
                     {
-                        /* Manager /all 单锁快照：头部计数与明细行数必须自洽 */
-                        YomkResponse all = YOMK_REQUEST("/YomkPluginManager/all", nullptr);
-                        if (!isOk(all) || !managerAllConsistent(respString(all)))
-                        {
-                            ++c4AllBad;
-                        }
                         /* 门面内省三连：churn 期间恒 eOk */
                         if (!isOk(YOMKPLUGIN_INFO_PLUGINS()) || !isOk(YOMKPLUGIN_INFO_INSTANCES()) ||
                             !isOk(YOMKPLUGIN_INFO_BUILDER()))
@@ -450,7 +402,6 @@ int main()
     check(
         c4CreateOk.load() == 200 && c4CreateFail.load() == 0 && c4DestroyOk.load() == 200,
         "C4 churn 200 create/destroy all ok");
-    check(c4AllBad.load() == 0, "C4 /all snapshot self-consistent during churn");
     check(c4FacadeBad.load() == 0, "C4 facade introspection all ok during churn");
     check(listInstances().empty(), "C4 terminal instances empty after churn");
 

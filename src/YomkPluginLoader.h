@@ -62,17 +62,9 @@ private:
     YomkResponse createInstance(YomkPkgPtr pkg);
     /* PluginInstance -> ok */
     YomkResponse deleteInstance(YomkPkgPtr pkg);
-    /* 内省接口 */
-    /* -> StringArray */
-    YomkResponse infoPlugins(YomkPkgPtr pkg);
-    /* String pluginName -> String 元信息行 */
-    YomkResponse infoPlugin(YomkPkgPtr pkg);
-    /* -> String 全量 dump */
-    YomkResponse infoAll(YomkPkgPtr pkg);
     /* 内部辅助（调用方已持锁） */
     void purgeDead(const std::string& pluginName);
     int aliveCount(const std::string& pluginName);
-    std::string pluginInfoLine(const std::string& pluginName);
     std::mutex m_mutex;
     /* 句柄表 */
     std::map<std::string, LoadedPlugin> m_plugins;
