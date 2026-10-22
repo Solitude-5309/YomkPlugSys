@@ -59,7 +59,7 @@ private:
     /* String pluginName -> PluginMeta */
     YomkResponse meta(YomkPkgPtr pkg);
     /* CreateReq -> PluginInstance */
-    YomkResponse create(YomkPkgPtr pkg);
+    YomkResponse createInstance(YomkPkgPtr pkg);
     /* PluginInstance -> ok */
     YomkResponse deleteInstance(YomkPkgPtr pkg);
     /* 内省接口 */

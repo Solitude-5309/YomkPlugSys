@@ -14,7 +14,7 @@ int YomkPluginLoader::init()
     YomkInstallFunc("/load", YomkPluginLoader::load, PluginPath);
     YomkInstallFunc("/unload", YomkPluginLoader::unload, String);
     YomkInstallFunc("/meta", YomkPluginLoader::meta, String);
-    YomkInstallFunc("/create", YomkPluginLoader::create, CreateReq);
+    YomkInstallFunc("/create", YomkPluginLoader::createInstance, CreateReq);
     YomkInstallFunc("/delete", YomkPluginLoader::deleteInstance, PluginInstance);
     YomkInstallFunc("/plugins", YomkPluginLoader::infoPlugins);
     YomkInstallFunc("/plugin", YomkPluginLoader::infoPlugin, String);
@@ -165,7 +165,7 @@ YomkResponse YomkPluginLoader::meta(YomkPkgPtr pkg)
     }
 }
 
-YomkResponse YomkPluginLoader::create(YomkPkgPtr pkg)
+YomkResponse YomkPluginLoader::createInstance(YomkPkgPtr pkg)
 {
     try
     {
