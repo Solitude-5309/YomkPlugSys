@@ -1,6 +1,6 @@
 #!/bin/bash
 # 一键编译脚本（交互式）
-# 用法: source build_ubuntu.sh
+# 用法: source build_ubuntu.sh（或 bash build_ubuntu.sh 直接执行亦可）
 # 依次交互询问 YomkServer 安装路径（前置路径）与扩展安装路径，默认均取环境变量 YOMK_PREFIX_PATH，可修改
 # 示例程序默认随主库编译安装（无需询问）；测试程序询问是否编译（直接回车不编译，输入 Y 才编译）
 # 扩展库与 YomkServer 安装到一起（头文件由 YomkServer::YomkServer 的 INTERFACE include 统一提供）
@@ -25,6 +25,11 @@ _normalize_path() {
     echo "${p}"
 }
 
+# 交互询问 YomkServer 安装路径（前置路径），默认取环境变量 YOMK_PREFIX_PATH。
+# 主流程封装在 main() 内：函数内 return 在 source 与 bash 直接执行两种模式下都能
+# 立即中止后续步骤（直接执行时顶层 return 不会退出脚本，是 cmake 配置失败后仍继续
+# 触发 sudo 安装/示例编译的根因）。
+main() {
 if [ -z "${YOMK_PREFIX_PATH}" ]; then
     echo "警告: 未检测到环境变量 YOMK_PREFIX_PATH，可能未通过 build_ubuntu.sh 安装 YomkServer，请手动输入安装路径"
 fi
@@ -164,3 +169,10 @@ if [ "${BUILD_TEST}" = "ON" ]; then
 fi
 echo "==========================================="
 unset _LIB_LINE _t
+}
+
+# 执行主流程并按执行方式传递退出码：source 模式用顶层 return（exit 会杀掉调用方交互
+# shell）；bash 直接执行模式用 exit。两种模式下失败均以非零退出码中止。
+main
+_RET=$?
+(return 0) 2>/dev/null && return "${_RET}" || exit "${_RET}"
