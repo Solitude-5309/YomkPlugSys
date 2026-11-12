@@ -2,6 +2,8 @@
 
 #include <dlfcn.h>
 
+#include <yomk/log/YomkLoggerApi.h>
+
 #include <algorithm>
 
 YomkPluginLoader::YomkPluginLoader(YomkServer* server) : YomkService(server)
@@ -11,19 +13,23 @@ YomkPluginLoader::YomkPluginLoader(YomkServer* server) : YomkService(server)
 
 int YomkPluginLoader::init()
 {
-    YomkInstallFunc("/load", YomkPluginLoader::load, PluginPath);
-    YomkInstallFunc("/unload", YomkPluginLoader::unload, String);
-    YomkInstallFunc("/meta", YomkPluginLoader::meta, String);
-    YomkInstallFunc("/create", YomkPluginLoader::createInstance, CreateReq);
-    YomkInstallFunc("/delete", YomkPluginLoader::deleteInstance, PluginInstance);
+    installFunc("/load", &YomkPluginLoader::load, yomk::msgs::PluginPath::kName);
+    installFunc("/unload", &YomkPluginLoader::unload, yomk::msgs::String::kName);
+    installFunc("/meta", &YomkPluginLoader::meta, yomk::msgs::String::kName);
+    installFunc("/create", &YomkPluginLoader::createInstance, yomk::msgs::CreateReq::kName);
+    installFunc("/delete", &YomkPluginLoader::deleteInstance, yomk::msgs::PluginInstance::kName);
     return 0;
 }
 
-YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, PluginPath, data);
+        auto data = yomk::msgs::unpack<yomk::msgs::PluginPath>(pkg);
+        if (!data)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::PluginPath::kName);
+        }
         void* handle = nullptr;
         YomkPluginMetaFunc metaFn = nullptr;
         YomkPluginCreateInstanceFunc createFn = nullptr;
@@ -33,7 +39,7 @@ YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
         handle = dlopen(data->d.path.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (!handle)
         {
-            return {YomkResponse::eNo, std::string("dlopen failed: ") + dlerror()};
+            return {yomk::payload::ResStatus::Failed, std::string("dlopen failed: ") + dlerror()};
         }
         metaFn = reinterpret_cast<YomkPluginMetaFunc>(dlsym(handle, YOMKPLUGIN_SYMBOL_META));
         createFn = reinterpret_cast<YomkPluginCreateInstanceFunc>(dlsym(handle, YOMKPLUGIN_SYMBOL_CREATE_INSTANCE));
@@ -41,14 +47,14 @@ YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
         if (!metaFn || !createFn || !deleteFn)
         {
             dlclose(handle);
-            return {YomkResponse::eNo, "missing plugin export symbols"};
+            return {yomk::payload::ResStatus::Failed, "missing plugin export symbols"};
         }
 
         const YomkPluginMeta* meta = metaFn();
         if (!meta || !meta->name || !*meta->name)
         {
             dlclose(handle);
-            return {YomkResponse::eNo, "invalid plugin meta"};
+            return {yomk::payload::ResStatus::Failed, "invalid plugin meta"};
         }
         if (meta->abi_version != YOMKPLUGIN_ABI_VERSION)
         {
@@ -56,7 +62,7 @@ YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
             const int pluginAbi = meta->abi_version;
             dlclose(handle);
             return {
-                YomkResponse::eNo,
+                yomk::payload::ResStatus::Failed,
                 "abi version mismatch: plugin " + std::to_string(pluginAbi) + ", host " +
                     std::to_string(YOMKPLUGIN_ABI_VERSION)};
         }
@@ -66,7 +72,7 @@ YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
         if (m_plugins.count(pluginName))
         {
             dlclose(handle);
-            return {YomkResponse::eNo, "plugin already loaded: " + pluginName};
+            return {yomk::payload::ResStatus::Failed, "plugin already loaded: " + pluginName};
         }
         LoadedPlugin lib;
         lib.handle = handle;
@@ -74,23 +80,27 @@ YomkResponse YomkPluginLoader::load(YomkPkgPtr pkg)
         lib.createFn = createFn;
         lib.deleteFn = deleteFn;
         m_plugins[pluginName] = lib;
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, pluginName)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(pluginName)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("load exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("load exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "load exception"};
+        return {yomk::payload::ResStatus::Failed, "load exception"};
     }
 }
 
-YomkResponse YomkPluginLoader::unload(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginLoader::unload(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, String, data);
+        auto data = yomk::msgs::unpack<yomk::msgs::String>(pkg);
+        if (!data)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::String::kName);
+        }
         const std::string pluginName = data->d;
         void* handle = nullptr;
         {
@@ -98,13 +108,13 @@ YomkResponse YomkPluginLoader::unload(YomkPkgPtr pkg)
             auto it = m_plugins.find(pluginName);
             if (it == m_plugins.end())
             {
-                return {YomkResponse::eNo, "plugin not loaded: " + pluginName};
+                return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
             }
             purgeDead(pluginName);
             if (aliveCount(pluginName) > 0)
             {
                 /* 引用计数保护：仍有存活实例时拒绝卸载 */
-                return {YomkResponse::eNo, "instances still alive: " + pluginName};
+                return {yomk::payload::ResStatus::Failed, "instances still alive: " + pluginName};
             }
             handle = it->second.handle;
             m_plugins.erase(it);
@@ -114,34 +124,38 @@ YomkResponse YomkPluginLoader::unload(YomkPkgPtr pkg)
              * 低频，锁内执行可接受 */
             dlclose(handle);
         }
-        YOMK_INFO_TAG("YomkPluginLoader", "unload: ", pluginName);
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, "ok")};
+        yomk::log().tag("YomkPluginLoader").info("unload: ", pluginName);
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared("ok")};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("unload exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("unload exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "unload exception"};
+        return {yomk::payload::ResStatus::Failed, "unload exception"};
     }
 }
 
-YomkResponse YomkPluginLoader::meta(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginLoader::meta(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, String, data);
+        auto data = yomk::msgs::unpack<yomk::msgs::String>(pkg);
+        if (!data)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::String::kName);
+        }
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_plugins.find(data->d);
         if (it == m_plugins.end())
         {
-            return {YomkResponse::eNo, "plugin not loaded: " + data->d};
+            return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + data->d};
         }
         const YomkPluginMeta* meta = it->second.metaFn();
         if (!meta)
         {
-            return {YomkResponse::eNo, "invalid plugin meta"};
+            return {yomk::payload::ResStatus::Failed, "invalid plugin meta"};
         }
         PluginMeta out;
         out.abi_version = meta->abi_version;
@@ -150,30 +164,34 @@ YomkResponse YomkPluginLoader::meta(YomkPkgPtr pkg)
         out.version = meta->version ? meta->version : "";
         out.author = meta->author ? meta->author : "";
         out.description = meta->description ? meta->description : "";
-        return {YomkResponse::eOk, "ok", YomkMkPtr(PluginMeta, out)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMeta::shared(out)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("meta exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("meta exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "meta exception"};
+        return {yomk::payload::ResStatus::Failed, "meta exception"};
     }
 }
 
-YomkResponse YomkPluginLoader::createInstance(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginLoader::createInstance(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, CreateReq, req);
+        auto req = yomk::msgs::unpack<yomk::msgs::CreateReq>(pkg);
+        if (!req)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::CreateReq::kName);
+        }
         std::shared_ptr<YomkPluginInterface> inst;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto it = m_plugins.find(req->d.pluginName);
             if (it == m_plugins.end())
             {
-                return {YomkResponse::eNo, "plugin not loaded: " + req->d.pluginName};
+                return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + req->d.pluginName};
             }
             /* 插件工厂必须持锁调用：与 unload 锁内 dlclose 互斥，否则锁外工厂调用
              * 可能落在已 unmap 的插件代码上（段错误）。
@@ -181,44 +199,48 @@ YomkResponse YomkPluginLoader::createInstance(YomkPkgPtr pkg)
             YomkPluginInterface* raw = it->second.createFn(req->d.instanceName.c_str(), req->d.instanceFile.c_str());
             if (!raw)
             {
-                return {YomkResponse::eNo, "create instance failed: " + req->d.pluginName};
+                return {yomk::payload::ResStatus::Failed, "create instance failed: " + req->d.pluginName};
             }
             /* shared_ptr 自定义 deleter 绑定该库的 delete_instance；登记 alive 后再返回 */
             inst.reset(raw, it->second.deleteFn);
             m_alive[req->d.pluginName].push_back(inst);
         }
-        return {YomkResponse::eOk, "ok", YomkMkPtr(PluginInstance, inst)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInstance::shared(inst)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("create exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("create exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "create exception"};
+        return {yomk::payload::ResStatus::Failed, "create exception"};
     }
 }
 
-YomkResponse YomkPluginLoader::deleteInstance(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginLoader::deleteInstance(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, PluginInstance, data);
+        auto data = yomk::msgs::unpack<yomk::msgs::PluginInstance>(pkg);
+        if (!data)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::PluginInstance::kName);
+        }
         /* shared_ptr 拷贝随响应包销毁时 reset，自动触发 delete_instance */
         std::lock_guard<std::mutex> lock(m_mutex);
         for (auto& kv : m_alive)
         {
             purgeDead(kv.first);
         }
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, "ok")};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared("ok")};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("delete exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("delete exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "delete exception"};
+        return {yomk::payload::ResStatus::Failed, "delete exception"};
     }
 }
 

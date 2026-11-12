@@ -8,8 +8,8 @@
  *   <安装路径>/bin/ExampleYomkPluginSystemBuilder
  * 清单路径由 CMake 编译期注入（指向 examples/workflow/manifest.yomk）。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -22,7 +22,7 @@ namespace
 {
 bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 
 /* 打印分节标题 */
@@ -71,14 +71,14 @@ int main()
     YomkResponse resp = YOMKPLUGIN_BUILD(manifest);
     if (!isOk(resp))
     {
-        fail("构建", resp.m_msg);
+        fail("构建", resp.msg);
     }
     resp = YOMKPLUGIN_INFO_BUILDER();
     if (!isOk(resp))
     {
-        fail("查询构建信息", resp.m_msg);
+        fail("查询构建信息", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, BuilderInfo, builder);
+    YomkUnPackPkg(resp.data, BuilderInfo, builder);
     if (!builder)
     {
         fail("查询构建信息", "响应数据缺失");
@@ -102,9 +102,9 @@ int main()
     resp = YOMKPLUGIN_INFO_PLUGINS();
     if (!isOk(resp))
     {
-        fail("查询插件", resp.m_msg);
+        fail("查询插件", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, PluginMetaArray, metas);
+    YomkUnPackPkg(resp.data, PluginMetaArray, metas);
     if (!metas)
     {
         fail("查询插件", "响应数据缺失");
@@ -128,9 +128,9 @@ int main()
     resp = YOMKPLUGIN_INFO_INSTANCES();
     if (!isOk(resp))
     {
-        fail("查询实例", resp.m_msg);
+        fail("查询实例", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, InstanceInfoArray, instances);
+    YomkUnPackPkg(resp.data, InstanceInfoArray, instances);
     if (!instances)
     {
         fail("查询实例", "响应数据缺失");
@@ -148,9 +148,9 @@ int main()
     resp = YOMKPLUGIN_INFO_INSTANCES_BY("ConnectionService");
     if (!isOk(resp))
     {
-        fail("过滤实例", resp.m_msg);
+        fail("过滤实例", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, InstanceInfoArray, filtered);
+    YomkUnPackPkg(resp.data, InstanceInfoArray, filtered);
     if (!filtered)
     {
         fail("过滤实例", "响应数据缺失");
@@ -168,9 +168,9 @@ int main()
     resp = YOMKPLUGIN_INFO_PLUGIN_BY("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
-        fail("按实例查插件", resp.m_msg);
+        fail("按实例查插件", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, PluginMeta, instMeta);
+    YomkUnPackPkg(resp.data, PluginMeta, instMeta);
     if (!instMeta)
     {
         fail("按实例查插件", "响应数据缺失");
@@ -191,9 +191,9 @@ int main()
     resp = YOMKPLUGIN_INFO_INSTANCES_FILE("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
-        fail("查看实例文件", resp.m_msg);
+        fail("查看实例文件", resp.msg);
     }
-    YomkUnPackPkg(resp.m_data, String, fileContent);
+    YomkUnPackPkg(resp.data, String, fileContent);
     if (!fileContent)
     {
         fail("查看实例文件", "响应数据缺失");
@@ -207,17 +207,17 @@ int main()
      * 输出：String(ok/msg) */
     section("8. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
     resp = YOMKPLUGIN_TRY_UNLOAD("ConnectionService");
-    std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.m_msg) << std::endl;
+    std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.msg) << std::endl;
     resp = YOMKPLUGIN_UNLOAD("ConnectionService");
     if (!isOk(resp))
     {
-        fail("卸载 ConnectionService", resp.m_msg);
+        fail("卸载 ConnectionService", resp.msg);
     }
     std::cout << "UNLOAD ConnectionService: ok" << std::endl;
     resp = YOMKPLUGIN_UNLOAD("WorkspaceService");
     if (!isOk(resp))
     {
-        fail("卸载 WorkspaceService", resp.m_msg);
+        fail("卸载 WorkspaceService", resp.msg);
     }
     std::cout << "UNLOAD WorkspaceService: ok" << std::endl;
 

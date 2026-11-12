@@ -2,7 +2,7 @@
 # 一键编译脚本（交互式）
 # 用法: source build_ubuntu.sh（或 bash build_ubuntu.sh 直接执行亦可）
 # 依次交互询问 YomkServer 安装路径（前置路径）与扩展安装路径，默认均取环境变量 YOMK_PREFIX_PATH，可修改
-# 示例程序默认随主库编译安装（无需询问）；测试程序询问是否编译（直接回车不编译，输入 Y 才编译）
+# 示例程序默认随主库编译安装（无需询问）；测试程序询问是否编译（直接回车默认编译，输入 n 跳过）
 # 扩展库与 YomkServer 安装到一起（头文件由 YomkServer::YomkServer 的 INTERFACE include 统一提供）
 # 安装后将扩展 lib 注册到系统动态库搜索路径（复用 yomk.conf）并刷新 ldconfig 缓存，新开任意终端即可找到扩展 so
 
@@ -59,8 +59,9 @@ if [ ! -w "${INSTALL_DIR}" ]; then
     SUDO="sudo"
 fi
 
-# 询问是否编译 test（直接回车不编译，输入 Y 才编译）
-read -p "编译测试程序? [y/N]: " BUILD_TEST
+# 询问是否编译 test（直接回车默认编译，输入 n 跳过）
+read -p "编译测试程序? [Y/n]: " BUILD_TEST
+BUILD_TEST=${BUILD_TEST:-y}
 if [[ "${BUILD_TEST}" =~ ^[Yy]$ ]]; then
     BUILD_TEST="ON"
 else
@@ -104,7 +105,8 @@ fi
 mkdir -p "${EXAMPLES_BUILD_DIR}"
 cd "${EXAMPLES_BUILD_DIR}" || return 1
 
-cmake "${EXAMPLES_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}" -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+cmake "${EXAMPLES_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}" -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+    -UYomkPluginSystem_DIR -UYomkServer_DIR
 if [ $? -ne 0 ]; then
     echo "示例程序 cmake 配置失败"
     cd "${_ORIG_DIR}"
@@ -123,7 +125,10 @@ if [ "${BUILD_TEST}" = "ON" ]; then
     mkdir -p "${TEST_BUILD_DIR}"
     cd "${TEST_BUILD_DIR}" || return 1
 
-    cmake "${TEST_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}"
+    # -U 清除上次运行缓存下来的包定位（YomkPluginSystem_DIR/YomkServer_DIR），
+    # 强制按本次 CMAKE_PREFIX_PATH 重新查找，避免 find_package 钉死在陈旧安装目录
+    cmake "${TEST_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}" \
+        -UYomkPluginSystem_DIR -UYomkServer_DIR
     if [ $? -ne 0 ]; then
         echo "测试程序 cmake 配置失败"
         cd "${_ORIG_DIR}"

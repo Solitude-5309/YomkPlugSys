@@ -2,7 +2,7 @@
  * WorkspaceService：workflow 示例插件（工作空间）
  * 演示 Builder 按清单加载插件并创建实例，实例文件透传给插件。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
 
 #include <string>
 

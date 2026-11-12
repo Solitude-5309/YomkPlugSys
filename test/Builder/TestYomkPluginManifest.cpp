@@ -6,8 +6,8 @@
  * 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，
  * 直接运行也不污染当前目录）；插件 so 符号链接进夹具目录满足相对路径契约。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -37,18 +37,18 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 static bool isNo(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eNo;
+    return r.status == ResStatus::Failed;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -60,7 +60,7 @@ static std::string respString(const YomkResponse& r)
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(isNo(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 组合断言：eOk 且汇总串精确匹配 */
@@ -124,9 +124,9 @@ static void linkPlugin()
 static BuilderInfo builderInfo()
 {
     YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+        YomkUnPackPkg(resp.data, BuilderInfo, info);
         if (info)
         {
             return info->d;
@@ -264,7 +264,7 @@ int main()
     bool instEmpty = false;
     if (isOk(inst))
     {
-        YomkUnPackPkg(inst.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(inst.data, InstanceInfoArray, arr);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unload");

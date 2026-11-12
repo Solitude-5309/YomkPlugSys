@@ -1,237 +1,219 @@
 # YomkServer API 参考
 
-## 核心类型
+## 链式域入口（七个）
 
-```cpp
-typedef std::shared_ptr<YomkPkg> YomkPkgPtr;  // 消息包指针
+框架全部操作经七个链式域入口暴露，累积方法（`url/msg/srv/key/loop/fn_name/tag/dir` 等）前置、任意顺序组合，终结动作（`request/create/set/start/call/remove/list/get_info` 等）一律无参：
 
-class YomkResponse {
-public:
-    enum EResStatus { eInvalid = -1, eOk = 0, eNo = 1 };
-    EResStatus m_status;
-    std::string m_msg;
-    YomkPkgPtr m_data;
-};
+| 入口 | 模块 | 职责 |
+|------|------|------|
+| `yomk::server()` | YomkServer | 请求通信、服务器生命周期、服务管理 |
+| `yomk::srv_info()` | YomkServerInfo | 拓扑内省：服务清单 / 函数清单 / 单函数元信息 / 全量拓扑 |
+| `yomk::log()` | YomkLogger | 日志发射（六级 × 模板参数包） |
+| `yomk::log_mgr()` | YomkLogger | 日志管理：门控 / 代理 / 位置前缀 / 文件日志器生命周期 / 内省 |
+| `yomk::ctx()` | YomkContext | 跨服务强类型键值存储 + Checker/Monitor |
+| `yomk::event_loop()` | YomkEventLoop | 具名单线程 FIFO 事件循环 |
+| `yomk::fn_pool()` | YomkFunctionPool | 动态函数池（注册 / 调用 / 热替换） |
 
-typedef std::function<YomkResponse(YomkPkgPtr pkg)> YomkServiceFunc;
-typedef std::function<void(YomkResponse response)> YomkResponseFunc;
-```
+**builder 通用规则（必须遵守）**：
+
+- builder 按值传递，链式表达式须**单表达式内联**使用，接收变量一律 `auto` 或不接收；内部持 `string_view`，缓存 builder 复用即悬垂。
+- `yomk::log()` 域入口在**调用行**捕获位置前缀，缓存 builder 还会导致位置错误。
+- 按模块头导入（无伞形聚合头）：`<yomk/server/YomkServerApi.h>`、`YomkServerInfoApi.h`、`YomkLoggerApi.h`、`YomkContextApi.h`、`YomkEventLoopApi.h`、`YomkFunctionPoolApi.h`；自定义消息包含 `<yomk/msg/YomkMsg.h>` 使用 `YOMK_DEFINE_MSG` 与 `yomk::msgs::unpack`，标准类型见 `<yomk/msg/YomkStdMsg.h>`，核心载荷消息见 `<yomk/server/YomkServerMsg.h>`，模块专属消息/载荷见 `<yomk/{ctx,event_loop,fn_pool,log,srv_info}/Yomk{Module}Msg.h>` / `Yomk{Module}Payload.h`（对应 `*Api.h` 已按需包含）；`YOMK_DEFINE_MSG` 生成类型位于 `yomk::msgs` 命名空间。
 
 ## 状态码约定
 
-框架统一遵循以下惯例（源码 `YomkFunctionPool.cpp` 等处注释确立）：
-
 | 状态 | 值 | 语义 |
 |------|----|------|
-| `eOk` | 0 | 调用成功 |
-| `eNo` | 1 | not-found / 目标不存在 / 被拒绝 / 条件不满足 |
-| `eInvalid` | -1 | 入参非法（空名、nullptr 等）或服务器未初始化 |
+| `ResStatus::Succeeded` | 0 | 调用成功 |
+| `ResStatus::Failed` | 1 | not-found / 目标不存在 / 被拒绝 / 条件不满足 |
+| `ResStatus::Invalid` | -1 | 入参非法（空名等）或服务器未初始化 |
 
-- 未初始化（未 `YOMK_INIT`）时调用任意 `YOMK_*` 宏：同步请求返回 `eInvalid`，msg 为 `"YomkServer is not init"`；异步请求直接丢弃（框架测试 TestYomkAPINotInit 覆盖此行为）。
-- 判断"目标是否存在"用 `eNo`，判断"参数是否合法"用 `eInvalid`，不要混用。
+未初始化守卫（全框架统一约定）：
 
-## YomkMsg 宏
+| 入口形态 | 未初始化行为 |
+|---|---|
+| request / status / 各域写与内省终结 | `ResStatus::Invalid` |
+| create / add / remove（服务注册类终结） | `-1` |
+| `.async()` 异步请求 | 静默丢弃，回调不触发 |
+| `ctx().msg<T>().get()` 类型化读 | 原样返回调用方默认值 |
+| `.version()` / `.instance()` / `.shutdown()` | 免初始化安全 |
+
+均记录错误诊断日志，不抛异常。判断"目标是否存在"用 `Failed`，判断"参数是否合法"用 `Invalid`，不要混用。
+
+## 核心类型
 
 ```cpp
-YomkMsg(DataType, MsgName, VarName)
-// DataType：数据类 | MsgName：消息名称（辅助宏使用此名） | VarName：成员变量名
-```
+using YomkMsgPtr = std::shared_ptr<YomkMsg>;  // 消息包基类指针，跨边界统一流转
 
-**辅助宏：**
-```cpp
-YomkMkPtr(MsgName, ...)   // 创建消息包 shared_ptr
-Yomk(MsgName)             // → yomk::MsgName##_（类名）
-YomkPtr(MsgName)          // → yomk::MsgName##Ptr（指针类型）
-YomkMk(MsgName, ...)      // → 构造实例
-```
-
-> **入包语义**：`YomkMkPtr` 生成的包类型同时提供 `const DataType &` 与 `DataType &&` 两种构造，传 `std::move(data)` 即移动入包（大对象可避免拷贝）；传左值时重载决议仍选中 `const&` 版本，行为与逐值拷贝一致。
-
-> **命名约定**：消息名称由用户自定义（PascalCase），无固定前缀要求，可与数据类同名。消息类型名是“宏词汇”而非“类型词汇”——只能在 `Yomk()` / `YomkPtr()` / `YomkMkPtr()` / `YomkUnPackPkg*` / `YomkInstallFunc` 第三参等宏的参数位置出现，不能当裸类型名使用。`YomkMsg` 展开生成的真实类型是 `yomk::MsgName_`（类）与 `yomk::MsgNamePtr`（指针），裸写 `MsgName` 会报 `'MsgName' has not been declared`。
-
-**解包宏：**
-```cpp
-YomkUnPackPkgResponse(pkg, MsgName, ptr)  // 失败自动 return {eNo, ...}
-YomkUnPackPkgVoid(pkg, MsgName, ptr)      // 失败自动 return（void函数）
-YomkUnPackPkg(pkg, MsgName, ptr)          // 不自动 return，需手动判空
-YomkUnPackPkgT(pkg, MsgName, ClassName, ptr) // MsgName为运行时字符串
-```
-
-**YomkInstallFunc / YomkBindWeakSelf：**
-```cpp
-YomkInstallFunc(FuncName, Func)             // 弱绑定成员函数并装入本服务 funcMap
-YomkInstallFunc(FuncName, Func, MsgName)    // 同上，额外声明期望消息类型（可选末位参数）
-// MsgName 字符串化后仅作内省元数据，不参与运行时校验；两参旧调用零改动
-YomkBindWeakSelf(Func)           // 弱绑定成员函数（不装入 funcMap），供注册到外部子系统使用
-// 两者均展开为 weakFunc(bind(&Func, this, _1))：回调触发时先 weak_ptr.lock() 判活，
-// 服务已删除则安全丢弃，不会悬垂 this 崩溃。
-// weakFunc 是泛型模板，返回的泛型 lambda 按调用处目标 std::function 类型隐式转换，
-// 同一个宏自动适配全部回调签名：功能函数/FunctionPool/EventLoop（YomkResponse(YomkPkgPtr)，
-// 删除后返回 eNo）、异步响应（void(YomkResponse)，丢弃）、Context checker
-// （ECheckStatus(const Context&)，删除后默认放行 eAccept）、Context monitor（void，丢弃）。
-
-struct YomkFuncInfo {  // 功能函数元信息（调试内省用），预留扩展（如安全性校验）
-    std::string m_funcName;  // 功能函数名（/开头）
-    std::string m_msgName;   // 期望消息类型名（YomkInstallFunc 三参声明，可为空）
+// yomk::payload::Response —— 统一响应（三态状态码）
+struct Response {
+    ResStatus status;   // 本次请求的状态
+    std::string msg;    // 对状态的说明（成功多为 "ok" 或描述文本，失败为契约消息；不携带返回数据）
+    YomkMsgPtr data;    // 携带的返回数据（结构化消息包）
 };
+
+using YomkServiceFunc  = std::function<yomk::payload::Response(YomkMsgPtr pkg)>;
+using YomkResponseFunc = std::function<void(yomk::payload::Response response)>;
 ```
 
-## 内置数据结构
+字段口径固化：返回数据一律放 `data`，`msg` 仅作状态说明。
+
+**内置数据结构**：
 
 ```cpp
 namespace yomk {
     struct Event {
-        std::string m_eventLoopName; YomkPkgPtr m_pkg;
-        YomkServiceFunc m_serviceFunc; std::uint64_t m_eventId;
-        YomkResponse m_response; std::function<void()> m_waitCallback;
-        std::string m_tag; // 用户事件标记，POST 时可选传入，仅用于内省展示
+        std::string eventLoopName; YomkMsgPtr pkg;
+        YomkServiceFunc serviceFunc; std::uint64_t eventId;
+        yomk::payload::Response response; std::function<void()> waitCallback;
+        std::string tag;   // 用户事件标记，post 时可选，仅内省展示
     };
-    // m_logger=日志器名（服务端按其选择/惰性创建日志器实例）；m_tag=记录标签（随记录显示 [tag]）
-    // 控制台 TAG 宏兼容双填（m_logger=tag 且 m_tag=tag）；文件 TAG 宏 m_logger=文件名、m_tag=tag
-    struct Log { enum ELogLevel{eDebug,eInfo,eWarn,eError}; ELogLevel m_level; std::string m_log; std::string m_logger; std::string m_tag; };
-    struct Context { std::string m_key; YomkPkgPtr m_value; };
-    struct ContextChecker {
-        enum ECheckStatus{eAccept, eReject};
-        std::string m_key; std::function<ECheckStatus(const Context&)> m_checkFunc;
-    };
-    struct ContextMonitor { std::string m_key; std::function<void(Context)> m_contextMonitorFunc; bool m_asyncMonitor; };
+    // logger=日志器名（服务端按其选择/惰性创建）；tag=记录标签（随记录显示 [tag]）
+    // LogLevel 为命名空间级 enum class（见 YomkLoggerPayload.h），非 Log 内嵌枚举
+    struct Log { payload::LogLevel level; std::string log; std::string logger; std::string tag; };
+    struct Context { std::string key; YomkMsgPtr value; std::string group = "main"; };  // group=key 所属组名（缺省 main）
+    enum class CheckStatus{Accept, Reject};   // checker 门控结论（定义见 YomkContextPayload.h）
 }
+namespace yomk { struct FuncInfo {           // 功能函数元信息（内省用，定义见 YomkServerInfoPayload.h）
+    std::string funcName;      // 路由名（/ 开头）
+    std::string msgName;       // 期望消息类型名（声明处第三参 / msg_name()，可为空）
+    std::string description;   // 函数说明（第四参 / description()，自由字符串，可为空）
+}; }
 ```
 
-**内置标准类型消息包**（成员名均为 `d`，共 31 种，标量与对应 Array 成对提供）：
-
-| 类别 | 类型 |
-|------|------|
-| 布尔 | `Bool` |
-| 字节/字符 | `Char`, `UChar`, `Byte`, `Int8`, `Uint8` |
-| 整数 | `Int16`, `Uint16`, `Int32`, `Uint32`, `Int64`, `Uint64` |
-| 浮点 | `Float32`, `Float64` |
-| 字符串 | `String` |
-
-每个标量均有对应 `XxxArray`（如 `Int32Array`, `StringArray`），完整清单见 `YomkServer/include/YomkServer/YomkPkg.h` 末段。
-
-**回调签名：**
-```cpp
-typedef std::function<void(const yomk::Context& ctx)> YomkContextMonitorFunc;
-typedef std::function<yomk::ContextChecker::ECheckStatus(const yomk::Context& ctx)> YomkContextCheckFunc;
-typedef std::function<bool(const yomk::Log& log)> YomkConsoleLogProxyFunc;
-```
-
-## 核心类
+**回调签名（Context / Logger）**：
 
 ```cpp
-class YomkServer {
-    static std::shared_ptr<YomkServer> create(std::size_t asyncThreadCount = 0);
-    // 唯一构造入口，必须 shared_ptr 持有（栈/裸 new 编译期拒绝）。
-    // asyncThreadCount：异步请求池线程数（默认 0 取框架默认值）。
-    // 异步监控池归 Context 模块自持（固定单线程 FIFO：写锁内入队，恒按 set 提交序保序，含并发 set）。
-    // 线程池仅内部使用，不对用户暴露。
-    template<typename T> int newService(const std::string& srvName = "");  // 返回注册结果（0 成功 / -1 失败）
-    int startService(std::vector<std::string> srvNames);
-    int addService(YomkService* srv);  // init 失败返回 -1 并自动回滚
-    int delService(const std::string& srvName);  // 删除服务（锁外调 deinit 后析构）
-    void shutdown();  // 优雅关闭：停请求池（拒新->排空->join）后锁外逐个 deinit（Context 在其中自停监控池），幂等
-    std::vector<std::string> serviceNames();  // 内省：全部服务名
-    std::map<std::string, YomkFuncInfo> serviceFuncInfos(const std::string& srvName);  // 内省：指定服务的函数元信息
-    YomkResponse request(const std::string& url, YomkPkgPtr pkg = nullptr);
-    void asyncRequest(const std::string& url, YomkPkgPtr pkg = nullptr, YomkResponseFunc func = nullptr);
-};
-
-class YomkBoot {
-    virtual ~YomkBoot() {}     // YOMK_BOOT 以 unique_ptr 接管传入实例的所有权，勿再手动 delete
-    virtual int before() = 0;  // 服务启动前：创建资源
-    virtual int start() = 0;   // 注册并启动服务
-    virtual int after() = 0;   // 服务启动后：初始化调用
-};
-
-class YomkService {
-    YomkService(YomkServer* server);
-    void name(const std::string& name);
-    std::string name();
-    bool deleted() const;  // 服务是否已被标记注销（YOMK_DEL_SERVICE / 同名替换置位）
-    virtual int init() = 0;
-    virtual void deinit() {}  // 删除服务时由框架在锁外调用，覆写用于停线程/注销外部资源
-    template<typename Func> auto weakFunc(Func func);  // 泛型弱绑定守卫（适配签名清单见上方 YomkBindWeakSelf 注释）
-    void installFunc(const std::string& funcName, YomkServiceFunc func, const std::string& msgName = "");
-    std::map<std::string, YomkFuncInfo> funcInfos();  // 内省：本服务函数元信息（funcName 为键）
-    YomkResponse invoke(const std::string& funcName, YomkPkgPtr pkg = nullptr);  // 直接调用本服务的功能函数（不经 URL 路由）
-    YomkResponse request(const std::string& url, YomkPkgPtr pkg = nullptr);
-    void asyncRequest(const std::string& url, YomkPkgPtr pkg = nullptr, YomkResponseFunc func = nullptr);
-};
+using YomkContextMonitorFunc  = std::function<void(const yomk::payload::Context& ctx)>;
+using YomkContextCheckerFunc  = std::function<yomk::payload::CheckStatus(const yomk::payload::Context& ctx)>;
+using YomkConsoleLogProxyFunc = std::function<bool(const yomk::payload::Log& log)>;
 ```
 
-## 宏 API 速查
+## YOMK_DEFINE_MSG 与解包
 
-### 请求通信
-| 宏 | 说明 |
-|----|------|
-| `YOMK_INIT()` | 初始化（自动启动内置服务）；可选参数透传至 `init(asyncThreadCount)` 配置异步线程池大小 |
-| `YOMK_BOOT(boot)` | Boot 生命周期初始化 |
-| `YOMK_NEW_SERVICE(T, name)` | 注册服务（模板）；返回 0 成功 / -1 失败（如 init 失败自动回滚） |
-| `YOMK_ADD_SERVICE(srv, name)` | 注册服务（实例）；服务指针所有权移交框架（注册成功后以 shared_ptr 持有），同一指针禁止重复注册（双重释放）；同名替换时旧服务先被锁外 deinit 再安装新服务；返回 0 成功 / -1 失败（如 init 失败自动回滚） |
-| `YOMK_DEL_SERVICE(name)` | 删除服务（后续请求返回 service not found，外流弱绑定回调立即失效：置位注销标志后即使强引用未归零也丢弃，同名替换同语义；YOMK_SHUTDOWN 走排空语义不置位） |
-| `YOMK_SHUTDOWN()` | 关闭服务器：先排空在途异步请求（拒新 -> 存量执行完 -> join 工作线程），再逐个服务调用 deinit() 并清空服务表、释放单例；幂等，关闭后不支持二次初始化；未显式调用时退出清理经 atexit 兜底（锁内置空快照、锁外释放，永生单例锁保证在途任务安全取空返回，无挂起/段错误） |
-| `YOMK_REQUEST(url, pkg)` | 同步请求 |
-| `YOMK_ASYNC_REQUEST(url, pkg, cb)` | 异步请求（异步请求池执行，并发有界；回调异常被框架捕获记日志；`YOMK_SHUTDOWN` 后提交被拒绝） |
-| `YOMK_SERVER_P` / `YOMK_SERVER_PTR` | 获取 Server 指针 |
+```cpp
+struct MyData { std::string field1; int field2; };   // 数据类先在命名空间外定义
+YOMK_DEFINE_MSG(MyData, MyData, d);   // 生成 yomk::msgs::MyData / MyDataPtr，成员名约定 d
+```
 
-### Context
-| 宏 | 说明 |
-|----|------|
-| `YOMK_CONTEXT_CREATE(key, val)` | 创建 K-V（key 已存在返回 eNo；val 为 nullptr 拒绝创建返回 eNo；值类型与同 key 现值不一致返回 eNo "context type not match"） |
-| `YOMK_CONTEXT_GET(MsgName, key, def)` | 获取值（**返回值对象发布后只读**：改动请新建对象再 `YOMK_CONTEXT_SET`，勿原地改；key 不存在时返回兜底默认值 def，调用方永不拿到空指针） |
-| `YOMK_CONTEXT_SET(key, val)` | 设置值 |
-| `YOMK_CONTEXT_DESTROY(key)` | 销毁（key 不存在返回 eNo） |
-| `YOMK_CONTEXT_ON/OFF_CHECKER()` | 开关检查器（全局开关 ON 且该 key 已设置 checker 时才生效） |
-| `YOMK_CONTEXT_SET_CHECKER(key, func)` | 设置检查函数（返回 eAccept 放行 / eReject 拦截，拦截后 set 返回 eNo 且 monitor 不触发）。**checker 在写锁内门控：回调内重入 set（含跨键环）会死锁**，区别于 monitor 的递归栈溢出 |
-| `YOMK_CONTEXT_ON/OFF_MONITOR()` | 开关监控器 |
-| `YOMK_CONTEXT_SET_MONITOR(key, func, async)` | 设置监控函数（async 省略默认 false）。**语义**：仅通知发生了一次 set，并回传该次键值快照（不保证实时）；顺序上异步恒按 set 提交序保序，同步并发下不保证跨线程序。**回调约束**：快照仅回调期有效（留存请拷贝）；值对象只读勿原地改；需最新值在回调内 `YOMK_CONTEXT_GET` 重读；异常被吞不影响 set；校验/拒绝用 checker。**两种模式**：同步（默认）——锁外内联、及时，回调内重入 set 会递归（长链栈溢出）；异步——写锁内入单线程监控池、set 返回后按提交序执行、deinit/`YOMK_SHUTDOWN` 排空不丢，适合耗时回调与状态机回写 |
-| `YOMK_CONTEXT_INFO_KEYS()` | 内省：key 列表（返回 StringArray） |
-| `YOMK_CONTEXT_INFO_KEY(key)` | 内省：单 key 元信息（msg 格式 `key [类型名] checker:on\|off monitors:N(async:M)`） |
-| `YOMK_CONTEXT_INFO_ALL()` | 内省：全量 dump（每行同单 key 元信息格式） |
+- `yomk::msgs::MyData::shared(args...)` — 类内静态工厂，转发构造参数 → `shared_ptr` 消息包。
+  **注意**：模板形参 `A&&...` 无法从花括号初始化列表推导，传聚合对象须带类型：`MyData::shared(MyData{"a", 1})`、`Int32Array::shared(std::vector<std::int32_t>{1,2,3})`。
+- `yomk::msgs::MyData::shared(std::move(data))` — 右值重载移动入包，大对象免拷贝。
+- `yomk::msgs::unpack<yomk::msgs::MyData>(pkg)` — 按运行期类型名解包，pkg 为空或类型不匹配返回 `nullptr`（不自动 return，调用方手动判空），不抛异常。
+- 消息名（宏第二参）即运行期类型名 `kName`；各处声明的"期望消息类型名"字符串（`installFunc` 第三参、`fn_pool().msg_name()`、`event_loop().msg_name()`）与其保持一致，仅作内省元数据、不拦截调用。
 
-### EventLoop
-| 宏 | 说明 |
-|----|------|
-| `YOMK_EVENTLOOP_START(name, defaultFunc)` / `(name, defaultFunc, MsgName)` | 启动（运行中幂等；对已停止未销毁的循环为重启：新开线程按 FIFO 续跑保留的积压事件、不丢失；可选末位 MsgName 声明默认处理函数期望的消息类型，字符串化后仅作内省元数据，一参/两参旧调用零改动） |
-| `YOMK_EVENTLOOP_STOP(name)` | 停止（仅退出工作线程、不清队列：未执行事件保留至下次 START 续跑；停止期间投递被拒） |
-| `YOMK_EVENTLOOP_POST(name, pkg, handle, tag="")` | 异步投递（handle/tag 均可省略，tag 仅作内省标记；循环未运行投递被拒返 eNo） |
-| `YOMK_EVENTLOOP_POST_WAIT(name, pkg, handle, tag="")` | 同步投递（tag 同上；未运行被拒返 eNo，销毁丢弃排队事件时等待者同样被释放） |
-| `YOMK_EVENTLOOP_DESTROY(name)` | 销毁（先停止退出线程、再清空未执行事件——不可续跑，并移除循环条目） |
-| `YOMK_EVENTLOOP_INFO_LOOPS()` | 内省：事件循环名列表（返回 StringArray） |
-| `YOMK_EVENTLOOP_INFO_LOOP(name)` / `(name, n)` | 内省：单循环元信息（msg 格式 `name running:on\|off pending:N defaultFunc:on\|off [类型名] nextNEventTag(n): tag1, tag2, ...`，默认处理函数声明过类型时附加 `[类型名]`，n 缺省 3，队列不足 n 时全部列出，空 tag 显示 `-`） |
-| `YOMK_EVENTLOOP_INFO_ALL()` | 内省：全量 dump（每行同单循环元信息格式） |
+**内置标准类型**（成员名均为 `d`，共 30 种）：`Bool`、`Char`、`UChar`、`Byte`、`Int8`、`Uint8`、`Int16`、`Uint16`、`Int32`、`Uint32`、`Int64`、`Uint64`、`Float32`、`Float64`、`String` 及对应 `XxxArray`（如 `StringArray`、`Int32Array`）。
 
-### FunctionPool
-| 宏 | 说明 |
-|----|------|
-| `YOMK_FUNCTIONPOOL_REGISTER(name, func)` / `(name, func, MsgName)` | 注册（三参形式声明期望消息类型，字符串化后仅作内省元数据，不参与运行时校验；两参旧调用零改动）。**同名重复注册即运行时热替换，无需先注销** |
-| `YOMK_FUNCTIONPOOL_UNREGISTER(name)` | 注销（未注册返回 eNo，空名 eInvalid） |
-| `YOMK_FUNCTIONPOOL_CALL(name, pkg)` | 调用（未注册 eNo，空名 eInvalid；pkg 原样透传可为 nullptr；用户函数异常原样穿透到调用方，需自行 try/catch） |
-| `YOMK_FUNCTIONPOOL_INFO_NAMES()` | 内省：注册函数名列表（返回 StringArray） |
-| `YOMK_FUNCTIONPOOL_INFO_NAME(name)` | 内省：单函数存在性查询（命中 eOk 且 msg 为 `funcName [类型名]`，未声明类型时无括号后缀，未注册 eNo） |
-| `YOMK_FUNCTIONPOOL_INFO_ALL()` | 内省：全量 dump（首行 `functions:N`，其余每行 `funcName [类型名]`） |
+## installFunc / weakFunc
 
-### ServerInfo（调试内省）
-| 宏 | 说明 |
-|----|------|
-| `YOMK_SERVER_INFO_SERVICES()` | 服务列表（返回 StringArray） |
-| `YOMK_SERVER_INFO_FUNCTIONS(srvName)` | 指定服务的函数列表（每行 `funcName [msgName]`） |
-| `YOMK_SERVER_INFO_FUNCTION(url)` | 单函数类型查询（入参 `/srvName/funcName`，命中返回 msg 为类型名，未声明为空串） |
-| `YOMK_SERVER_INFO_ALL()` | 全量 dump：服务名行 + 缩进函数行 |
+```cpp
+installFunc("/x", &C::m)                         // 成员函数直装本服务 funcMap（内部自动 weakFunc 包装）
+installFunc("/x", &C::m, "MsgName")              // 第三参：期望消息类型名（字符串字面量，仅内省元数据）
+installFunc("/x", &C::m, "MsgName", "Description")  // 第四参：函数说明（自由字符串，透传不解析）
+weakFunc(&Class::Method)                         // 弱绑定成员函数（不装 funcMap），注册到外部子系统必用
+```
 
-### 日志
-| 宏 | 说明 |
-|----|------|
-| `YOMK_INFO/WARN/ERROR/DEBUG(...)` | 控制台日志（默认 tag=MainLogger） |
-| `YOMK_INFO_TAG/WARN_TAG/ERROR_TAG/DEBUG_TAG(tag, ...)` | 自定义 tag 日志（tag 兼容双填 Log::m_tag 与 Log::m_logger，随记录显示 [tag]） |
-| `YOMK_FILE_LOG_CREATE(dir, file)` | 创建文件日志 |
-| `YOMK_FILE_INFO/WARN/ERROR/DEBUG(file, ...)` | 文件日志（默认 tag=MainLogger） |
-| `YOMK_FILE_INFO_TAG/WARN_TAG/ERROR_TAG/DEBUG_TAG(file, tag, ...)` | 文件日志自定义 tag（Log::m_logger=file、Log::m_tag=tag，由日志器统一拼接 [tag] 段） |
-| `YOMK_FILE_LOG_WRITE(file)` | 刷新到磁盘 |
-| `YOMK_ON/OFF_CONSOLE_LOG_INFO/WARN/ERROR/DEBUG()` | 开关控制台级别 |
-| `YOMK_SET_CONSOLE_LOG_PROXY(func)` | 日志代理（回调返回 false 拦截该条日志、框架不做默认输出，返回 true 则放行；传 nullptr 或空 std::function 即卸载代理、恢复框架默认输出，内省首行随之显示 `proxy:off`） |
-| `YOMK_LOGGER_INFO_LOGGERS()` | 内省：日志器列表（返回 StringArray，控制台行 `name [console]`，文件行 `name [file] dir:路径`） |
-| `YOMK_LOGGER_INFO_LOGGER(name)` | 内省：单日志器元信息（msg 同上格式，未注册 eNo） |
-| `YOMK_LOGGER_INFO_ALL()` | 内省：全量 dump（首行 `console:debug:on\|off info:... warn:... error:... proxy:on\|off`，其余为日志器行） |
-| `YOMK_FILE_LOG_DELETE(name)` | 删除日志器（同时清理 console/file 两表，msg `deleted console:c file:f`，均未命中 eNo；文件日志器移除时析构自动落盘，不删磁盘 .log 文件） |
+弱绑定判活：回调触发时先 `weak_ptr.lock()`，服务已删除则安全丢弃，不会悬垂 `this`。同一 `weakFunc` 是泛型模板，按调用处目标 `std::function` 类型自动适配全部回调签名，丢弃行为按返回类型：功能函数/FunctionPool/EventLoop（`Response(YomkMsgPtr)` → `Failed`）、异步响应（`void(Response)` → 丢弃 + 错误日志 "service has been deleted or unregistered, callback ignored"）、checker（`CheckStatus(const Context&)` → 放行 `Accept`）、void monitor（→ 丢弃）。其他返回类型 → `Ret{}` 默认值。构造期绑定（init 之前）永久无效。
+
+`YomkService` 还提供便捷成员：`invoke(funcName, pkg)`（不经 URL 路由直调本服务函数）、`request(url, pkg)` / `asyncRequest(url, pkg, cb)`（转调 server 域链），以及 `funcInfos()` 本服务元信息。
+
+## 服务器域（yomk::server()）
+
+### 请求与响应
+
+| 链 | 终结与返回 |
+|---|---|
+| `.url(u).msg(pkg)` | `.request()` → `Response` 阻塞至服务应答；`.status()` → 三态 `ResStatus`（失败细节进诊断日志） |
+| `.url(u).async(cb)` | 切入异步分面，`.msg(pkg)`（可在 `.async()` 前或后）后 `.request()` → `void`：投递到内置线程池立即返回，结果经 `cb` 送达；`cb` 传 `nullptr` 仅投递不取回 |
+
+`.msg(pkg)` 可省略 = 空消息。
+
+### 生命周期与服务管理
+
+| 链 | 终结与返回 |
+|---|---|
+| `.async_thread(n)` | `.init()`：初始化单例并自动启动内置服务（Logger/Context/EventLoop/FunctionPool/ServerInfo）；`n` 异步线程池大小（省略 = 0 自动检测），仅首次生效；进程内幂等（call_once），挂 atexit 兜底销毁 |
+| — | `.version()` 版本字符串（各域入口 `srv_info()/log_mgr()/ctx()/event_loop()/fn_pool()` 同样提供 `.version()` 模块版本终结，编译期常量直返）/ `.instance()` `shared_ptr<YomkServer>` 快照（未初始化 `nullptr`）/ `.shutdown()` 优雅关闭（未初始化空转）——三者免初始化安全 |
+| `.srv<T>(name)` | `.create()` → `int`：创建并注册 `YomkService` 派生服务；`name` 省略沿用 T 构造默认名；0 成功，-1 失败（未初始化 / 未先调 `srv<T>` / `T::init()` 非 0 自动回滚） |
+| `.srv_name(n).srv_ptr(s)` | `.add()` → `int`：注册已有实例，所有权移交框架；累积非空 `srv_name` 时注册前先改名；同名替换 = 旧服务置注销标志 + deinit 后安装新服务；守卫拒绝时指针仍归调用方 |
+| `.srv_name(n)` | `.remove()` → `int`：按名注销并释放所有权；-1 = 不存在 / 名称为空 / 未初始化 |
+| `.boot_ptr(cfg)` | `.run()` → `int`：先 init 再按 before → start → after 执行 `YomkBoot` 编排；`cfg` 裸指针所有权移交 `run`；任一阶段非 0 立即中止并传播；`boot_ptr` 省略 = 仅 init 返回 0 |
+
+`shutdown()`：拒新 → 排空 → join 异步请求池，再清空服务表逐个 `deinit`；幂等，假定主线程；**关闭后不支持二次 init**。`deinit()` 四触发时机：`remove()` 单删、`shutdown()` 全关、`add()` 同名替换、进程退出 atexit 兜底。
+
+### 拓扑内省（读终结，返回 `Response`）
+
+`.services()` 服务名清单（StringArray）/ `.srv_name(n).functions()` 指定服务函数清单（FuncInfoList）/ `.fn_url(u).get_info()` 单函数元信息（FuncInfo）/ `.all()` 全量拓扑（ServerServiceInfoList：`serviceName` + `funcs`）。服务不存在时 `functions()` 为空清单。
+
+## Context 域（yomk::ctx()）
+
+| 场景 | 链 | 终结与返回 |
+|---|---|---|
+| 创建 | `.key(k).group(g).value(pkg)` | `.create()` → `ResStatus`（g 省略 = 缺省组 `"main"`） |
+| 整体替换 | `.key(k).group(g).value(pkg)` | `.set()` → `ResStatus` |
+| 类型化读 | `.key(k).group(g).msg<T>()` | `.with_default(d).get()` → `shared_ptr<T>`；`.with_default` 可省略 = 未命中回退 `nullptr` |
+| 销毁键 | `.key(k).group(g)` | `.destroy()` → `ResStatus` |
+| 键级校验门控 | `.key(k).group(g).checker_fn(fn)` | `.apply()` → `ResStatus` |
+| 键级变更监听 | `.key(k).group(g).monitor_fn(fn).async(on)` | `.apply()` → `ResStatus`；`.async(on)` 可省略 = 同步 |
+| 组级开关 | `.group(g).checker()` / `.monitor()` | `.enable()` / `.disable()` → `ResStatus`（**建组默认关**，须显式开启；回调保留不删除） |
+| 内省 | `.group(g)` / `.key(k).group(g)` / — | `.keys()` 组内键名 / `.info()` 单键元信息 / `.groups()` 全部组名 / `.all()` 跨组聚合，均 → `Response` |
+
+- 键级回调（`checker_fn`/`monitor_fn`）只能注册到**已存在**的键（否则 `Failed` "context key '{k}' does not exist"），即先 `create()` 再注册；monitors 为追加式（可注册多个）。
+- Checker 生效条件：组开关 ON **且**该键已注册 checker；门控在写锁内执行，**回调内重入 set 会死锁**。Reject 拦截 set（`Failed` "set context key '{k}' rejected by checker"），monitor 不触发。
+- Monitor 仅通知"发生了一次 set"并回传该次键值快照（不保证实时，留存请拷贝；需最新值回调内重读 `get()`）；`.async(true)` 经该组单线程池按 set 提交序保序送达；同步形态锁外即时执行、并发下不保证跨线程序、回调内重入 set 会递归。
+- 组名约定：`.group()` 省略即 `"main"`；空组名 `Failed` "group name is empty"；非 main 组首次寻址惰性自动创建，组名唯一、**不支持销毁组**，异步监控池每组自持。
+- 写路径失败契约：空键名 `Failed` "context key is empty"；create 值空 `Failed` "create context key '{k}' failed: value is empty"、键已存在 `Failed` "context key '{k}' already exists"；set 键不存在 `Failed` "context key '{k}' does not exist"、类型不符 `Failed` "context type not match: ..."。
+- `get()` 返回只读快照，值对象发布后勿原地修改；类型化读按 `kName` 运行期比对，`T` 须为 `YomkMsg` 派生。
+
+## EventLoop 域（yomk::event_loop()）
+
+| 场景 | 链 | 终结与返回 |
+|---|---|---|
+| 启动 | `.loop(name).handle_fn(fn).msg_name(m)` | `.start()` → `ResStatus`；`handle_fn` 为循环默认处理函数、`msg_name` 期望类型名（均仅内省元数据），可省略 |
+| 停止 | `.loop(name)` | `.stop()` → `ResStatus`（停线程**保留队列**） |
+| 销毁 | `.loop(name)` | `.destroy()` → `ResStatus`（停线程 + 清空队列 + 移出循环表，不可续跑） |
+| 非阻塞投递 | `.msg(data).loop(name).handle_fn(fn).tag(t)` | `.post()` → `ResStatus`（仅入队结果）；`handle_fn`/`tag` 可省略 |
+| 阻塞投递 | 同上 | `.post_wait()` → `ResStatus`（阻塞等待事件执行完成） |
+| 内省 | `.loop(name).tag_count(n)` / — | `.get_info()` 单循环状态 + 队列头 n 条 tag 采样（n 省略 = 3）/ `.list()` 循环名清单 / `.all()` 全量，均 → `Response` |
+
+- **同名 `start()` 不重建**：复用既有实例并触发启动（停止后续跑），本次累积的 `handle_fn`/`msg_name` 不生效；仅新循环名创建并绑定默认处理函数。
+- 投递事件未带 `handle_fn` 时回落循环默认处理函数；两者皆空则事件不执行任何回调直接出队。
+- 失败契约：循环不存在 `Failed` "event loop '{n}' does not exist"；已停止未销毁时投递 `Failed` "event loop '{n}' not running, post rejected"（post_wait 同款 "...post wait rejected"）。
+- `EventLoopInfo`：`loopName/running/pending/hasDefaultFunc/msgName/nextTags`。
+
+## FunctionPool 域（yomk::fn_pool()）
+
+| 场景 | 链 | 终结与返回 |
+|---|---|---|
+| 注册 | `.fn_name(name).fn(f).msg_name(m).description(d)` | `.install()` → `ResStatus`；`msg_name/description` 可省略；**同名重复 install 即运行时热替换**（返回 `Succeeded`，无需先注销） |
+| 注销 | `.fn_name(name)` | `.uninstall()` → `ResStatus`（名字不存在 `Failed`） |
+| 调用 | `.fn_name(name).msg(pkg)` | `.call()` → `Response`（即函数返回值，`data` 携带结果；**阻塞**；msg 省略 = 空消息；名字不存在 `Failed`） |
+| 内省 | `.fn_name(name)` / — | `.get_info()` / `.list()` / `.all()`，均 → `Response` |
+
+## Logger 域
+
+### 发射链（yomk::log()）
+
+| 链 | 行为 |
+|---|---|
+| `.info(args...)`（六级：`trace/debug/info/warn/error/fatal`） | 主控制台输出，tag 缺省 `"main"`（tag 即控制台日志器名，首次使用惰性创建）；参数包逐个追加无上限，`bool` 输出 `true/false`；终结返回 `ResStatus` |
+| `.tag(t).info(args...)` | 指定 tag |
+| `.to_sink(name).info(args...)` | 写入具名**文件**日志器；`.tag(t)` 可叠加；未知名 `Failed` 不惰性创建——文件日志器须先经 `log_mgr().dir().file().create()` |
+
+输出行格式：`[YYYY-MM-DD HH:MM:SS.mmm] [级别] [tag] [位置前缀] 内容`，级别定宽 5（`[INFO ]`），位置前缀默认仅行号 `[N]`。发射同步阻塞（经请求域投递至内置 Logger 服务）。
+
+### 管理链（yomk::log_mgr()）
+
+| 场景 | 链 |
+|---|---|
+| 级别门控 | `.console(name).level(lv).enable()/.disable()`、`.file(name).level(lv).enable()/.disable()`——`name` 省略 = 全局主闸，具名 = 仅该日志器（未命中 `Failed` 不惰性创建）；`.level()` 缺省 `Info`；控制台/文件两套完全独立，两级 AND |
+| 代理拦截 | `.console().proxy(fn).apply()` / `.file().proxy(fn).apply()`——回调收 `const Log&`，`false` 消费该条（不输出/不落盘）、`true` 穿透默认；`nullptr` 卸载；两侧独立 |
+| 位置前缀 | `.location().show_file(on).show_line(on).show_func(on).apply()`——进程级、控制台与文件同时生效；前缀按 `[file:line:func]` 以 `:` 拼接、关断段整体省略（默认 `[N]`；三项全关无前缀） |
+| 文件日志器生命周期 | `.dir(d).file(name).create()`（`.dir()` 先于 `.file()`；空名/空目录 `Invalid`，同名重复 `Failed`）；`.file(name).flush()`；`.file(name).remove()`（同名 console+file 两表一并清除、两表皆未命中 `Failed`；**不删磁盘 `.log` 文件**，释放时自动落盘） |
+| 内省 | `.console().list()/.file().list()` 名清单（字典序）；`.console(name).get_info()/.file(name).get_info()` 单器 `LoggerInfo`（两表允许同名须按类型精确查）；`.console().status()/.file().status()` 全局主闸 `LoggerState`；`.all()` 全量 LoggerInfoList（每条内嵌逐器门控层真值状态段） |
+
+内省归因：`get_info`/`all()` 条目报**逐器门控层**；条目 on 但无输出时查 `.status()` 确认**全局主闸**——两层各自独立。
+
+## 常用失败契约字符串（断言/排障用）
+
+`"context key '{k}' does not exist"` / `"context key '{k}' already exists"` / `"context type not match: ..."` / `"set context key '{k}' rejected by checker"` / `"group name is empty"` / `"event loop '{n}' does not exist"` / `"event loop '{n}' not running, post rejected"` / `"logger '{n}' already exists"` / `"service has been deleted or unregistered, callback ignored"`（弱绑定丢弃；`{k}`/`{n}` 为实际名值）

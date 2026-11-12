@@ -5,8 +5,8 @@
  * 卸载-重载全循环、多实例强卸。
  * 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest，与工作目录无关。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -36,18 +36,18 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 static bool isNo(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eNo;
+    return r.status == ResStatus::Failed;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -59,7 +59,7 @@ static std::string respString(const YomkResponse& r)
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(isNo(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 组合断言：eOk 且汇总串精确匹配 */
@@ -104,9 +104,9 @@ static std::vector<InstanceInfo> listInstances()
 {
     std::vector<InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         out = arr->d;
     }
     return out;
@@ -117,9 +117,9 @@ static std::vector<PluginMeta> listPlugins()
 {
     std::vector<PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         out = arr->d;
     }
     return out;

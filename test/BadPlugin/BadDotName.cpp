@@ -2,7 +2,7 @@
  * BadDotName：meta 合法但插件名含 '.'。
  * 预期 Manager load 拒绝："plugin name must not contain '.'"（限定名拼接唯一性防护）。
  */
-#include <YomkPluginSystem/YomkPluginInterface.h>
+#include <yomk/plugin_system/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
     YOMKPLUGIN_ABI_VERSION, "Bad.Dot.Name", "bad", "0.0.1", "Yomk", "plugin name contains dot",

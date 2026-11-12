@@ -6,8 +6,8 @@
  * 硬断言仅收敛性与终态；吞吐以 [PERF] 行打印作基线参考，不作断言。
  * 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <atomic>
 #include <chrono>
@@ -42,14 +42,14 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -61,7 +61,7 @@ static std::string respString(const YomkResponse& r)
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(!isOk(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(!isOk(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径 */
@@ -100,9 +100,9 @@ static std::vector<InstanceInfo> listInstances()
 {
     std::vector<InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         out = arr->d;
     }
     return out;
@@ -113,9 +113,9 @@ static std::vector<PluginMeta> listPlugins()
 {
     std::vector<PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         out = arr->d;
     }
     return out;
@@ -143,14 +143,14 @@ static YomkResponse destroyInst(const std::string& name)
 /* S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
 static bool s4MsgAllowed(const YomkResponse& r)
 {
-    if (r.m_status == YomkResponse::eOk)
+    if (r.status == ResStatus::Succeeded)
     {
         return true;
     }
-    return r.m_msg.find("plugin unloaded during create") != std::string::npos ||
-           r.m_msg.find("duplicate instance name") != std::string::npos ||
-           r.m_msg.find("plugin not loaded") != std::string::npos ||
-           r.m_msg.find("plugin not loaded") != std::string::npos;
+    return r.msg.find("plugin unloaded during create") != std::string::npos ||
+           r.msg.find("duplicate instance name") != std::string::npos ||
+           r.msg.find("plugin not loaded") != std::string::npos ||
+           r.msg.find("plugin not loaded") != std::string::npos;
 }
 
 /* 毫秒计时（steady_clock） */
@@ -195,7 +195,7 @@ int main()
     }
     check(isOk(YOMKPLUGIN_BUILD(fp("s200.yomk"))), "S0 build 200-entry manifest ok");
     YomkResponse s0Info = YOMKPLUGIN_INFO_BUILDER();
-    YomkUnPackPkg(s0Info.m_data, BuilderInfo, s0Builder);
+    YomkUnPackPkg(s0Info.data, BuilderInfo, s0Builder);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
     /* ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ---------- */

@@ -5,8 +5,8 @@
  * instanceInfoLine 内省行、Loader meta 深拷贝、插件注册列表、跨插件同名实例、超长输入边界。
  * 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -36,18 +36,18 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 static bool isNo(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eNo;
+    return r.status == ResStatus::Failed;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -59,7 +59,7 @@ static std::string respString(const YomkResponse& r)
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(isNo(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录 */
@@ -100,9 +100,9 @@ static std::vector<PluginMeta> listPlugins()
 {
     std::vector<PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         out = arr->d;
     }
     return out;
@@ -112,9 +112,9 @@ static std::vector<InstanceInfo> listInstances()
 {
     std::vector<InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         out = arr->d;
     }
     return out;
@@ -183,7 +183,7 @@ int main()
     bool hitOne = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         hitOne = arr->d.size() == 1 && arr->d[0].name == "TestPlugin";
     }
     check(hitOne, "M2 list filter hit returns single plugin");
@@ -196,7 +196,7 @@ int main()
     bool hitTwo = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         hitTwo = arr->d.size() == 2;
     }
     check(hitTwo, "M2 list_instances filter hit returns 2 instances");
@@ -208,7 +208,7 @@ int main()
     bool zeroOk = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         zeroOk = arr->d.empty();
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
@@ -221,7 +221,7 @@ int main()
     bool macroHitTwo = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         macroHitTwo = arr->d.size() == 2;
     }
     check(macroHitTwo, "M2 INFO_INSTANCES_BY filter hit returns 2 instances");
@@ -235,7 +235,7 @@ int main()
     bool byInstOk = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMeta, pm);
+        YomkUnPackPkg(resp.data, PluginMeta, pm);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
     check(byInstOk, "M2 INFO_PLUGIN_BY instance lookup returns owner plugin meta");
@@ -288,7 +288,7 @@ int main()
     bool metaOk = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMeta, m);
+        YomkUnPackPkg(resp.data, PluginMeta, m);
         metaOk = m->d.abi_version == YOMKPLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
                  m->d.version == "0.0.1" && m->d.author == "Yomk";
     }
@@ -381,7 +381,7 @@ int main()
     bool ownerA = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMeta, pmA);
+        YomkUnPackPkg(resp.data, PluginMeta, pmA);
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
@@ -389,7 +389,7 @@ int main()
     bool ownerB = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMeta, pmB);
+        YomkUnPackPkg(resp.data, PluginMeta, pmB);
         ownerB = pmB && pmB->d.name == "SecondPlugin";
     }
     check(ownerB, "M6 same bare name under second plugin resolves to SecondPlugin");

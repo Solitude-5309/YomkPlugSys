@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "YomkPluginMsgs.h"
+#include <yomk/server/YomkServerApi.h>
+
+#include "YomkPluginMsg.h"
 
 using namespace yomk;
 
@@ -22,6 +24,10 @@ public:
     void deinit() override;
 
 private:
+    /* 宿主 server 裸指针（构造期由框架传入，生命周期覆盖服务）：
+     * deinit 注销内部服务用——析构流程中不得走 yomk::server() 域入口，
+     * 域入口快照会持有正在 shutdown 的 server 并在其返回时二次释放 */
+    YomkServer* m_server = nullptr;
     /* 清单条目：实例名@动态库相对路径@实例配置文件相对路径 */
     struct ManifestEntry
     {
@@ -36,28 +42,28 @@ private:
 
     /* 请求接口 */
     /* BuildReq -> String 构建结果汇总 */
-    YomkResponse build(YomkPkgPtr pkg);
+    yomk::payload::Response build(YomkMsgPtr pkg);
     /* 无 -> String 扩展版本号 */
-    YomkResponse version(YomkPkgPtr pkg);
+    yomk::payload::Response version(YomkMsgPtr pkg);
     /* 内省接口 */
     /* -> BuilderInfo 最近构建信息（清单条目/路径/结果/插件与实例数） */
-    YomkResponse infoBuilder(YomkPkgPtr pkg);
+    yomk::payload::Response infoBuilder(YomkMsgPtr pkg);
     /* 代理 Manager /list：[String pluginName] -> PluginMetaArray 插件列表 */
-    YomkResponse plugins(YomkPkgPtr pkg);
+    yomk::payload::Response plugins(YomkMsgPtr pkg);
     /* 代理 Manager /list_instances：[String pluginName] -> InstanceInfoArray 实例明细 */
-    YomkResponse instances(YomkPkgPtr pkg);
+    yomk::payload::Response instances(YomkMsgPtr pkg);
     /* 代理 Manager /plugin_by_instance：String instanceName -> PluginMeta 实例所属插件元数据 */
-    YomkResponse pluginByInstance(YomkPkgPtr pkg);
+    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);
     /* 代理 Manager /instances_file：String instanceName -> String 实例文件内容 */
-    YomkResponse instancesFile(YomkPkgPtr pkg);
+    yomk::payload::Response instancesFile(YomkMsgPtr pkg);
     /* 代理 Manager /force_unload：String pluginName -> ok 先销毁全部实例再卸载 */
-    YomkResponse unload(YomkPkgPtr pkg);
+    yomk::payload::Response unload(YomkMsgPtr pkg);
     /* 代理 Manager /try_unload：String pluginName -> ok 有存活实例拒绝 */
-    YomkResponse tryUnload(YomkPkgPtr pkg);
+    yomk::payload::Response tryUnload(YomkMsgPtr pkg);
 
     /* 清单解析：首行须为格式标识 #! yomk_plugin_system；# 注释忽略（整行/行内），
      * 按 @ 切分校验三段，路径段拒绝绝对路径 */
-    YomkResponse parseManifest(
+    yomk::payload::Response parseManifest(
         const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries);
 
     /* 记录最近一次构建状态（内省用） */

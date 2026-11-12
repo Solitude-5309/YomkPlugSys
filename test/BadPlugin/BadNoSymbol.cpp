@@ -2,7 +2,7 @@
  * BadNoSymbol：仅导出 yomk_plugin_meta，故意缺失 create/delete 符号。
  * 预期宿主 dlsym 失败："missing plugin export symbols"。
  */
-#include <YomkPluginSystem/YomkPluginInterface.h>
+#include <yomk/plugin_system/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
     YOMKPLUGIN_ABI_VERSION,

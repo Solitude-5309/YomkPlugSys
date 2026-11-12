@@ -3,14 +3,16 @@
 #include <memory>
 #include <mutex>
 
-#include "YomkPluginMsgs.h"
+#include <yomk/server/YomkServerApi.h>
+
+#include "plugin_system/YomkPluginMsg.h"
 
 using namespace yomk;
 
 /*
  * YomkPluginManager：插件管理数据层
  * 全部业务数据在此统一管理：插件表（meta 深拷贝）+ 实例表（shared_ptr 唯一所有者）。
- * 与 Loader 为独立服务，纯通过 YOMK_REQUEST 调用 Loader 接口。
+ * 与 Loader 为独立服务，纯通过 request() 调用 Loader 接口。
  */
 class YomkPluginManager : public YomkService
 {
@@ -42,24 +44,24 @@ private:
 
     /* 请求接口 */
     /* PluginPath -> String pluginName */
-    YomkResponse load(YomkPkgPtr pkg);
+    yomk::payload::Response load(YomkMsgPtr pkg);
     /* String pluginName -> ok（有存活实例失败） */
-    YomkResponse tryUnload(YomkPkgPtr pkg);
+    yomk::payload::Response tryUnload(YomkMsgPtr pkg);
     /* String pluginName -> ok（直接删所有实例） */
-    YomkResponse forceUnload(YomkPkgPtr pkg);
+    yomk::payload::Response forceUnload(YomkMsgPtr pkg);
     /* CreateReq -> InstanceInfo（instanceName 为限定名 插件名.实例名） */
-    YomkResponse createInstance(YomkPkgPtr pkg);
+    yomk::payload::Response createInstance(YomkMsgPtr pkg);
     /* DestroyReq -> ok */
-    YomkResponse destroyInstance(YomkPkgPtr pkg);
+    yomk::payload::Response destroyInstance(YomkMsgPtr pkg);
     /* [String pluginName] -> PluginMetaArray */
-    YomkResponse list(YomkPkgPtr pkg);
+    yomk::payload::Response list(YomkMsgPtr pkg);
     /* [String pluginName] -> InstanceInfoArray */
-    YomkResponse listInstances(YomkPkgPtr pkg);
+    yomk::payload::Response listInstances(YomkMsgPtr pkg);
     /* 内省接口 */
     /* String 限定名实例名（插件名.实例名）-> PluginMeta（实例所属插件元数据，未知实例拒绝） */
-    YomkResponse pluginByInstance(YomkPkgPtr pkg);
+    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);
     /* String 限定名实例名（插件名.实例名）-> String 实例文件内容（未知实例/文件不可读拒绝） */
-    YomkResponse instancesFile(YomkPkgPtr pkg);
+    yomk::payload::Response instancesFile(YomkMsgPtr pkg);
 
     /* 限定名 = 插件名.实例名（插件名全局唯一且不含 '.'，限定名全局唯一） */
     static std::string qualifiedName(const std::string& pluginName, const std::string& instanceName);

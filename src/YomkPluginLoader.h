@@ -3,8 +3,10 @@
 #include <mutex>
 #include <vector>
 
-#include "YomkPluginInterface.h"
-#include "YomkPluginMsgs.h"
+#include <yomk/server/YomkServerApi.h>
+
+#include "plugin_system/YomkPluginInterface.h"
+#include "plugin_system/YomkPluginMsg.h"
 
 using namespace yomk;
 
@@ -53,15 +55,15 @@ private:
 
     /* 请求接口 */
     /* PluginPath -> String pluginName */
-    YomkResponse load(YomkPkgPtr pkg);
+    yomk::payload::Response load(YomkMsgPtr pkg);
     /* String pluginName -> ok（有存活实例拒绝） */
-    YomkResponse unload(YomkPkgPtr pkg);
+    yomk::payload::Response unload(YomkMsgPtr pkg);
     /* String pluginName -> PluginMeta */
-    YomkResponse meta(YomkPkgPtr pkg);
+    yomk::payload::Response meta(YomkMsgPtr pkg);
     /* CreateReq -> PluginInstance */
-    YomkResponse createInstance(YomkPkgPtr pkg);
+    yomk::payload::Response createInstance(YomkMsgPtr pkg);
     /* PluginInstance -> ok */
-    YomkResponse deleteInstance(YomkPkgPtr pkg);
+    yomk::payload::Response deleteInstance(YomkMsgPtr pkg);
     /* 内部辅助（调用方已持锁） */
     void purgeDead(const std::string& pluginName);
     int aliveCount(const std::string& pluginName);

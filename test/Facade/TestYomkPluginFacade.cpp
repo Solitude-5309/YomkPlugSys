@@ -4,8 +4,8 @@
  * 空态内省契约（INFO_BUILDER 空态默认值、INFO_PLUGIN_BY/INFO_INSTANCES_FILE 未知实例拒绝、INFO_PLUGINS/INFO_INSTANCES 空数组）、
  * BUILD 不存在清单失败路径。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <iostream>
 #include <string>
@@ -31,18 +31,18 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 static bool isNo(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eNo;
+    return r.status == ResStatus::Failed;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -68,7 +68,7 @@ int main()
     /* ---------- 空态内省契约 ---------- */
     resp = YOMKPLUGIN_INFO_BUILDER();
     check(isOk(resp), "INFO_BUILDER returns eOk");
-    YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+    YomkUnPackPkg(resp.data, BuilderInfo, info);
     check(info != nullptr, "INFO_BUILDER unpacks BuilderInfo");
     check(
         info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
@@ -77,19 +77,19 @@ int main()
 
     resp = YOMKPLUGIN_INFO_PLUGIN_BY("no-inst");
     check(
-        isNo(resp) && resp.m_msg == "instance not found: no-inst",
+        isNo(resp) && resp.msg == "instance not found: no-inst",
         "INFO_PLUGIN_BY empty-state rejects unknown instance");
 
     resp = YOMKPLUGIN_INFO_INSTANCES_FILE("no-inst");
     check(
-        isNo(resp) && resp.m_msg == "instance not found: no-inst",
+        isNo(resp) && resp.msg == "instance not found: no-inst",
         "INFO_INSTANCES_FILE empty-state rejects unknown instance");
 
     resp = YOMKPLUGIN_INFO_PLUGINS();
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         pluginsEmpty = arr->d.empty();
     }
     check(pluginsEmpty, "INFO_PLUGINS eOk + empty array");
@@ -98,7 +98,7 @@ int main()
     bool instEmpty = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "INFO_INSTANCES eOk + empty array");
@@ -106,7 +106,7 @@ int main()
     /* ---------- BUILD 失败路径 ---------- */
     resp = YOMKPLUGIN_BUILD("/nonexistent/no_such.yomk");
     check(isNo(resp), "BUILD nonexistent manifest returns eNo");
-    check(resp.m_msg.find("manifest not found") != std::string::npos, "BUILD error msg 'manifest not found'");
+    check(resp.msg.find("manifest not found") != std::string::npos, "BUILD error msg 'manifest not found'");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;
     std::cout << "PASS: " << g_pass << std::endl;

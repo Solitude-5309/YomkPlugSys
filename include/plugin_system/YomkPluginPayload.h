@@ -1,18 +1,14 @@
 #pragma once
-/*
- * 消息数据类：结构体定义 + YomkMsg 注册（服务端与用户共用）。
- * 用户请求宏已统一迁移至 <YomkPluginSystem/YomkPluginAPI.h>，勿在此追加接口宏。
- */
-#include <YomkServer/YomkAPI.h>
-
-#include <memory>
 #include <string>
 #include <vector>
 
-#include "YomkPluginInterface.h"
-
-/* ------------------------- 数据类 ------------------------- */
-
+/*
+ * YomkPluginSystem 扩展专属载荷（namespace yomk::payload，与 SDK 各
+ * Yomk{Module}Payload.h 同一设计）：数据结构体承载业务字段（服务端与用户共用），
+ * 对应消息包目录见 YomkPluginMsg.h。
+ */
+namespace yomk::payload
+{
 struct PluginPath
 {
     /* so 文件路径 */
@@ -73,18 +69,14 @@ struct BuilderInfo
     /* 最近构建创建的实例数 */
     int instances = 0;
 };
+}  // namespace yomk::payload
 
-// clang-format off
-/* 定义完所有数据类后统一注册 YomkMsg（数组类直接以 std::vector 为 DataType，同框架内置 StringArray 风格） */
-YomkMsg(PluginPath, PluginPath, d)
-YomkMsg(PluginMeta, PluginMeta, d)
-YomkMsg(CreateReq, CreateReq, d)
-YomkMsg(DestroyReq, DestroyReq, d)
-YomkMsg(BuildReq, BuildReq, d)
-YomkMsg(InstanceInfo, InstanceInfo, d)
-YomkMsg(BuilderInfo, BuilderInfo, d)
-YomkMsg(std::vector<PluginMeta>, PluginMetaArray, d)
-YomkMsg(std::vector<InstanceInfo>, InstanceInfoArray, d)
-
-/* shared_ptr 经消息包在进程内直接持有传递（无序列化，仅限同进程内请求，不可跨进程） */
-YomkMsg(std::shared_ptr<YomkPluginInterface>, PluginInstance, d)
+/* 裸名兼容：数据结构体自全局命名空间迁入 yomk::payload，逐个 using 声明引入
+ * （不用 using namespace 污染），历史代码以裸名访问业务字段零改动 */
+using yomk::payload::BuildReq;
+using yomk::payload::BuilderInfo;
+using yomk::payload::CreateReq;
+using yomk::payload::DestroyReq;
+using yomk::payload::InstanceInfo;
+using yomk::payload::PluginMeta;
+using yomk::payload::PluginPath;

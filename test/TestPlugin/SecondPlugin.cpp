@@ -3,7 +3,7 @@
  * 与 TestPlugin 同构、meta 名不同，覆盖跨插件同名实例场景：
  * 实例规范名为宿主拼接的限定名（插件名.实例名，全局唯一），跨插件允许同名裸名。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
 
 #include <string>
 

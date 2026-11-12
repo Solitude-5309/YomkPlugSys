@@ -1,9 +1,11 @@
-#include "YomkPluginSystemBuilder.h"
+#include "plugin_system/YomkPluginSystemBuilder.h"
 
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <set>
+
+#include <yomk/log/YomkLoggerApi.h>
 
 #include "YomkPluginLoader.h"
 #include "YomkPluginManager.h"
@@ -20,7 +22,7 @@ static std::string trim(const std::string& s)
     return s.substr(begin, end - begin + 1);
 }
 
-YomkPluginSystemBuilder::YomkPluginSystemBuilder(YomkServer* server) : YomkService(server)
+YomkPluginSystemBuilder::YomkPluginSystemBuilder(YomkServer* server) : YomkService(server), m_server(server)
 {
     name("/YomkPluginSystemBuilder");
 }
@@ -28,37 +30,44 @@ YomkPluginSystemBuilder::YomkPluginSystemBuilder(YomkServer* server) : YomkServi
 int YomkPluginSystemBuilder::init()
 {
     /* 内部机制/数据服务由门面接管生命周期：先注册 Loader，再注册 Manager */
-    if (YOMK_NEW_SERVICE(YomkPluginLoader) != 0)
+    if (yomk::server().srv<YomkPluginLoader>().create() != 0)
     {
-        YOMK_ERROR_TAG("YomkPluginSystemBuilder", "init: register YomkPluginLoader failed");
+        yomk::log().tag("YomkPluginSystemBuilder").error("init: register YomkPluginLoader failed");
         return -1;
     }
-    if (YOMK_NEW_SERVICE(YomkPluginManager) != 0)
+    if (yomk::server().srv<YomkPluginManager>().create() != 0)
     {
-        YOMK_ERROR_TAG("YomkPluginSystemBuilder", "init: register YomkPluginManager failed");
+        yomk::log().tag("YomkPluginSystemBuilder").error("init: register YomkPluginManager failed");
         return -1;
     }
 
-    YomkInstallFunc("/build", YomkPluginSystemBuilder::build, BuildReq);
-    YomkInstallFunc("/version", YomkPluginSystemBuilder::version);
-    YomkInstallFunc("/builder", YomkPluginSystemBuilder::infoBuilder);
-    YomkInstallFunc("/plugins", YomkPluginSystemBuilder::plugins, String);
-    YomkInstallFunc("/instances", YomkPluginSystemBuilder::instances, String);
-    YomkInstallFunc("/plugin_by_instance", YomkPluginSystemBuilder::pluginByInstance, String);
-    YomkInstallFunc("/instances_file", YomkPluginSystemBuilder::instancesFile, String);
-    YomkInstallFunc("/unload", YomkPluginSystemBuilder::unload, String);
-    YomkInstallFunc("/try_unload", YomkPluginSystemBuilder::tryUnload, String);
+    installFunc("/build", &YomkPluginSystemBuilder::build, yomk::msgs::BuildReq::kName);
+    installFunc("/version", &YomkPluginSystemBuilder::version);
+    installFunc("/builder", &YomkPluginSystemBuilder::infoBuilder);
+    installFunc("/plugins", &YomkPluginSystemBuilder::plugins, yomk::msgs::String::kName);
+    installFunc("/instances", &YomkPluginSystemBuilder::instances, yomk::msgs::String::kName);
+    installFunc("/plugin_by_instance", &YomkPluginSystemBuilder::pluginByInstance, yomk::msgs::String::kName);
+    installFunc("/instances_file", &YomkPluginSystemBuilder::instancesFile, yomk::msgs::String::kName);
+    installFunc("/unload", &YomkPluginSystemBuilder::unload, yomk::msgs::String::kName);
+    installFunc("/try_unload", &YomkPluginSystemBuilder::tryUnload, yomk::msgs::String::kName);
     return 0;
 }
 
 void YomkPluginSystemBuilder::deinit()
 {
-    /* 逆序注销 init 注册的内部服务 */
-    YOMK_DEL_SERVICE("/YomkPluginManager");
-    YOMK_DEL_SERVICE("/YomkPluginLoader");
+    /* 逆序注销 init 注册的内部服务。
+     * 须直调 server 接口而非 yomk::server() 域入口：进程析构兜底走 shutdown()
+     * （先清空服务表再锁外逐个 deinit），此时内部服务已被清出表（delService 返
+     * 回 -1 忽略即可）；若经域入口，其快照会持有正在 shutdown 的 server，返回时
+     * 触发二次释放导致段错误。显式注销 Builder（服务仍在表）时二者均正常清理 */
+    if (m_server)
+    {
+        m_server->delService("/YomkPluginManager");
+        m_server->delService("/YomkPluginLoader");
+    }
 }
 
-YomkResponse YomkPluginSystemBuilder::parseManifest(
+yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
     const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries)
 {
     namespace fs = std::filesystem;
@@ -66,12 +75,12 @@ YomkResponse YomkPluginSystemBuilder::parseManifest(
     fs::path manifest = fs::weakly_canonical(workflowPath, ec);
     if (ec || !fs::is_regular_file(manifest))
     {
-        return {YomkResponse::eNo, "manifest not found: " + workflowPath};
+        return {yomk::payload::ResStatus::Failed, "manifest not found: " + workflowPath};
     }
     std::ifstream in(manifest);
     if (!in)
     {
-        return {YomkResponse::eNo, "manifest open failed: " + workflowPath};
+        return {yomk::payload::ResStatus::Failed, "manifest open failed: " + workflowPath};
     }
     workflowDir = manifest.parent_path().string();
 
@@ -82,7 +91,7 @@ YomkResponse YomkPluginSystemBuilder::parseManifest(
     if (!std::getline(in, firstLine) || trim(firstLine) != kFormatMarker)
     {
         return {
-            YomkResponse::eNo,
+            yomk::payload::ResStatus::Failed,
             "manifest line 1: format marker not found (expect '" + std::string(kFormatMarker) + "')"};
     }
 
@@ -111,7 +120,7 @@ YomkResponse YomkPluginSystemBuilder::parseManifest(
         if (p1 == std::string::npos || p2 == std::string::npos || p3 != std::string::npos)
         {
             return {
-                YomkResponse::eNo,
+                yomk::payload::ResStatus::Failed,
                 "manifest line " + std::to_string(lineNo) + ": expect instanceName@libRelPath@instanceFileRelPath"};
         }
         ManifestEntry entry;
@@ -121,49 +130,53 @@ YomkResponse YomkPluginSystemBuilder::parseManifest(
         entry.instanceFile = trim(line.substr(p2 + 1));
         if (entry.instanceName.empty() || entry.libRelPath.empty() || entry.instanceFile.empty())
         {
-            return {YomkResponse::eNo, "manifest line " + std::to_string(lineNo) + ": empty segment"};
+            return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": empty segment"};
         }
         /* 格式契约为相对路径：路径段拒绝绝对路径 */
         if (entry.libRelPath[0] == '/')
         {
-            return {YomkResponse::eNo, "manifest line " + std::to_string(lineNo) + ": lib path must be relative"};
+            return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": lib path must be relative"};
         }
         if (entry.instanceFile[0] == '/')
         {
             return {
-                YomkResponse::eNo, "manifest line " + std::to_string(lineNo) + ": instance file path must be relative"};
+                yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": instance file path must be relative"};
         }
         entries.push_back(entry);
     }
-    return {YomkResponse::eOk, "ok"};
+    return {yomk::payload::ResStatus::Succeeded, "ok"};
 }
 
-YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
 {
     try
     {
-        YomkUnPackPkgResponse(pkg, BuildReq, req);
+        auto req = yomk::msgs::unpack<yomk::msgs::BuildReq>(pkg);
+        if (!req)
+        {
+            return invalidReqMsg(pkg, yomk::msgs::BuildReq::kName);
+        }
 
         std::vector<ManifestEntry> entries;
         std::string workflowDir;
-        YomkResponse resp = parseManifest(req->d.workflowPath, workflowDir, entries);
-        if (resp.m_status != YomkResponse::eOk)
+        yomk::payload::Response resp = parseManifest(req->d.workflowPath, workflowDir, entries);
+        if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
-            recordBuild(req->d.workflowPath, resp.m_msg, 0, 0, {});
+            recordBuild(req->d.workflowPath, resp.msg, 0, 0, {});
             return resp;
         }
 
         namespace fs = std::filesystem;
         /* 预查插件表：同一 so 已加载时幂等跳过 */
         std::map<std::string, std::string> pathToPlugin;
-        resp = YOMK_REQUEST("/YomkPluginManager/list", nullptr);
-        if (resp.m_status == YomkResponse::eOk)
+        resp = request("/YomkPluginManager/list", nullptr);
+        if (resp.status == yomk::payload::ResStatus::Succeeded)
         {
-            YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+            auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
             if (!arr)
             {
                 recordBuild(req->d.workflowPath, "build: invalid plugin list response", 0, 0, {});
-                return {YomkResponse::eNo, "build: invalid plugin list response"};
+                return {yomk::payload::ResStatus::Failed, "build: invalid plugin list response"};
             }
             for (const auto& m : arr->d)
             {
@@ -186,7 +199,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
                 msg += ": instance file not found: ";
                 msg += instancePath;
                 recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
-                return {YomkResponse::eNo, msg};
+                return {yomk::payload::ResStatus::Failed, msg};
             }
             if (!fs::is_regular_file(soPath))
             {
@@ -194,7 +207,7 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
                 msg += ": plugin lib not found: ";
                 msg += soPath;
                 recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
-                return {YomkResponse::eNo, msg};
+                return {yomk::payload::ResStatus::Failed, msg};
             }
 
             /* 加载插件（已加载则复用，幂等） */
@@ -208,19 +221,19 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             {
                 PluginPath path;
                 path.path = soPath;
-                resp = YOMK_REQUEST("/YomkPluginManager/load", YomkMkPtr(PluginPath, path));
-                if (resp.m_status != YomkResponse::eOk)
+                resp = request("/YomkPluginManager/load", yomk::msgs::PluginPath::shared(path));
+                if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
-                    std::string msg = lineTag + ": load failed: " + resp.m_msg;
+                    std::string msg = lineTag + ": load failed: " + resp.msg;
                     recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
-                    return {YomkResponse::eNo, msg};
+                    return {yomk::payload::ResStatus::Failed, msg};
                 }
-                YomkUnPackPkg(resp.m_data, String, idPkg);
+                auto idPkg = yomk::msgs::unpack<yomk::msgs::String>(resp.data);
                 if (!idPkg)
                 {
                     std::string msg = lineTag + ": invalid load response";
                     recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
-                    return {YomkResponse::eNo, msg};
+                    return {yomk::payload::ResStatus::Failed, msg};
                 }
                 pluginName = idPkg->d;
                 pathToPlugin[soPath] = pluginName;
@@ -232,12 +245,12 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
             createReq.instanceFile = instancePath;
-            resp = YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, createReq));
-            if (resp.m_status != YomkResponse::eOk)
+            resp = request("/YomkPluginManager/create_instance", yomk::msgs::CreateReq::shared(createReq));
+            if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
-                std::string msg = lineTag + ": create failed: " + resp.m_msg;
+                std::string msg = lineTag + ": create failed: " + resp.msg;
                 recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
-                return {YomkResponse::eNo, msg};
+                return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
             entryLines.push_back(entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceFile);
@@ -246,39 +259,39 @@ YomkResponse YomkPluginSystemBuilder::build(YomkPkgPtr pkg)
         std::string summary =
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
         recordBuild(req->d.workflowPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
-        YOMK_INFO_TAG("YomkPluginSystemBuilder", "build: ", req->d.workflowPath, " ", summary);
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, summary)};
+        yomk::log().tag("YomkPluginSystemBuilder").info("build: ", req->d.workflowPath, " ", summary);
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(summary)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("build exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("build exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "build exception"};
+        return {yomk::payload::ResStatus::Failed, "build exception"};
     }
 }
 
 /* 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源
- * project(VERSION)）， 经 YOMKPLUGIN_VERSION 宏（YomkPluginAPI.h）对外 */
-YomkResponse YomkPluginSystemBuilder::version(YomkPkgPtr pkg)
+ * project(VERSION)）， 经 YOMKPLUGIN_VERSION 宏（YomkPluginApi.h）对外 */
+yomk::payload::Response YomkPluginSystemBuilder::version(YomkMsgPtr pkg)
 {
     try
     {
         std::string version = "YomkPluginSystem v" EXTENSION_VERSION " (WIP)";
-        return {YomkResponse::eOk, "ok", YomkMkPtr(String, version)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(version)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("version exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("version exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "version exception"};
+        return {yomk::payload::ResStatus::Failed, "version exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::infoBuilder(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
 {
     try
     {
@@ -290,112 +303,112 @@ YomkResponse YomkPluginSystemBuilder::infoBuilder(YomkPkgPtr pkg)
         info.result = m_lastResult;
         info.plugins = m_lastPlugins;
         info.instances = m_lastInstances;
-        return {YomkResponse::eOk, "ok", YomkMkPtr(BuilderInfo, info)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::BuilderInfo::shared(info)};
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("builder exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("builder exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "builder exception"};
+        return {yomk::payload::ResStatus::Failed, "builder exception"};
     }
 }
 
 /* 代理接口：纯透传入参包给 Manager，参数校验与响应语义归 Manager */
-YomkResponse YomkPluginSystemBuilder::plugins(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/list", pkg);
+        return request("/YomkPluginManager/list", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("plugins exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("plugins exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "plugins exception"};
+        return {yomk::payload::ResStatus::Failed, "plugins exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::instances(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::instances(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/list_instances", pkg);
+        return request("/YomkPluginManager/list_instances", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("instances exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("instances exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "instances exception"};
+        return {yomk::payload::ResStatus::Failed, "instances exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::pluginByInstance(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::pluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/plugin_by_instance", pkg);
+        return request("/YomkPluginManager/plugin_by_instance", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("plugin_by_instance exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("plugin_by_instance exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "plugin_by_instance exception"};
+        return {yomk::payload::ResStatus::Failed, "plugin_by_instance exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::instancesFile(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::instancesFile(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/instances_file", pkg);
+        return request("/YomkPluginManager/instances_file", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("instances_file exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("instances_file exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "instances_file exception"};
+        return {yomk::payload::ResStatus::Failed, "instances_file exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::unload(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::unload(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/force_unload", pkg);
+        return request("/YomkPluginManager/force_unload", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("unload exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("unload exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "unload exception"};
+        return {yomk::payload::ResStatus::Failed, "unload exception"};
     }
 }
 
-YomkResponse YomkPluginSystemBuilder::tryUnload(YomkPkgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::tryUnload(YomkMsgPtr pkg)
 {
     try
     {
-        return YOMK_REQUEST("/YomkPluginManager/try_unload", pkg);
+        return request("/YomkPluginManager/try_unload", pkg);
     }
     catch (const std::exception& e)
     {
-        return {YomkResponse::eNo, std::string("try_unload exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("try_unload exception: ") + e.what()};
     }
     catch (...)
     {
-        return {YomkResponse::eNo, "try_unload exception"};
+        return {yomk::payload::ResStatus::Failed, "try_unload exception"};
     }
 }
 

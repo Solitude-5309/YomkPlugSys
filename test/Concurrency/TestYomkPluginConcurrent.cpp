@@ -6,8 +6,8 @@
  * 装置 TSan-clean：线程内只写原子计数，join 后主线程统一断言。
  * 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <atomic>
 #include <cctype>
@@ -41,14 +41,14 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 
 static std::string respString(const YomkResponse& r)
 {
-    if (r.m_data && r.m_data->name() == "String")
+    if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.m_data);
+        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
         if (p)
         {
             return p->d;
@@ -60,7 +60,7 @@ static std::string respString(const YomkResponse& r)
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(!isOk(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(!isOk(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 组合断言：eOk 且汇总串精确匹配 */
@@ -105,9 +105,9 @@ static std::vector<InstanceInfo> listInstances()
 {
     std::vector<InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
         out = arr->d;
     }
     return out;
@@ -118,9 +118,9 @@ static std::vector<PluginMeta> listPlugins()
 {
     std::vector<PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         out = arr->d;
     }
     return out;
@@ -148,14 +148,14 @@ static YomkResponse destroyInst(const std::string& name)
 /* C3 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
 static bool c3MsgAllowed(const YomkResponse& r)
 {
-    if (r.m_status == YomkResponse::eOk)
+    if (r.status == ResStatus::Succeeded)
     {
         return true;
     }
-    return r.m_msg.find("plugin unloaded during create") != std::string::npos ||
-           r.m_msg.find("duplicate instance name") != std::string::npos ||
-           r.m_msg.find("plugin not loaded") != std::string::npos ||
-           r.m_msg.find("plugin not loaded") != std::string::npos;
+    return r.msg.find("plugin unloaded during create") != std::string::npos ||
+           r.msg.find("duplicate instance name") != std::string::npos ||
+           r.msg.find("plugin not loaded") != std::string::npos ||
+           r.msg.find("plugin not loaded") != std::string::npos;
 }
 
 int main()
@@ -259,8 +259,8 @@ int main()
                         ++c2Ok;
                     }
                     else if (
-                        r.m_msg.find("load failed: plugin already loaded: TestPlugin") == std::string::npos &&
-                        r.m_msg.find("create failed: duplicate instance name: c2-i1") == std::string::npos)
+                        r.msg.find("load failed: plugin already loaded: TestPlugin") == std::string::npos &&
+                        r.msg.find("create failed: duplicate instance name: c2-i1") == std::string::npos)
                     {
                         /* 两条合法竞争文案：load 判重失败 / 预查命中后 create 查重失败 */
                         ++c2MsgBad;

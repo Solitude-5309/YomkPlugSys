@@ -72,16 +72,19 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`） |
 | `/YomkPluginManager/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`） |
 
-所有功能函数均用三参 `YomkInstallFunc` 安装，服务器层 `/YomkServerInfo` 内省可见类型标记。
+所有功能函数均用三参 `installFunc` 安装（消息类型标识经消息包类 `kName` 传入），服务器层 `/YomkServerInfo` 内省可见类型标记。
 
 ## ABI 契约（插件开发者接口）
 
-安装后对外头文件位于 `<安装路径>/include/YomkPluginSystem/`：
+安装后对外头文件位于 `<安装路径>/include/yomk/plugin_system/`（对外引用统一 `<yomk/plugin_system/...>`，与 SDK 各域共用 `<prefix>/include` 同一 include 根）：
 
 | 头文件 | 内容 |
 |--------|------|
 | `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（全局唯一限定名 插件名.实例名，系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
-| `YomkPluginAPI.h` | 统一 API 入口：聚合全部对外头文件 + 10 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_PLUGIN_BY / INFO_INSTANCES / INFO_INSTANCES_BY / INFO_INSTANCES_FILE / VERSION） |
+| `YomkPluginUrl.h` | 模块 URL 常量（`yomk::url` 开放命名空间，`plugin` 前缀 string_view 编译期常量） |
+| `YomkPluginPayload.h` | 模块专属载荷：数据结构体（`yomk::payload`，业务字段访问用） |
+| `YomkPluginMsg.h` | 模块专属消息包：YOMK_DEFINE_MSG 注册（`yomk::msgs`，跨请求传递用）+ 请求侧类型校验辅助 |
+| `YomkPluginApi.h` | 模块 API 头（四件套之 Api）：聚合全部对外头 + `yomk::plugin()` 链式域入口 + 10 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_PLUGIN_BY / INFO_INSTANCES / INFO_INSTANCES_BY / INFO_INSTANCES_FILE / VERSION） |
 | `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
 
 位于 `src/`、不随 install 分发的内部声明头（仅编译扩展内部可见）：
@@ -91,7 +94,7 @@ build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/Y
 | `YomkPluginLoader.h` | 机制层服务声明 + 宿主 dlsym 契约（导出符号宏与函数类型），内部用 |
 | `YomkPluginManager.h` | 数据层服务声明，内部用 |
 
-头文件单向分层：ABI 叶子（Interface，含元数据 C 结构）→ 消息数据类（Msgs）→ 服务声明头（Builder / 内部 Loader/Manager）→ 聚合入口（API），无 include 环。随 install 分发的公共头仅上述 4 个；插件开发者与宿主用户统一 `#include <YomkPluginSystem/YomkPluginAPI.h>` 即可，内部服务（Loader/Manager）声明对用户不可见，白盒测试亦仅经门面宏或 URL 直调访问。
+头文件单向分层（四件套形态，与 SDK 各 Yomk{Module}Url/Payload/Msg/Api.h 同一设计）：ABI 叶子（Interface，含元数据 C 结构）→ URL 常量（Url，零依赖）→ 模块载荷（Payload，yomk::payload）→ 模块消息包（Msg，yomk::msgs）→ 服务声明头（Builder / 内部 Loader/Manager）→ 模块 API 头（Api：域入口 + 门面宏 + 兼容层），无 include 环。随 install 分发的公共头仅上述 6 个；插件开发者与宿主用户统一 `#include <yomk/plugin_system/YomkPluginApi.h>` 即可，内部服务（Loader/Manager）声明对用户不可见，白盒测试亦仅经门面宏或 URL 直调访问。
 
 插件须以 `extern "C"` 导出三个固定符号：
 
@@ -108,7 +111,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface *instance);                
 以示例插件 `test/TestPlugin/TestPlugin.cpp` 为例：
 
 ```cpp
-#include <YomkPluginSystem/YomkPluginAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
 #include <string>
 
 class MyInstance : public YomkPluginInterface
@@ -158,7 +161,7 @@ target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
 source build_ubuntu.sh
 ```
 
-> 交互式编译：依次询问 YomkServer 安装路径（前置路径）与扩展安装路径，默认均取 `$YOMK_PREFIX_PATH`，可修改。扩展库与 YomkServer 安装到一起（头文件由 `YomkServer::YomkServer` 的 INTERFACE include 统一提供）。示例程序默认编译并随扩展安装（到 `<安装路径>/bin`），安装后可直接运行 `ExampleYomkPluginSystemBuilder` 验证 workflow 构建示例。测试程序询问是否编译（直接回车不编译，输入 Y 才编译），仅本地构建不安装（产物在 `test/build/` 下），可直接运行 `TestYomkPluginSystem` 验证。
+> 交互式编译：依次询问 YomkServer 安装路径（前置路径）与扩展安装路径，默认均取 `$YOMK_PREFIX_PATH`，可修改。扩展库与 YomkServer 安装到一起（头文件由 `YomkServer::YomkServer` 的 INTERFACE include 统一提供）。示例程序默认编译并随扩展安装 （到 `<安装路径>/bin`），安装后可直接运行 `ExampleYomkPluginSystemBuilder` 验证 workflow 构建示例。测试程序询问是否编译（直接回车默认编译，输入 n 跳过），仅本地构建不安装（产物在 `test/build/` 下），可直接运行 `TestYomkPluginSystem` 验证。
 
 ## 测试
 
@@ -213,11 +216,14 @@ cmake --build test/build -j
 
 ```
 YomkPluginSystem/
-├── include/                      # 对外头文件（平铺，随 install 分发）
-│   ├── YomkPluginAPI.h           # 统一 API 入口：契约 + 数据类 + 服务声明 + API 宏
-│   ├── YomkPluginInterface.h     # ABI：插件侧契约（元数据 + 实例接口 + 导出宏）
-│   ├── YomkPluginMsgs.h          # 消息数据类 + YomkMsg 注册
-│   └── YomkPluginSystemBuilder.h # 编排层服务声明（唯一用户服务）
+├── include/
+│   └── plugin_system/         # 扩展目录名（安装后对外引用统一 <yomk/plugin_system/...>，随 install 分发）
+│       ├── YomkPluginInterface.h     # ABI：插件侧契约（元数据 + 实例接口 + 导出宏）
+│       ├── YomkPluginUrl.h           # 模块 URL 常量（yomk::url，plugin 前缀）
+│       ├── YomkPluginPayload.h       # 模块专属载荷（yomk::payload 数据结构体）
+│       ├── YomkPluginMsg.h           # 模块专属消息包（YOMK_DEFINE_MSG 注册）
+│       ├── YomkPluginSystemBuilder.h # 编排层服务声明（唯一用户服务）
+│       └── YomkPluginApi.h           # 模块 API 头（四件套之 Api：域入口 + 门面宏 + 兼容层）
 ├── src/                          # 内部实现（不随 install 分发）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明
@@ -231,8 +237,12 @@ YomkPluginSystem/
 │   ├── TestPlugin/               # 示例插件（SHARED 库）
 │   ├── TestYomkPluginSystem.cpp  # 测试程序
 │   └── run_tests.sh              # 全量测试一键运行器
+├── cmake/
+│   ├── AbiInfo.cmake             # 编译器预选 + ABI 环境指纹
+│   ├── YomkServerVersionCheck.cmake # YomkServer 版本检测（3.6.18 及以上）
+│   └── ProjectConfig.cmake.in    # find_package 导出配置模板
 ├── CMakeLists.txt
-├── build_ubuntu.sh
+├── build_ubuntu.sh               # 一键编译脚本（交互式）
 └── README.md
 ```
 
@@ -241,7 +251,7 @@ YomkPluginSystem/
 将以下完整程序拷贝为 main.cpp，安装扩展后可直接编译运行（注册唯一门面服务 → 版本号直取）：
 
 ```cpp
-#include <YomkPluginSystem/YomkPluginAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
 #include <iostream>
 
 using namespace yomk;
@@ -253,8 +263,11 @@ int main(int argc, char *argv[])
     // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
     YOMK_NEW_SERVICE(YomkPluginSystemBuilder);
 
-    // 查询扩展版本（请求 /YomkPluginSystemBuilder/version，成功走 YOMK_INFO_TAG 打印、失败走 YOMK_ERROR_TAG，无返回值）
-    YOMKPLUGIN_VERSION(); // 输出: YomkPluginSystem v0.0.16 (WIP)
+    // 查询扩展版本（请求 /YomkPluginSystemBuilder/version，成功走 yomk::log().info 打印、失败走 yomk::log().error，无返回值）
+    YOMKPLUGIN_VERSION(); // 输出: YomkPluginSystem v0.2.9 (WIP)
+
+    // 链式域入口（等价请求：yomk::server().url(yomk::url::pluginVersion).request()）
+    yomk::payload::Response resp = yomk::plugin().version();
 
     return 0;
 }

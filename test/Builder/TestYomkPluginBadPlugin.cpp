@@ -5,8 +5,8 @@
  * 以及坏 create 后插件仍注册的内省侧效、部分成功后前序条目保留。
  * 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
-#include <YomkServer/YomkAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/server/YomkServerApi.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -37,17 +37,17 @@ static void check(bool ok, const std::string& desc)
 
 static bool isOk(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eOk;
+    return r.status == ResStatus::Succeeded;
 }
 static bool isNo(const YomkResponse& r)
 {
-    return r.m_status == YomkResponse::eNo;
+    return r.status == ResStatus::Failed;
 }
 
 /* 组合断言：eNo 且错误文案含子串 */
 static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
 {
-    check(isNo(r) && r.m_msg.find(substr) != std::string::npos, desc);
+    check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录 */
@@ -88,9 +88,9 @@ static std::vector<PluginMeta> listPlugins()
 {
     std::vector<PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, PluginMetaArray, arr);
+        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
         out = arr->d;
     }
     return out;
@@ -100,9 +100,9 @@ static std::vector<PluginMeta> listPlugins()
 static BuilderInfo builderInfo()
 {
     YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
-    if (resp.m_status == YomkResponse::eOk)
+    if (resp.status == ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.m_data, BuilderInfo, info);
+        YomkUnPackPkg(resp.data, BuilderInfo, info);
         if (info)
         {
             return info->d;
@@ -211,7 +211,7 @@ int main()
     bool instEmpty = false;
     if (isOk(inst))
     {
-        YomkUnPackPkg(inst.m_data, InstanceInfoArray, arr);
+        YomkUnPackPkg(inst.data, InstanceInfoArray, arr);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unloads");

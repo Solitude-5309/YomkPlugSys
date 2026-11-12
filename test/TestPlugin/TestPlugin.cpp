@@ -4,7 +4,7 @@
  * instance_name 由宿主创建实例时指定（限定名 插件名.实例名，全局唯一），
  * instance_file 独立透传，两者互不影响。
  */
-#include <YomkPluginSystem/YomkPluginAPI.h>
+#include <yomk/plugin_system/YomkPluginApi.h>
 
 #include <string>
 
