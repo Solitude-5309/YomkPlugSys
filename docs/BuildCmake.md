@@ -103,6 +103,7 @@ cmake --build test/build -j
 ## 注意事项
 
 - 构建目录可任意（仓库外亦可）；`compile_commands.json` 自动导出到源码根供 clangd 使用。
+- 示例程序与示例插件分离安装：`ExampleYomkPluginSystemBuilder` 装入 `<prefix>/bin`，但清单路径编译期固化为源码树 `examples/workflow/manifest.yomk`，插件 so 也留在源码树 `examples/workflow/*/lib/`（不安装）——源码树被移动或删除后，已安装的示例程序无法运行。
 - 构建产物目录（`build/`、`test/build/`、`examples/build/`）与 `test_logs/` 均被 .gitignore 忽略。
 - 交叉编译/换编译器时 ABI 环境指纹（`cmake/AbiInfo.cmake`）会生成 `abi_report.txt`，插件与宿主须同环境编译（见[插件开发指南](YomkPluginInterface.md)）。
 

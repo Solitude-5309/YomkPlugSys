@@ -1,6 +1,6 @@
 # 插件开发指南（YomkPluginInterface）
 
-面向插件开发者：编写一个可被 YomkPluginSystem 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。
+面向插件开发者：编写一个可被 YomkPluginSystem 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plugin_system/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPluginApi.h`，便于一处引入）。
 
 ## 适用与不适用
 
@@ -32,7 +32,7 @@ public:
     virtual const char* instanceType() const override { return "demo"; }
 
 private:
-    std::string m_name;   /* 返回的 const char* 必须在实例存活期内有效 */
+    std::string m_name;   // 返回的 const char* 必须在实例存活期内有效
 };
 
 static const YomkPluginMeta g_meta = {
@@ -43,8 +43,9 @@ static const YomkPluginMeta* metaFn() { return &g_meta; }
 
 static YomkPluginInterface* createFn(const char* instance_name, const char* instance_file)
 {
+    if (!instance_name || !*instance_name) return nullptr;   // 实例名必填，空名视为创建失败
     try { return new MyInstance(instance_name); }
-    catch (...) { return nullptr; }   /* 导出函数必须捕获异常，失败返回 nullptr */
+    catch (...) { return nullptr; }   // 导出函数必须捕获异常，失败返回 nullptr
 }
 
 static void deleteFn(YomkPluginInterface* instance) { delete instance; }
@@ -52,9 +53,11 @@ static void deleteFn(YomkPluginInterface* instance) { delete instance; }
 YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
 ```
 
-编译为 SHARED 库：
+编译为 SHARED 库（`YomkServer::YomkServer` 提供 `<yomk/plugin_system/...>` 所在的 include 根与 SDK 编译宏）：
 
 ```cmake
+find_package(YomkServer REQUIRED)
+
 add_library(MyPlugin SHARED MyPlugin.cpp)
 target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
 ```
@@ -98,20 +101,20 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 | 参数 | 语义 |
 |---|---|
 | `instance_name` | 宿主指定的实例限定名 `插件名.实例名`（全局唯一）；插件**必须**以传入名称作为实例名（`instanceName()` 返回它） |
-| `instance_file` | 透传参数：创建时指定的实例文件**绝对路径**；插件系统不读不解析，是否使用/如何解析由插件实现自行决定（允许为空）。文件内容可经内省接口按限定名回读 |
+| `instance_file` | 透传参数：创建时指定的实例文件**绝对路径**；框架不读不解析，是否使用/如何解析由插件实现自行决定（直接请求时可为空，清单构建时必填且文件须存在）。内容可经内省接口按限定名回读 |
 
 ## 注意事项
 
 - 插件与宿主须同编译器、共用本扩展安装的头文件（ABI 依赖 vtable 布局）；ABI 版本由 `YOMKPLUGIN_ABI_VERSION` 把关，不符即拒绝装载。
 - 导出函数**不得让异常逃逸**：`create_instance` 内部须 catch 全部异常并返回 `nullptr`（宿主按创建失败处理）。
-- 不得在 `yomk_plugin_meta()` 中做耗时/有副作用操作：装载期会实时调用（Loader 的 `meta` 接口每次实时读取不缓存）。
+- 不得在 `yomk_plugin_meta()` 中做耗时/有副作用操作：装载期实时调用；Loader 的 `meta` 接口每次请求都重新调用导出函数，不做缓存。
 - so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginPath` 指定（见[清单格式](PluginManifest.md)）。
 
 ## 常见问题 FAQ
 
-- **加载失败的可能原因？** 符号缺失（未导出三件套）/ ABI 版本不符 / meta.name 为空或与已加载插件重名 / so 路径不存在——均返回 `Failed` 并带原因。
+- **加载失败的可能原因？** 符号缺失（未导出三件套）/ ABI 版本不符 / meta 为空或 `name` 为空 / 插件名含 `.` / 与已加载插件同名 / so 路径不存在——均返回 `Failed` 并带原因。
 - **一个 so 能出多个实例吗？** 能：工厂函数按调用反复创建；实例间共享插件级静态数据，须自行保证线程安全。
-- **instance_file 必须存在吗？** 装载校验只查**文件存在性**（清单/请求给出路径时）；内容完全不解析，读取行为由插件决定。
+- **instance_file 必须存在吗？** 只有清单构建会校验文件存在；直接 `create_instance` 请求不校验。内容一律不解析，读取行为由插件决定。
 - **插件能自己调插件系统的接口吗？** 能：插件作为进程内代码可直接用 `yomk::plugin()` 域入口（注意避免在构造/destruct 中递归创建同插件实例导致死锁）。
 
 ## 相关跳转

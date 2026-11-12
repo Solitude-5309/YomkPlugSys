@@ -46,15 +46,15 @@ WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService
 
 | 段 | 规则 |
 |---|---|
-| 实例名 | 裸名，同一插件内唯一；空名/含 `.` 解析失败 |
+| 实例名 | 裸名，同一插件内唯一；空名解析失败；不得含 `.`（限定名分隔符，查找接口按 `插件名.` 前缀匹配） |
 | 动态库路径 | 相对**清单所在目录**的完整路径，须含平台相关文件名全名（Linux `libX.so` / macOS `libX.dylib` / Windows `X.dll`）；拒绝绝对路径 |
-| 实例文件路径 | 相对**清单所在目录**的完整路径，可为空；拒绝绝对路径 |
+| 实例文件路径 | 相对**清单所在目录**的完整路径，**必填**且文件须存在；拒绝绝对路径 |
 
 **注释与空行**：`#` 开头的整行为注释；条目行中 `#` 之后为行内注释；两者解析时均忽略，空行跳过。
 
 ## build 流程
 
-解析清单 → 校验实例配置文件/动态库存在 → 逐条装载（已加载插件幂等跳过）→ 按清单实例名创建实例。任一步失败返回 `Failed` 并**指明清单行号**；已成功条目不回滚（详见[插件生命周期](PluginLifecycle.md)）。
+解析清单 → 校验实例配置文件/动态库存在 → 逐条装载（同一 so 路径已加载则复用，不重复 load）→ 按清单实例名创建实例。任一步失败返回 `Failed` 并**指明清单行号**；已成功条目不回滚（详见[插件生命周期](PluginLifecycle.md)）。
 
 ## 注意事项
 
@@ -67,7 +67,7 @@ WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService
 
 - **清单可以用别的文件名吗？** 可以，格式标识只认首行 `#! yomk_plugin_system`；`.yomk` 后缀仅为约定。
 - **条目失败会怎样？** 中止并返回失败原因与行号；之前条目已装载的不回滚，修正后重新 `build` 即可。
-- **实例文件能省略吗？** 能：第三段留空即 `实例名@lib路径@`，插件工厂收到空 `instance_file`。
+- **实例文件能省略吗？** 清单里不能：三段均必填，任意一段为空报 `empty segment`；文件不存在报 `instance file not found`。直接请求 `/YomkPluginManager/create_instance` 时 `instance_file` 可为空（插件工厂收到空串）。
 - **相对路径以哪里为基准？** 只以清单文件所在目录为基准，与 CWD、安装路径均无关。
 
 ## 相关跳转

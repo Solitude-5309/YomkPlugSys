@@ -10,7 +10,7 @@
 | `/YomkPluginLoader` | 机制层（内部服务） | dlopen/dlsym/dlclose、meta 读取、实例创建机制；不登记插件、不拥有实例 |
 | `/YomkPluginManager` | 数据层（内部服务） | 插件表 + 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期管理 |
 
-三服务纯请求通信。用户仅注册/请求门面服务，接口经 `yomk::plugin()` 链式域入口或 `YOMKPLUGIN_*` 门面宏发起；内部服务 URL 仅供扩展内部与白盒测试直调。
+三服务纯请求通信。用户仅注册/请求门面服务，接口一律经 `yomk::plugin()` 链式域入口发起（通用 `url/msg/request` 链归 `yomk::server()`）；内部服务 URL 仅供扩展内部与白盒测试直调。
 
 ## 快速开始
 
@@ -54,7 +54,7 @@ int main()
 
 ## 文档
 
-按需跳跃阅读，每个分片自包含（遵循 [yomk文档原则](../../YomkServer/docs/yomk文档原则.md)）：
+按需跳跃阅读，每个分片自包含（遵循 [yomk文档原则](../YomkServer/docs/yomk文档原则.md)）：
 
 | 我想要… | 分片 |
 |---|---|
@@ -78,7 +78,7 @@ YomkPluginSystem/
 │       ├── YomkPluginPayload.h       # 模块专属载荷（yomk::payload 数据结构体）
 │       ├── YomkPluginMsg.h           # 模块专属消息包（YOMK_DEFINE_MSG 注册）
 │       ├── YomkPluginSystemBuilder.h # 编排层服务声明（唯一用户服务）
-│       └── YomkPluginApi.h           # 模块 API 头（四件套之 Api：域入口 + 门面宏 + 兼容层）
+│       └── YomkPluginApi.h           # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明

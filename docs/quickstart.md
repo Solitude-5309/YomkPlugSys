@@ -1,6 +1,6 @@
 # 快速开始
 
-5 分钟跑通 YomkPluginSystem：安装扩展 → 写最小宿主程序 → 构建示例插件工程 → 内省 → 卸载。全程约 3 段命令 + 1 个程序文件。
+5 分钟跑通 YomkPluginSystem：安装扩展 → 写最小宿主工程 → 构建示例插件工程 → 内省 → 卸载。全程约 3 段命令 + 2 个小文件（`main.cpp` / `CMakeLists.txt`）。
 
 ## 适用与不适用
 
@@ -22,9 +22,11 @@ source build_ubuntu.sh
 
 安装完成后扩展 so 与头文件进入同一前缀（安装布局详见[构建与验证](BuildCmake.md)）。
 
-## 第 2 步：最小宿主程序
+## 第 2 步：最小宿主工程
 
-保存为 `main.cpp`：
+新建空目录（如 `~/yomk-demo`，避免污染本仓库）存放下面两个文件。
+
+`main.cpp`：
 
 ```cpp
 #include <yomk/plugin_system/YomkPluginApi.h>
@@ -41,7 +43,8 @@ int main()
 
     // 按清单构建示例插件工程（清单见 examples/workflow/manifest.yomk）
     auto build = yomk::plugin().build(PLUGIN_MANIFEST);
-    std::cout << "build: " << build.msg << std::endl;
+    auto summary = yomk::msgs::unpack<yomk::msgs::String>(build.data);   // 汇总在 data 的 String 包内
+    std::cout << "build: " << build.msg << " (" << (summary ? summary->d : "") << ")" << std::endl;
 
     // 内省：插件列表
     auto plugins = yomk::plugin().infoPlugins();
@@ -57,18 +60,33 @@ int main()
 }
 ```
 
-编译运行（清单绝对路径经 `PLUGIN_MANIFEST` 宏编译期注入）：
+`CMakeLists.txt`：
 
-```bash
-MANIFEST="$PWD/examples/workflow/manifest.yomk"
-g++ -std=c++17 main.cpp -o demo -DPLUGIN_MANIFEST="\"$MANIFEST\"" \
-    -I"${YOMK_PREFIX_PATH}/include" \
-    -L"${YOMK_PREFIX_PATH}/lib" -lYomkPluginSystem -lYomkServer -Wl,-rpath,"${YOMK_PREFIX_PATH}/lib"
+```cmake
+cmake_minimum_required(VERSION 3.14)
+project(demo LANGUAGES CXX)
 
-./demo
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(YomkServer REQUIRED)
+find_package(YomkPluginSystem REQUIRED)
+
+add_executable(demo main.cpp)
+target_compile_definitions(demo PRIVATE PLUGIN_MANIFEST="${PLUGIN_MANIFEST}")
+target_link_libraries(demo PRIVATE YomkPluginSystem::YomkPluginSystem YomkServer::YomkServer)
 ```
 
-预期输出（节选）：`build: ok (plugins:2 instances:2)`、两行 `plugin: ConnectionService/WorkspaceService`、`tryUnload: ok`。
+构建运行（清单绝对路径经 `PLUGIN_MANIFEST` 缓存变量注入宏；`YomkPluginSystem` 对 YomkServer 是 PRIVATE 链接，故宿主须显式再链 `YomkServer::YomkServer`）：
+
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH="${YOMK_PREFIX_PATH}" \
+    -DPLUGIN_MANIFEST="/path/to/YomkPluginSystem/examples/workflow/manifest.yomk"
+cmake --build build -j
+./build/demo
+```
+
+预期输出（节选）：`build: ok (plugins:2 instances:2)`、两行 `plugin: ConnectionService v1.0.0` 与 `plugin: WorkspaceService v1.0.0`、`tryUnload: instances still alive: ConnectionService`（实例仍存活，保守语义拒绝卸载）。
 
 ## 第 3 步：观察完整流程
 
@@ -77,6 +95,8 @@ g++ -std=c++17 main.cpp -o demo -DPLUGIN_MANIFEST="\"$MANIFEST\"" \
 ```bash
 <安装路径>/bin/ExampleYomkPluginSystemBuilder
 ```
+
+> 示例程序的清单路径在编译期固化为源码树中的 `examples/workflow/manifest.yomk`，示例插件 so 也留在源码树（不随安装分发），因此需在本仓库原位置运行。
 
 ## 下一步
 

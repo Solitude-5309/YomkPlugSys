@@ -26,5 +26,5 @@
 ## 规范与配套
 
 - 术语约定：门面服务（YomkPluginSystemBuilder）、机制层（Loader）/ 数据层（Manager）为内部服务；限定名 = `插件名.实例名`（全局唯一主键）；实例文件 = `instance_file`（透传参数）
-- API 精确契约：头文件 Doxygen 注释（`include/yomk/plugin_system/`），逐参数与返回码以之为准
+- API 精确契约：头文件 Doxygen 注释（仓库内 `include/plugin_system/`，安装后 `<prefix>/include/yomk/plugin_system/`），逐参数与返回码以之为准
 - 完整示例：`examples/ExampleYomkPluginSystemBuilder.cpp`（入门全流程）、`examples/workflow/`（双插件清单工程）、`test/`（8 个测试闭环）

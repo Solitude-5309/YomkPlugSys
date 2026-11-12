@@ -21,14 +21,14 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
 | 清单构建 | `yomk::plugin().build(workflowPath)` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
-| 强制卸载 | `yomk::plugin().unload(pluginName)` | → `Response`（先销毁全部实例再卸载） |
+| 强制卸载 | `yomk::plugin().unload(pluginName)` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plugin().tryUnload(pluginName)` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plugin().infoBuilder()` | → `Response`（data 为 `BuilderInfo`） |
-| 插件列表 | `yomk::plugin().infoPlugins()` / `.infoPlugins(pluginName)` | → `Response`（data 为 `PluginMetaArray`） |
-| 实例明细 | `yomk::plugin().infoInstances()` / `.infoInstances(pluginName)` | → `Response`（data 为 `InstanceInfoArray`） |
+| 插件列表 | `yomk::plugin().infoPlugins()` / `.infoPlugins(pluginName)` | → `Response`（data 为 `PluginMetaArray`；按名查询时未知插件 `Failed`） |
+| 实例明细 | `yomk::plugin().infoInstances()` / `.infoInstances(pluginName)` | → `Response`（data 为 `InstanceInfoArray`；按插件过滤时未知插件 `Failed`） |
 | 实例查插件 | `yomk::plugin().infoPluginBy(instanceName)` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
 | 实例文件 | `yomk::plugin().infoInstancesFile(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
-| 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z`） |
+| 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z (WIP)`） |
 
 > `instanceName` 一律为限定名 `插件名.实例名`（全局唯一主键）；`pluginName` 为插件 meta 名。
 
@@ -48,7 +48,7 @@ auto build = yomk::plugin().build("examples/workflow/manifest.yomk");
 auto plugins = yomk::plugin().infoPlugins();
 auto instances = yomk::plugin().infoInstances("ConnectionService");   // 按插件过滤
 
-// 卸载（有存活实例时 tryUnload 拒绝，unload 先销毁全部实例）
+// 卸载（有存活实例时 tryUnload 拒绝；unload 先清空实例表再卸载，外部引用未释放同样拒绝）
 auto r = yomk::plugin().tryUnload("ConnectionService");
 ```
 
@@ -67,11 +67,11 @@ if (arr)
 
 ## 注意事项
 
-- `build` 流程：解析清单 → 校验实例配置文件/动态库存在 → 加载（已加载幂等跳过）→ 按清单实例名创建（登记为限定名）。任一步失败 `Failed` 并指明清单行号。
-- `unload` 与 `try_unload` 是两种语义：前者先删除该插件全部实例再卸载（破坏性）；后者有存活实例即拒绝，插件保持加载（保守性）。边界详见[插件生命周期](PluginLifecycle.md)。
+- `build` 流程：解析清单 → 校验实例文件与动态库存在 → 加载（同一 so 路径已加载则幂等复用；另一个 so 文件导出同名 meta 会被拒绝）→ 按清单实例名创建（登记为限定名）。任一步失败 `Failed` 并指明清单行号（清单不可读、首行标识缺失同样失败）。
+- `unload` 与 `try_unload` 是两种语义：前者先清空该插件实例表再卸载（不等待实例自然销毁）；后者不动实例、有存活实例即拒绝。两者的最终卸载都经 Loader 判活，外部仍持有实例引用时都会 `Failed`（`instances still alive`），此时 `unload` 已清空实例表、插件仍加载。边界详见[插件生命周期](PluginLifecycle.md)。
 - `BuilderInfo` 反映**最近一次**构建（清单路径/结果/条目行/插件与实例数），空值 = 尚未构建；多次构建只保留最后一次。
 - 门面服务注册后即可请求；未注册时请求返回 `Failed`。
-- 版本值由 CMake 编译期注入（`project(VERSION)` 单一来源），运行时查询返回形如 `YomkPluginSystem v0.2.9 (WIP)` 的描述。
+- 版本值由 CMake 编译期注入（`project(VERSION)` 单一来源），运行时查询返回形如 `YomkPluginSystem v1.0.7 (WIP)` 的描述（版本号随工程版本变化）。
 
 ## 常见问题 FAQ
 

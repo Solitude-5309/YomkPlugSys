@@ -195,7 +195,7 @@ int main()
 
     // 8. 卸载插件
     // 接口：yomk::plugin().tryUnload(pluginName) 尝试卸载：有存活实例则拒绝
-    //       yomk::plugin().unload(pluginName)    强制卸载：先销毁全部实例再卸载
+    //       yomk::plugin().unload(pluginName)    强制卸载：先清空实例表再卸载（外部仍有实例引用时同样拒绝）
     // 输入：pluginName；输出：String(ok/msg)
     section("8. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
     resp = yomk::plugin().tryUnload("ConnectionService");

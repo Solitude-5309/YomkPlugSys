@@ -59,13 +59,17 @@ public:
     }
 
     /**
-     * @brief Force-unload a plugin library: destroy all its instances first, then close the library
+     * @brief Force-unload a plugin library: clear its instance table first, then close the library
      * @param pluginName Plugin name (meta name, must not contain '.')
      * @return Response carrying a String packet "ok" on success; failure reason in msg
+     * @note References held outside the manager still block the library close (liveness check);
+     *       the instance table is already cleared at that point, so the plugin stays loaded,
+     *       without instances.
      */
-    // @zh: 强制卸载插件库：先销毁该插件的全部实例，再卸载动态库。
+    // @zh: 强制卸载插件库：先清空该插件的实例表，再卸载动态库（不夺走外部已持有的实例引用）。
     // @zh: param pluginName 插件名（meta 名，不得含 '.'）。
     // @zh: return Response，成功时 data 为 String 包 "ok"；失败原因见 msg。
+    // @zh: note 外部仍持有实例引用时库不会被关闭（判活拒绝）；此时实例表已清空、插件保持加载但无实例。
     yomk::payload::Response unload(std::string_view pluginName)
     {
         return yomk::server().url(yomk::url::pluginUnload).msg(yomk::msgs::String::shared(std::string(pluginName))).request();
