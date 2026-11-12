@@ -114,7 +114,7 @@ int main()
     check(instEmpty, "infoInstances() Succeeded + empty array");
 
     // ---------- BUILD 失败路径 ----------
-    resp = yomk::plugin().build("/nonexistent/no_such.yomk");
+    resp = yomk::plugin().manifest("/nonexistent/no_such.yomk").build();
     check(isNo(resp), "BUILD nonexistent manifest returns Failed");
     check(resp.msg.find("manifest not found") != std::string::npos, "BUILD error msg 'manifest not found'");
 

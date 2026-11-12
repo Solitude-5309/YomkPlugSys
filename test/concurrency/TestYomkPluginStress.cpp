@@ -191,7 +191,7 @@ int main()
         }
         writeManifest("s200.yomk", oss.str());
     }
-    check(isOk(yomk::plugin().build(fp("s200.yomk"))), "S0 build 200-entry manifest ok");
+    check(isOk(yomk::plugin().manifest(fp("s200.yomk")).build()), "S0 build 200-entry manifest ok");
     yomk::payload::Response s0Info = yomk::plugin().infoBuilder();
     auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
@@ -203,7 +203,7 @@ int main()
     for (int round = 1; round <= 250; ++round)
     {
         const bool unloadOk = isOk(yomk::plugin().unload("TestPlugin"));
-        const bool buildOk = isOk(yomk::plugin().build(fp("s200.yomk")));
+        const bool buildOk = isOk(yomk::plugin().manifest(fp("s200.yomk")).build());
         if (unloadOk && buildOk)
         {
             ++churnOk;
@@ -225,7 +225,7 @@ int main()
     // ---------- S2 2000 对 create/destroy ----------
     // 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留）
     writeManifest("pre.yomk", "#! yomk_plugin_system\npre-i1@libTestPlugin.so@inst.txt\n");
-    yomk::plugin().build(fp("pre.yomk"));
+    yomk::plugin().manifest(fp("pre.yomk")).build();
     destroyInst("pre-i1");
 
     const auto s2Start = std::chrono::steady_clock::now();

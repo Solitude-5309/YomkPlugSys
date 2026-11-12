@@ -42,7 +42,7 @@ int main()
     yomk::server().srv<YomkPluginSystemBuilder>().create();
 
     // 按清单构建示例插件工程（清单见 examples/workflow/manifest.yomk）
-    auto build = yomk::plugin().build(PLUGIN_MANIFEST);
+    auto build = yomk::plugin().manifest(PLUGIN_MANIFEST).build();
     auto summary = yomk::msgs::unpack<yomk::msgs::String>(build.data);   // 汇总在 data 的 String 包内
     std::cout << "build: " << build.msg << " (" << (summary ? summary->d : "") << ")" << std::endl;
 

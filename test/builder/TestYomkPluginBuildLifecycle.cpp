@@ -141,7 +141,7 @@ int main()
 
     // ---------- S1 合法构建与内省基线 ----------
     writeManifest("s1.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("s1.yomk")), "plugins:1 instances:1", "S1 build single entry ok");
+    expectOkSummary(yomk::plugin().manifest(fp("s1.yomk")).build(), "plugins:1 instances:1", "S1 build single entry ok");
 
     std::vector<yomk::payload::InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
@@ -171,10 +171,10 @@ int main()
 
     // ---------- S2 so 复用幂等与实例重名 ----------
     writeManifest("s2.yomk", "#! yomk_plugin_system\ns2-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("s2.yomk")), "plugins:1 instances:1", "S2 same lib reused, not reloaded");
+    expectOkSummary(yomk::plugin().manifest(fp("s2.yomk")).build(), "plugins:1 instances:1", "S2 same lib reused, not reloaded");
     writeManifest("s2dup.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
     expectNo(
-        yomk::plugin().build(fp("s2dup.yomk")),
+        yomk::plugin().manifest(fp("s2dup.yomk")).build(),
         "manifest line 2: create failed: duplicate instance name: s1-i1",
         "S2 duplicate instance name through build");
     check(listInstances().size() == 2, "S2 two instances alive after dup-build failure");
@@ -226,25 +226,25 @@ int main()
 
     // ---------- S5 unload 强卸含存活实例 ----------
     writeManifest("s5.yomk", "#! yomk_plugin_system\ns5-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("s5.yomk")), "plugins:1 instances:1", "S5 rebuild for force unload");
+    expectOkSummary(yomk::plugin().manifest(fp("s5.yomk")).build(), "plugins:1 instances:1", "S5 rebuild for force unload");
     check(isOk(yomk::plugin().unload("TestPlugin")), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
     expectNo(yomk::plugin().unload("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
 
     // ---------- S6 卸载后重载 ----------
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("s6.yomk")), "plugins:1 instances:1", "S6 reload after unload ok");
+    expectOkSummary(yomk::plugin().manifest(fp("s6.yomk")).build(), "plugins:1 instances:1", "S6 reload after unload ok");
     insts = listInstances();
     check(insts.size() == 1 && insts[0].instanceName == "TestPlugin.s6-i1", "S6 instance back after reload");
 
     // ---------- S7 缺文件行号错误 ----------
     writeManifest("s7a.yomk", "#! yomk_plugin_system\ns7-i1@no_such.so@inst.txt\n");
-    expectNo(yomk::plugin().build(fp("s7a.yomk")), "manifest line 2: plugin lib not found", "S7 missing lib path error");
+    expectNo(yomk::plugin().manifest(fp("s7a.yomk")).build(), "manifest line 2: plugin lib not found", "S7 missing lib path error");
     writeManifest("s7b.yomk", "#! yomk_plugin_system\ns7-i2@libTestPlugin.so@missing_inst.txt\n");
     expectNo(
-        yomk::plugin().build(fp("s7b.yomk")), "manifest line 2: instance file not found", "S7 missing instance file error");
+        yomk::plugin().manifest(fp("s7b.yomk")).build(), "manifest line 2: instance file not found", "S7 missing instance file error");
     writeManifest("s7c.yomk", "#! yomk_plugin_system\ns7-i3@no_such.so@missing_inst.txt\n");
-    expectNo(yomk::plugin().build(fp("s7c.yomk")), "instance file not found", "S7 instance file checked before lib");
+    expectNo(yomk::plugin().manifest(fp("s7c.yomk")).build(), "instance file not found", "S7 instance file checked before lib");
 
     // ---------- 清理现场 ----------
     check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");

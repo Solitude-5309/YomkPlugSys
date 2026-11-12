@@ -1,6 +1,6 @@
 # 清单格式（manifest.yomk）
 
-manifest.yomk 是插件工程的装载清单：描述要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的 `build` 接口以清单路径为唯一入参，按行解析并逐条装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
+manifest.yomk 是插件工程的装载清单：描述要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的构建入口以清单路径为唯一输入（`yomk::plugin().manifest(path).build()`），按行解析并逐条装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
 
 ## 适用与不适用
 
@@ -28,7 +28,7 @@ ConnectionServiceIns@ConnectionService/lib/libConnectionService.so@ConnectionSer
 WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService/instances/WorkspaceService.txt
 ```
 
-预期行为：`yomk::plugin().build("<路径>/manifest.yomk")` 返回 `plugins:2 instances:2`；两实例登记为 `ConnectionService.ConnectionServiceIns`、`WorkspaceService.WorkspaceServiceIns`。
+预期行为：`yomk::plugin().manifest("<路径>/manifest.yomk").build()` 返回 `plugins:2 instances:2`；两实例登记为 `ConnectionService.ConnectionServiceIns`、`WorkspaceService.WorkspaceServiceIns`。
 
 ## 语法规则
 

@@ -144,7 +144,7 @@ int main()
 
     // ---------- R1 双层去重：基线双实例 ----------
     writeManifest("r1.yomk", "#! yomk_plugin_system\nr-a@libTestPlugin.so@inst.txt\nr-b@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("r1.yomk")), "plugins:1 instances:2", "R1 build two instances baseline");
+    expectOkSummary(yomk::plugin().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
 
     // 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重
     YomkMsgPtr samePath = yomk::msgs::PluginPath::shared(yomk::payload::PluginPath{fp("libTestPlugin.so")});
@@ -188,7 +188,7 @@ int main()
 
     // 重新构建触发二次 dlopen：重载后去重仍生效
     writeManifest("r3.yomk", "#! yomk_plugin_system\nr3-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("r3.yomk")), "plugins:1 instances:1", "R3 rebuild after unload ok");
+    expectOkSummary(yomk::plugin().manifest(fp("r3.yomk")).build(), "plugins:1 instances:1", "R3 rebuild after unload ok");
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(samePath).request(),
         "plugin already loaded: TestPlugin",
@@ -206,7 +206,7 @@ int main()
         "#! "
         "yomk_plugin_system\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
         "inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("r4.yomk")), "plugins:1 instances:3", "R4 build three instances");
+    expectOkSummary(yomk::plugin().manifest(fp("r4.yomk")).build(), "plugins:1 instances:3", "R4 build three instances");
     expectNo(yomk::plugin().tryUnload("TestPlugin"), "instances still alive", "R4 try_unload rejects while three alive");
     check(isOk(yomk::plugin().unload("TestPlugin")), "R4 force unload with three alive instances ok");
     check(listInstances().empty(), "R4 instances destroyed by force unload");

@@ -20,7 +20,7 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
-| 清单构建 | `yomk::plugin().build(workflowPath)` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
+| 清单构建 | `yomk::plugin().manifest(workflowPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
 | 强制卸载 | `yomk::plugin().unload(pluginName)` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plugin().tryUnload(pluginName)` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plugin().infoBuilder()` | → `Response`（data 为 `BuilderInfo`） |
@@ -41,8 +41,8 @@ using namespace yomk;
 yomk::server().init();
 yomk::server().srv<YomkPluginSystemBuilder>().create();
 
-// 按清单构建（清单格式见 PluginManifest.md；任一步失败 Failed 并指明清单行号）
-auto build = yomk::plugin().build("examples/workflow/manifest.yomk");
+// 按清单构建（manifest 绑定清单路径，build 终结；清单格式见 PluginManifest.md；任一步失败 Failed 并指明清单行号）
+auto build = yomk::plugin().manifest("examples/workflow/manifest.yomk").build();
 
 // 内省：插件列表与实例明细
 auto plugins = yomk::plugin().infoPlugins();

@@ -4,7 +4,8 @@
 // YomkPluginSystem 公开 API 聚合头（四件套之 Api）.
 // 设计取舍:
 // 1. 域入口 yomk::plugin() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
-//    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;
+//    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;需带清单的构建
+//    采用两段链 manifest(path) 绑定 -> build() 终结,终结方法保持零参;
 // 2. 分层单向:Interface(ABI 叶子) -> Url(常量叶子) -> Payload -> Msg -> Builder,
 //    本文件为聚合入口,无人反向依赖;
 // 3. 机制层 src/YomkPluginLoader.h 与数据层 src/YomkPluginManager.h 不随安装导出,
@@ -21,6 +22,41 @@
 
 namespace yomk::detail
 {
+/**
+ * @brief Intermediate chain node binding a manifest path, terminated by build()
+ * Returned by PluginBuilder::manifest(); like every terminator it hides the raw request
+ * channel (yomk::server().url(...).msg(...).request()).
+ * @note Holds a copy of the manifest path; use inline in a single chained expression only,
+ *       never store or reuse it.
+ */
+// @zh: 中间链节点：绑定清单路径，链以 build() 终结。
+// @zh: 由 PluginBuilder::manifest() 返回；与其它终结方法一样屏蔽裸请求通道。
+// @zh: note 持有清单路径的拷贝；仅用于单表达式链式调用，禁止存储或复用。
+class PluginManifestBuilder
+{
+public:
+    explicit PluginManifestBuilder(std::string_view workflowPath) : m_workflowPath(workflowPath) {}
+
+    /**
+     * @brief Build a plugin project from the bound manifest: load every listed library and create its instances
+     * @return Response carrying a String packet with the summary "plugins:N instances:N"
+     * @note Blocking; stops at the first failing manifest line, later lines are not processed
+     */
+    // @zh: 按绑定的清单构建插件工程：加载条目列出的全部动态库并创建实例。
+    // @zh: return Response，data 为 String 包，内容为汇总 plugins:N instances:N。
+    // @zh: note 阻塞；遇到首个失败条目即停止，后续条目不再处理。
+    yomk::payload::Response build() const
+    {
+        return yomk::server()
+            .url(yomk::url::pluginBuild)
+            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{m_workflowPath}))
+            .request();
+    }
+
+private:
+    std::string m_workflowPath;
+};
+
 /**
  * @brief Chainable domain entry of the YomkPluginSystem extension
  * Every terminator is a thin wrapper over the unified request channel
@@ -41,22 +77,14 @@ class PluginBuilder
 {
 public:
     /**
-     * @brief Build a plugin project from a manifest: load every listed library and create its instances
+     * @brief Bind a manifest file for building, terminating with build()
      * @param workflowPath Path of the .yomk manifest file
-     * @return Response carrying a String packet with the summary "plugins:N instances:N"
-     * @note Blocking; stops at the first failing manifest line, later lines are not processed
+     * @return Intermediate chain node carrying the path; call build() on it
      */
-    // @zh: 按清单构建插件工程：加载条目列出的全部动态库并创建实例。
+    // @zh: 绑定要构建的清单文件，链以 build() 终结。
     // @zh: param workflowPath .yomk 清单文件路径。
-    // @zh: return Response，data 为 String 包，内容为汇总 plugins:N instances:N。
-    // @zh: note 阻塞；遇到首个失败条目即停止，后续条目不再处理。
-    yomk::payload::Response build(std::string_view workflowPath)
-    {
-        return yomk::server()
-            .url(yomk::url::pluginBuild)
-            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{std::string(workflowPath)}))
-            .request();
-    }
+    // @zh: return 携带该路径的中间链节点；在其上调用 build()。
+    PluginManifestBuilder manifest(std::string_view workflowPath) { return PluginManifestBuilder(workflowPath); }
 
     /**
      * @brief Force-unload a plugin library: clear its instance table first, then close the library

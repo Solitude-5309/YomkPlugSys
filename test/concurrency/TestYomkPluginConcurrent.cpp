@@ -174,7 +174,7 @@ int main()
 
     // ---------- C0 基线：插件加载态 ----------
     writeManifest("c0.yomk", "#! yomk_plugin_system\nc0-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().build(fp("c0.yomk")), "plugins:1 instances:1", "C0 build baseline ok");
+    expectOkSummary(yomk::plugin().manifest(fp("c0.yomk")).build(), "plugins:1 instances:1", "C0 build baseline ok");
     check(isOk(destroyInst("c0-i1")), "C0 destroy baseline instance (plugin stays loaded)");
 
     // ---------- C1 并发 create/destroy 计数守恒：8 线程 x 50 ----------
@@ -251,7 +251,7 @@ int main()
             pool.emplace_back(
                 [&]()
                 {
-                    yomk::payload::Response r = yomk::plugin().build(fp("c2.yomk"));
+                    yomk::payload::Response r = yomk::plugin().manifest(fp("c2.yomk")).build();
                     if (isOk(r))
                     {
                         ++c2Ok;
@@ -336,7 +336,7 @@ int main()
     // ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ----------
     // 前置：C3 结束插件已卸载，重建加载态（churn 需要插件在库中）
     writeManifest("c4pre.yomk", "#! yomk_plugin_system\nc4pre-i1@libTestPlugin.so@inst.txt\n");
-    yomk::plugin().build(fp("c4pre.yomk"));
+    yomk::plugin().manifest(fp("c4pre.yomk")).build();
     destroyInst("c4pre-i1");
 
     std::atomic<bool> c4Done{false};

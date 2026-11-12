@@ -33,8 +33,8 @@ int main()
     // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
     yomk::server().srv<YomkPluginSystemBuilder>().create();
 
-    // 按清单构建插件工程（清单语法见 docs/PluginManifest.md）
-    auto build = yomk::plugin().build("/abs/path/to/manifest.yomk");
+    // 按清单构建插件工程（manifest(path) 绑定清单，build() 终结；清单语法见 docs/PluginManifest.md）
+    auto build = yomk::plugin().manifest("/abs/path/to/manifest.yomk").build();
 
     // 内省：插件列表
     auto plugins = yomk::plugin().infoPlugins();
