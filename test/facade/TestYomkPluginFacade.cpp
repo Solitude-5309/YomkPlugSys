@@ -1,6 +1,6 @@
 /*
- * TestYomkPluginFacade：门面宏契约冒烟测试（闭环1）
- * 覆盖：门面服务注册、/version 契约与 YOMKPLUGIN_VERSION 宏输出、
+ * TestYomkPluginFacade：门面链式域入口契约冒烟测试
+ * 覆盖：门面服务注册、/version 契约与链式版本查询输出、
  * 空态内省契约（INFO_BUILDER 空态默认值、INFO_PLUGIN_BY/INFO_INSTANCES_FILE 未知实例拒绝、INFO_PLUGINS/INFO_INSTANCES 空数组）、
  * BUILD 不存在清单失败路径。
  */
@@ -29,20 +29,20 @@ static void check(bool ok, const std::string& desc)
     }
 }
 
-static bool isOk(const YomkResponse& r)
+static bool isOk(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Succeeded;
+    return r.status == yomk::payload::ResStatus::Succeeded;
 }
-static bool isNo(const YomkResponse& r)
+static bool isNo(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Failed;
+    return r.status == yomk::payload::ResStatus::Failed;
 }
 
-static std::string respString(const YomkResponse& r)
+static std::string respString(const yomk::payload::Response& r)
 {
     if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
+        auto p = std::dynamic_pointer_cast<yomk::msgs::String>(r.data);
         if (p)
         {
             return p->d;
@@ -53,58 +53,72 @@ static std::string respString(const YomkResponse& r)
 
 int main()
 {
-    YOMK_INIT();
+    yomk::server().init();
     /* 门面服务：Loader/Manager 由 Builder::init 内部注册，用户仅注册本服务 */
-    check(YOMK_NEW_SERVICE(YomkPluginSystemBuilder) == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
 
     /* ---------- 版本契约 ---------- */
-    YomkResponse resp = YOMK_REQUEST("/YomkPluginSystemBuilder/version", nullptr);
+    yomk::payload::Response resp = yomk::server().url("/YomkPluginSystemBuilder/version").msg(nullptr).request();
     check(isOk(resp), "/version returns eOk");
     const std::string ver = respString(resp);
     check(ver.rfind("YomkPluginSystem v", 0) == 0, "/version prefix 'YomkPluginSystem v'");
-    /* 宏一键查询并打印（成功走 YOMK_INFO_TAG，无返回值，输出人工核对） */
-    YOMKPLUGIN_VERSION();
+    /* 链式查询 /version 并解包打印（成功走 info，输出人工核对） */
+    {
+        auto verResp = yomk::plugin().version();
+        if (verResp.status == yomk::payload::ResStatus::Succeeded)
+        {
+            auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
+            if (ver)
+            {
+                yomk::log().tag("YomkPluginSystem").info(ver->d);
+            }
+        }
+        else
+        {
+            yomk::log().tag("YomkPluginSystem").error("getVersion failed: ", verResp.msg);
+        }
+    }
 
     /* ---------- 空态内省契约 ---------- */
-    resp = YOMKPLUGIN_INFO_BUILDER();
+    resp = yomk::plugin().infoBuilder();
     check(isOk(resp), "INFO_BUILDER returns eOk");
-    YomkUnPackPkg(resp.data, BuilderInfo, info);
+    auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
     check(info != nullptr, "INFO_BUILDER unpacks BuilderInfo");
     check(
         info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
             info->d.manifest.empty(),
         "INFO_BUILDER empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
-    resp = YOMKPLUGIN_INFO_PLUGIN_BY("no-inst");
+    resp = yomk::plugin().infoPluginBy("no-inst");
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "INFO_PLUGIN_BY empty-state rejects unknown instance");
 
-    resp = YOMKPLUGIN_INFO_INSTANCES_FILE("no-inst");
+    resp = yomk::plugin().infoInstancesFile("no-inst");
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "INFO_INSTANCES_FILE empty-state rejects unknown instance");
 
-    resp = YOMKPLUGIN_INFO_PLUGINS();
+    resp = yomk::plugin().infoPlugins();
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
         pluginsEmpty = arr->d.empty();
     }
     check(pluginsEmpty, "INFO_PLUGINS eOk + empty array");
 
-    resp = YOMKPLUGIN_INFO_INSTANCES();
+    resp = yomk::plugin().infoInstances();
     bool instEmpty = false;
     if (isOk(resp))
     {
-        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "INFO_INSTANCES eOk + empty array");
 
     /* ---------- BUILD 失败路径 ---------- */
-    resp = YOMKPLUGIN_BUILD("/nonexistent/no_such.yomk");
+    resp = yomk::plugin().build("/nonexistent/no_such.yomk");
     check(isNo(resp), "BUILD nonexistent manifest returns eNo");
     check(resp.msg.find("manifest not found") != std::string::npos, "BUILD error msg 'manifest not found'");
 

@@ -35,17 +35,17 @@ static void check(bool ok, const std::string& desc)
     }
 }
 
-static bool isOk(const YomkResponse& r)
+static bool isOk(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Succeeded;
+    return r.status == yomk::payload::ResStatus::Succeeded;
 }
-static bool isNo(const YomkResponse& r)
+static bool isNo(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Failed;
+    return r.status == yomk::payload::ResStatus::Failed;
 }
 
 /* 组合断言：eNo 且错误文案含子串 */
-static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
+static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
@@ -87,10 +87,10 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
         out = arr->d;
     }
     return out;
@@ -99,10 +99,10 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
 /* 最近构建信息（对账 recordBuild 侧效） */
 static yomk::payload::BuilderInfo builderInfo()
 {
-    YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoBuilder();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, BuilderInfo, info);
+        auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
         if (info)
         {
             return info->d;
@@ -113,8 +113,8 @@ static yomk::payload::BuilderInfo builderInfo()
 
 int main()
 {
-    YOMK_INIT();
-    check(YOMK_NEW_SERVICE(YomkPluginSystemBuilder) == 0, "register YomkPluginSystemBuilder");
+    yomk::server().init();
+    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -142,33 +142,33 @@ int main()
 
     /* ---------- 加载失败分支（build 包装为 load failed） ---------- */
     writeManifest("b1.yomk", "#! yomk_plugin_system\nx1@libBadNoSymbol.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b1.yomk")), "manifest line 2: load failed: missing plugin export symbols",
+    expectNo(yomk::plugin().build(fp("b1.yomk")), "manifest line 2: load failed: missing plugin export symbols",
         "B1 missing export symbols rejects");
 
     writeManifest("b2.yomk", "#! yomk_plugin_system\nx1@libBadNullMeta.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b2.yomk")), "manifest line 2: load failed: invalid plugin meta",
+    expectNo(yomk::plugin().build(fp("b2.yomk")), "manifest line 2: load failed: invalid plugin meta",
         "B2 null meta rejects");
 
     writeManifest("b3.yomk", "#! yomk_plugin_system\nx1@libBadNullName.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b3.yomk")), "manifest line 2: load failed: invalid plugin meta",
+    expectNo(yomk::plugin().build(fp("b3.yomk")), "manifest line 2: load failed: invalid plugin meta",
         "B3 null meta name rejects");
 
     writeManifest("b4.yomk", "#! yomk_plugin_system\nx1@libBadEmptyName.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b4.yomk")), "manifest line 2: load failed: invalid plugin meta",
+    expectNo(yomk::plugin().build(fp("b4.yomk")), "manifest line 2: load failed: invalid plugin meta",
         "B4 empty meta name rejects");
 
     const std::string abiErr = "manifest line 2: load failed: abi version mismatch: plugin " +
         std::to_string(YOMKPLUGIN_ABI_VERSION + 1) + ", host " + std::to_string(YOMKPLUGIN_ABI_VERSION);
     writeManifest("b5.yomk", "#! yomk_plugin_system\nx1@libBadAbi.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b5.yomk")), abiErr, "B5 abi version mismatch rejects");
+    expectNo(yomk::plugin().build(fp("b5.yomk")), abiErr, "B5 abi version mismatch rejects");
 
     writeManifest("b6.yomk", "#! yomk_plugin_system\nx1@garbage.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b6.yomk")), "manifest line 2: load failed: dlopen failed:",
+    expectNo(yomk::plugin().build(fp("b6.yomk")), "manifest line 2: load failed: dlopen failed:",
         "B6 garbage so dlopen rejects");
 
     /* ---------- 创建失败分支（build 包装为 create failed） ---------- */
     writeManifest("b7.yomk", "#! yomk_plugin_system\nx1@libBadCreateNull.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b7.yomk")), "manifest line 2: create failed: create instance failed: BadCreateNull",
+    expectNo(yomk::plugin().build(fp("b7.yomk")), "manifest line 2: create failed: create instance failed: BadCreateNull",
         "B7 create returns nullptr rejects");
 
     bool registered = false;
@@ -182,12 +182,12 @@ int main()
     check(registered, "B8 bad-create plugin still registered after failed build");
 
     writeManifest("b8.yomk", "#! yomk_plugin_system\nx1@libBadCreateThrow.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b8.yomk")), "manifest line 2: create failed: create exception: bad create boom",
+    expectNo(yomk::plugin().build(fp("b8.yomk")), "manifest line 2: create failed: create exception: bad create boom",
         "B10 create exception caught and reported");
 
     /* ---------- 部分成功：前序条目保留、失败行号短路 ---------- */
     writeManifest("b9.yomk", "#! yomk_plugin_system\ntp1@libTestPlugin.so@inst.txt\nx1@libBadNoSymbol.so@inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("b9.yomk")), "manifest line 3: load failed: missing plugin export symbols",
+    expectNo(yomk::plugin().build(fp("b9.yomk")), "manifest line 3: load failed: missing plugin export symbols",
         "B11 build stops at failed line 3");
     const yomk::payload::BuilderInfo b12Info = builderInfo();
     const bool b12Kept =
@@ -198,20 +198,20 @@ int main()
     /* ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ---------- */
     writeManifest("b13.yomk", "#! yomk_plugin_system\nbd1@libBadDotName.so@inst.txt\n");
     expectNo(
-        YOMKPLUGIN_BUILD(fp("b13.yomk")),
+        yomk::plugin().build(fp("b13.yomk")),
         "load failed: plugin name must not contain '.'",
         "B13 dot in plugin name rejects");
 
     /* ---------- 清理现场 ---------- */
-    check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");
-    check(isOk(YOMKPLUGIN_UNLOAD("BadCreateNull")), "cleanup: force_unload BadCreateNull");
-    check(isOk(YOMKPLUGIN_UNLOAD("BadCreateThrow")), "cleanup: force_unload BadCreateThrow");
+    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().unload("BadCreateNull")), "cleanup: force_unload BadCreateNull");
+    check(isOk(yomk::plugin().unload("BadCreateThrow")), "cleanup: force_unload BadCreateThrow");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
-    YomkResponse inst = YOMKPLUGIN_INFO_INSTANCES();
+    yomk::payload::Response inst = yomk::plugin().infoInstances();
     bool instEmpty = false;
     if (isOk(inst))
     {
-        YomkUnPackPkg(inst.data, InstanceInfoArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(inst.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unloads");

@@ -35,20 +35,20 @@ static void check(bool ok, const std::string& desc)
     }
 }
 
-static bool isOk(const YomkResponse& r)
+static bool isOk(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Succeeded;
+    return r.status == yomk::payload::ResStatus::Succeeded;
 }
-static bool isNo(const YomkResponse& r)
+static bool isNo(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Failed;
+    return r.status == yomk::payload::ResStatus::Failed;
 }
 
-static std::string respString(const YomkResponse& r)
+static std::string respString(const yomk::payload::Response& r)
 {
     if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
+        auto p = std::dynamic_pointer_cast<yomk::msgs::String>(r.data);
         if (p)
         {
             return p->d;
@@ -58,13 +58,13 @@ static std::string respString(const YomkResponse& r)
 }
 
 /* 组合断言：eNo 且错误文案含子串 */
-static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
+static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 组合断言：eOk 且汇总串精确匹配 */
-static void expectOkSummary(const YomkResponse& r, const std::string& summary, const std::string& desc)
+static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
     check(isOk(r) && respString(r) == summary, desc + " (" + summary + ")");
 }
@@ -123,10 +123,10 @@ static void linkPlugin()
 /* 最近构建信息（对账 recordBuild 侧效） */
 static yomk::payload::BuilderInfo builderInfo()
 {
-    YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoBuilder();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, BuilderInfo, info);
+        auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
         if (info)
         {
             return info->d;
@@ -137,8 +137,8 @@ static yomk::payload::BuilderInfo builderInfo()
 
 int main()
 {
-    YOMK_INIT();
-    check(YOMK_NEW_SERVICE(YomkPluginSystemBuilder) == 0, "register YomkPluginSystemBuilder");
+    yomk::server().init();
+    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
 
     namespace fs = std::filesystem;
     /* 夹具目录每次运行清空重建，保证干净起点 */
@@ -151,79 +151,79 @@ int main()
     touchInstanceFile("inst.txt");
 
     /* ---------- A 路径预检：不存在/空串/目录/空白串 ---------- */
-    expectNo(YOMKPLUGIN_BUILD("/nonexistent/no_such.yomk"), "manifest not found", "A1 nonexistent path rejects");
-    expectNo(YOMKPLUGIN_BUILD(""), "manifest not found", "A2 empty path rejects");
+    expectNo(yomk::plugin().build("/nonexistent/no_such.yomk"), "manifest not found", "A1 nonexistent path rejects");
+    expectNo(yomk::plugin().build(""), "manifest not found", "A2 empty path rejects");
     fs::create_directory(fp("adirectory"), ec);
-    expectNo(YOMKPLUGIN_BUILD(fp("adirectory")), "manifest not found", "A3 directory path rejects");
-    expectNo(YOMKPLUGIN_BUILD("   "), "manifest not found", "A4 whitespace-only path rejects");
+    expectNo(yomk::plugin().build(fp("adirectory")), "manifest not found", "A3 directory path rejects");
+    expectNo(yomk::plugin().build("   "), "manifest not found", "A4 whitespace-only path rejects");
 
     /* ---------- B 首行格式标识 ---------- */
     writeManifest("m-empty.yomk", "");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-empty.yomk")), "format marker not found", "B1 empty file rejects marker");
+    expectNo(yomk::plugin().build(fp("m-empty.yomk")), "format marker not found", "B1 empty file rejects marker");
     writeManifest("m-wrong.yomk", "#! other_format\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-wrong.yomk")), "format marker not found", "B2 wrong marker rejects");
+    expectNo(yomk::plugin().build(fp("m-wrong.yomk")), "format marker not found", "B2 wrong marker rejects");
     writeManifest("m-pad.yomk", "  #! yomk_plugin_system\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-pad.yomk")), "plugins:0 instances:0", "B3 leading-space marker accepts");
+    expectOkSummary(yomk::plugin().build(fp("m-pad.yomk")), "plugins:0 instances:0", "B3 leading-space marker accepts");
     writeManifest("m-trail.yomk", "#! yomk_plugin_system trailing\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-trail.yomk")), "format marker not found", "B4 marker trailing content rejects");
+    expectNo(yomk::plugin().build(fp("m-trail.yomk")), "format marker not found", "B4 marker trailing content rejects");
     writeManifest("m-notfirst.yomk", "entry\n#! yomk_plugin_system\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-notfirst.yomk")), "line 1: format marker not found", "B5 marker not first line");
+    expectNo(yomk::plugin().build(fp("m-notfirst.yomk")), "line 1: format marker not found", "B5 marker not first line");
     writeManifest("m-crlf.yomk", "#! yomk_plugin_system\r\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-crlf.yomk")), "plugins:0 instances:0", "B6 marker line CRLF accepts");
+    expectOkSummary(yomk::plugin().build(fp("m-crlf.yomk")), "plugins:0 instances:0", "B6 marker line CRLF accepts");
 
     /* ---------- C 注释与空行 ---------- */
     writeManifest("m-comments.yomk", "#! yomk_plugin_system\n# c1\n# c2\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-comments.yomk")), "plugins:0 instances:0", "C1 all-comment manifest ok");
+    expectOkSummary(yomk::plugin().build(fp("m-comments.yomk")), "plugins:0 instances:0", "C1 all-comment manifest ok");
     writeManifest("m-blanks.yomk", "#! yomk_plugin_system\n\n   \n\t\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-blanks.yomk")), "plugins:0 instances:0", "C2 blank/whitespace lines skip");
+    expectOkSummary(yomk::plugin().build(fp("m-blanks.yomk")), "plugins:0 instances:0", "C2 blank/whitespace lines skip");
     writeManifest("m-inline.yomk", "#! yomk_plugin_system\ni-inline@libTestPlugin.so@inst.txt # cfg comment\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-inline.yomk")), "plugins:1 instances:1", "C3 inline comment truncated");
+    expectOkSummary(yomk::plugin().build(fp("m-inline.yomk")), "plugins:1 instances:1", "C3 inline comment truncated");
 
     /* ---------- D @ 切分与空段 ---------- */
     const std::string fmtErr = "expect instanceName@libRelPath@instanceFileRelPath";
     const std::string emptyErr = "empty segment";
     writeManifest("m-d1.yomk", "#! yomk_plugin_system\njustname\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d1.yomk")), fmtErr, "D1 no '@' rejects");
+    expectNo(yomk::plugin().build(fp("m-d1.yomk")), fmtErr, "D1 no '@' rejects");
     writeManifest("m-d2.yomk", "#! yomk_plugin_system\na@b\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d2.yomk")), fmtErr, "D2 one '@' rejects");
+    expectNo(yomk::plugin().build(fp("m-d2.yomk")), fmtErr, "D2 one '@' rejects");
     writeManifest("m-d3.yomk", "#! yomk_plugin_system\na@b@c@d\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d3.yomk")), fmtErr, "D3 three '@' rejects");
+    expectNo(yomk::plugin().build(fp("m-d3.yomk")), fmtErr, "D3 three '@' rejects");
     writeManifest("m-d4.yomk", "#! yomk_plugin_system\n@lib@file\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d4.yomk")), emptyErr, "D4 empty instance name rejects");
+    expectNo(yomk::plugin().build(fp("m-d4.yomk")), emptyErr, "D4 empty instance name rejects");
     writeManifest("m-d5.yomk", "#! yomk_plugin_system\na@@file\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d5.yomk")), emptyErr, "D5 empty lib segment rejects");
+    expectNo(yomk::plugin().build(fp("m-d5.yomk")), emptyErr, "D5 empty lib segment rejects");
     writeManifest("m-d6.yomk", "#! yomk_plugin_system\na@lib@\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d6.yomk")), emptyErr, "D6 empty file segment rejects");
+    expectNo(yomk::plugin().build(fp("m-d6.yomk")), emptyErr, "D6 empty file segment rejects");
     writeManifest("m-d7.yomk", "#! yomk_plugin_system\n@@\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d7.yomk")), emptyErr, "D7 all-empty segments reject");
+    expectNo(yomk::plugin().build(fp("m-d7.yomk")), emptyErr, "D7 all-empty segments reject");
     writeManifest("m-d8.yomk", "#! yomk_plugin_system\na@ \t @c\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-d8.yomk")), emptyErr, "D8 whitespace-only segment rejects");
+    expectNo(yomk::plugin().build(fp("m-d8.yomk")), emptyErr, "D8 whitespace-only segment rejects");
 
     /* ---------- E 绝对路径拒绝 ---------- */
     writeManifest("m-e1.yomk", "#! yomk_plugin_system\na@/abs/lib.so@f\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-e1.yomk")), "lib path must be relative", "E1 absolute lib path rejects");
+    expectNo(yomk::plugin().build(fp("m-e1.yomk")), "lib path must be relative", "E1 absolute lib path rejects");
     writeManifest("m-e2.yomk", "#! yomk_plugin_system\na@lib@/abs/f\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-e2.yomk")), "instance file path must be relative", "E2 absolute file path rejects");
+    expectNo(yomk::plugin().build(fp("m-e2.yomk")), "instance file path must be relative", "E2 absolute file path rejects");
 
     /* ---------- F 行号计数（注释/空行跳过后行号正确） ---------- */
     writeManifest("m-f2.yomk", "#! yomk_plugin_system\nbad\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-f2.yomk")), "manifest line 2:", "F1 error reported on line 2");
+    expectNo(yomk::plugin().build(fp("m-f2.yomk")), "manifest line 2:", "F1 error reported on line 2");
     writeManifest("m-f3.yomk", "#! yomk_plugin_system\n# comment\nbad\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-f3.yomk")), "manifest line 3:", "F2 error reported on line 3");
+    expectNo(yomk::plugin().build(fp("m-f3.yomk")), "manifest line 3:", "F2 error reported on line 3");
     writeManifest("m-f5.yomk", "#! yomk_plugin_system\n# c\n\n   \nbad\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-f5.yomk")), "manifest line 5:", "F3 error on line 5 after skips");
+    expectNo(yomk::plugin().build(fp("m-f5.yomk")), "manifest line 5:", "F3 error on line 5 after skips");
 
     /* ---------- G 合法条目接受（真实加载 TestPlugin） ---------- */
     writeManifest("m-g1.yomk", "#! yomk_plugin_system\ni-single@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g1.yomk")), "plugins:1 instances:1", "G1 single entry builds");
+    expectOkSummary(yomk::plugin().build(fp("m-g1.yomk")), "plugins:1 instances:1", "G1 single entry builds");
     writeManifest("m-g2.yomk", "#! yomk_plugin_system\ni-a@libTestPlugin.so@inst.txt\ni-b@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g2.yomk")), "plugins:1 instances:2", "G2 two entries same lib");
+    expectOkSummary(yomk::plugin().build(fp("m-g2.yomk")), "plugins:1 instances:2", "G2 two entries same lib");
     writeManifest("m-g3.yomk", "#! yomk_plugin_system\n\t i-pad \t@\t libTestPlugin.so \t@\t inst.txt \t\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g3.yomk")), "plugins:1 instances:1", "G3 padded segments trim");
+    expectOkSummary(yomk::plugin().build(fp("m-g3.yomk")), "plugins:1 instances:1", "G3 padded segments trim");
     writeManifest("m-g4.yomk", "#! yomk_plugin_system\ni-crlf@libTestPlugin.so@inst.txt\r\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g4.yomk")), "plugins:1 instances:1", "G4 entry line CRLF accepts");
+    expectOkSummary(yomk::plugin().build(fp("m-g4.yomk")), "plugins:1 instances:1", "G4 entry line CRLF accepts");
     writeManifest("m-g5.yomk", "#! yomk_plugin_system\nmy inst@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g5.yomk")), "plugins:1 instances:1", "G5 space in instance name accepts");
+    expectOkSummary(yomk::plugin().build(fp("m-g5.yomk")), "plugins:1 instances:1", "G5 space in instance name accepts");
 
     /* ---------- H /builder 对账（recordBuild 侧效） ---------- */
     const yomk::payload::BuilderInfo dump = builderInfo();
@@ -236,7 +236,7 @@ int main()
         "H2 /builder keeps entry lines of latest build");
 
     writeManifest("m-hfail.yomk", "#! yomk_plugin_system\n@lib@file\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-hfail.yomk")), emptyErr, "H3 failure build eNo");
+    expectNo(yomk::plugin().build(fp("m-hfail.yomk")), emptyErr, "H3 failure build eNo");
     const yomk::payload::BuilderInfo hfail = builderInfo();
     check(
         hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: empty segment" && hfail.plugins == 0 &&
@@ -246,7 +246,7 @@ int main()
     writeManifest(
         "m-part.yomk",
         "#! yomk_plugin_system\ngood1@libTestPlugin.so@inst.txt\nbad2@libTestPlugin.so@missing_inst.txt\n");
-    expectNo(YOMKPLUGIN_BUILD(fp("m-part.yomk")), "manifest line 3: instance file not found", "H5 partial build fails");
+    expectNo(yomk::plugin().build(fp("m-part.yomk")), "manifest line 3: instance file not found", "H5 partial build fails");
     const yomk::payload::BuilderInfo partDump = builderInfo();
     check(
         partDump.path == fp("m-part.yomk") &&
@@ -259,12 +259,12 @@ int main()
         "H7 /builder keeps completed entry lines");
 
     /* ---------- 清理现场 ---------- */
-    check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");
-    YomkResponse inst = YOMKPLUGIN_INFO_INSTANCES();
+    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    yomk::payload::Response inst = yomk::plugin().infoInstances();
     bool instEmpty = false;
     if (isOk(inst))
     {
-        YomkUnPackPkg(inst.data, InstanceInfoArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(inst.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unload");

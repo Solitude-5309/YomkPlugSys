@@ -17,7 +17,7 @@
 
 | 分片 | 一句话摘要 |
 |---|---|
-| [YomkPluginSystemBuilder](YomkPluginSystemBuilder.md) | 唯一用户门面服务：清单构建驱动插件装载、聚合内省、两种卸载语义；请求经 `yomk::plugin()` 域入口或 `YOMKPLUGIN_*` 门面宏发起 |
+| [YomkPluginSystemBuilder](YomkPluginSystemBuilder.md) | 唯一用户门面服务：清单构建驱动插件装载、聚合内省、两种卸载语义；请求经 `yomk::plugin()` 域入口发起 |
 | [插件生命周期](PluginLifecycle.md) | 插件加载→实例创建→销毁→卸载的状态机语义：幂等边界、存活实例拒绝、限定名全局唯一主键 |
 | [插件开发指南](YomkPluginInterface.md) | ABI 契约三件套：`YomkPluginMeta` 元数据、`YomkPluginInterface` 实例接口、`YOMKPLUGIN_EXPORT` 一键导出 |
 | [清单格式](PluginManifest.md) | manifest.yomk 语法：首行格式标识 + `实例名@动态库@实例文件` 条目 + 注释与路径规则 |

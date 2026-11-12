@@ -39,16 +39,16 @@ static void check(bool ok, const std::string& desc)
     }
 }
 
-static bool isOk(const YomkResponse& r)
+static bool isOk(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Succeeded;
+    return r.status == yomk::payload::ResStatus::Succeeded;
 }
 
-static std::string respString(const YomkResponse& r)
+static std::string respString(const yomk::payload::Response& r)
 {
     if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
+        auto p = std::dynamic_pointer_cast<yomk::msgs::String>(r.data);
         if (p)
         {
             return p->d;
@@ -58,13 +58,13 @@ static std::string respString(const YomkResponse& r)
 }
 
 /* 组合断言：eNo 且错误文案含子串 */
-static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
+static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(!isOk(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
 /* 组合断言：eOk 且汇总串精确匹配 */
-static void expectOkSummary(const YomkResponse& r, const std::string& summary, const std::string& desc)
+static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
     check(isOk(r) && respString(r) == summary, desc + " (" + summary + ")");
 }
@@ -104,10 +104,10 @@ static void writeManifest(const std::string& name, const std::string& content)
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoInstances();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
         out = arr->d;
     }
     return out;
@@ -117,38 +117,38 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 /* 白盒：Manager create_instance 直调 */
-static YomkResponse createInst(const std::string& name)
+static yomk::payload::Response createInst(const std::string& name)
 {
     yomk::payload::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceFile = fp("inst.txt");
-    return YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, req));
+    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
 }
 
 /* 白盒：Manager destroy_instance 直调 */
-static YomkResponse destroyInst(const std::string& name)
+static yomk::payload::Response destroyInst(const std::string& name)
 {
     yomk::payload::DestroyReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
-    return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
+    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(req)).request();
 }
 
 /* C3 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
-static bool c3MsgAllowed(const YomkResponse& r)
+static bool c3MsgAllowed(const yomk::payload::Response& r)
 {
-    if (r.status == ResStatus::Succeeded)
+    if (r.status == yomk::payload::ResStatus::Succeeded)
     {
         return true;
     }
@@ -160,8 +160,8 @@ static bool c3MsgAllowed(const YomkResponse& r)
 
 int main()
 {
-    YOMK_INIT();
-    check(YOMK_NEW_SERVICE(YomkPluginSystemBuilder) == 0, "register YomkPluginSystemBuilder");
+    yomk::server().init();
+    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -176,7 +176,7 @@ int main()
 
     /* ---------- C0 基线：插件加载态 ---------- */
     writeManifest("c0.yomk", "#! yomk_plugin_system\nc0-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(YOMKPLUGIN_BUILD(fp("c0.yomk")), "plugins:1 instances:1", "C0 build baseline ok");
+    expectOkSummary(yomk::plugin().build(fp("c0.yomk")), "plugins:1 instances:1", "C0 build baseline ok");
     check(isOk(destroyInst("c0-i1")), "C0 destroy baseline instance (plugin stays loaded)");
 
     /* ---------- C1 并发 create/destroy 计数守恒：8 线程 x 50 ---------- */
@@ -242,7 +242,7 @@ int main()
     check(listInstances().empty(), "C1 instances conserved back to zero");
 
     /* ---------- C2 并发 build 幂等收敛：4 线程并发同一清单 ---------- */
-    check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "C2 preload unload for build race");
+    check(isOk(yomk::plugin().unload("TestPlugin")), "C2 preload unload for build race");
     writeManifest("c2.yomk", "#! yomk_plugin_system\nc2-i1@libTestPlugin.so@inst.txt\n");
     std::atomic<int> c2Ok{0};
     std::atomic<int> c2MsgBad{0};
@@ -253,7 +253,7 @@ int main()
             pool.emplace_back(
                 [&]()
                 {
-                    YomkResponse r = YOMKPLUGIN_BUILD(fp("c2.yomk"));
+                    yomk::payload::Response r = yomk::plugin().build(fp("c2.yomk"));
                     if (isOk(r))
                     {
                         ++c2Ok;
@@ -291,7 +291,7 @@ int main()
                     int i = 0;
                     while (!c3Stop.load())
                     {
-                        YomkResponse r = createInst("c3-" + std::to_string(t) + "-" + std::to_string(i++));
+                        yomk::payload::Response r = createInst("c3-" + std::to_string(t) + "-" + std::to_string(i++));
                         if (!c3MsgAllowed(r))
                         {
                             ++c3MsgBad;
@@ -317,7 +317,7 @@ int main()
                  * 此后 create 全被拒，终态必空 */
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(YOMKPLUGIN_UNLOAD("TestPlugin")))
+                    if (isOk(yomk::plugin().unload("TestPlugin")))
                     {
                         break;
                     }
@@ -333,12 +333,12 @@ int main()
     check(c3MsgBad.load() == 0, "C3 create results all in allowed message set");
     check(listInstances().empty(), "C3 terminal instances empty after unload race");
     check(listPlugins().empty(), "C3 terminal plugins empty after unload race");
-    expectNo(YOMKPLUGIN_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "C3 double unload rejects");
+    expectNo(yomk::plugin().unload("TestPlugin"), "plugin not loaded: TestPlugin", "C3 double unload rejects");
 
     /* ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ---------- */
     /* 前置：C3 结束插件已卸载，重建加载态（churn 需要插件在库中） */
     writeManifest("c4pre.yomk", "#! yomk_plugin_system\nc4pre-i1@libTestPlugin.so@inst.txt\n");
-    YOMKPLUGIN_BUILD(fp("c4pre.yomk"));
+    yomk::plugin().build(fp("c4pre.yomk"));
     destroyInst("c4pre-i1");
 
     std::atomic<bool> c4Done{false};
@@ -379,8 +379,8 @@ int main()
                     while (!c4Done.load())
                     {
                         /* 门面内省三连：churn 期间恒 eOk */
-                        if (!isOk(YOMKPLUGIN_INFO_PLUGINS()) || !isOk(YOMKPLUGIN_INFO_INSTANCES()) ||
-                            !isOk(YOMKPLUGIN_INFO_BUILDER()))
+                        if (!isOk(yomk::plugin().infoPlugins()) || !isOk(yomk::plugin().infoInstances()) ||
+                            !isOk(yomk::plugin().infoBuilder()))
                         {
                             ++c4FacadeBad;
                         }
@@ -406,7 +406,7 @@ int main()
     check(listInstances().empty(), "C4 terminal instances empty after churn");
 
     /* ---------- 收尾终态清零 ---------- */
-    check(isOk(YOMKPLUGIN_UNLOAD("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

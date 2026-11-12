@@ -1,6 +1,6 @@
 # YomkPluginSystemBuilder（门面服务）
 
-YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 或等价的 `YOMKPLUGIN_*` 门面宏发起，阻塞至服务应答。
+YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
 
 ## 适用与不适用
 
@@ -31,23 +31,6 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z`） |
 
 > `instanceName` 一律为限定名 `插件名.实例名`（全局唯一主键）；`pluginName` 为插件 meta 名。
-
-### 门面宏对照
-
-宏为域入口的同名薄封装（历史契约保持，表达式形态一致）：
-
-| 宏 | 等价域入口 |
-|---|---|
-| `YOMKPLUGIN_BUILD(path)` | `yomk::plugin().build(path)` |
-| `YOMKPLUGIN_UNLOAD(name)` | `yomk::plugin().unload(name)` |
-| `YOMKPLUGIN_TRY_UNLOAD(name)` | `yomk::plugin().tryUnload(name)` |
-| `YOMKPLUGIN_INFO_BUILDER()` | `yomk::plugin().infoBuilder()` |
-| `YOMKPLUGIN_INFO_PLUGINS()` | `yomk::plugin().infoPlugins()` |
-| `YOMKPLUGIN_INFO_INSTANCES()` | `yomk::plugin().infoInstances()` |
-| `YOMKPLUGIN_INFO_INSTANCES_BY(name)` | `yomk::plugin().infoInstances(name)` |
-| `YOMKPLUGIN_INFO_PLUGIN_BY(name)` | `yomk::plugin().infoPluginBy(name)` |
-| `YOMKPLUGIN_INFO_INSTANCES_FILE(name)` | `yomk::plugin().infoInstancesFile(name)` |
-| `YOMKPLUGIN_VERSION()` | 版本查询 + 自动解包打印（无返回值） |
 
 ## 使用示例
 
@@ -93,7 +76,6 @@ if (arr)
 ## 常见问题 FAQ
 
 - **请求阻塞吗？** 阻塞至服务应答（同步语义）；无异步接口。
-- **宏和域入口该用哪个？** 完全等价；新代码推荐域入口 `yomk::plugin()`，存量代码宏可继续使用。
 - **build 重复执行同一清单？** 已加载插件幂等跳过；实例重名拒绝，返回 `Failed` 并指明行号。
 - **消息类型发错了会怎样？** 服务侧返回 `Failed`（`invalid request msg type`），报出期望与实际类型名。
 

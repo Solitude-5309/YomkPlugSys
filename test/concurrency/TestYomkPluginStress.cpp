@@ -40,16 +40,16 @@ static void check(bool ok, const std::string& desc)
     }
 }
 
-static bool isOk(const YomkResponse& r)
+static bool isOk(const yomk::payload::Response& r)
 {
-    return r.status == ResStatus::Succeeded;
+    return r.status == yomk::payload::ResStatus::Succeeded;
 }
 
-static std::string respString(const YomkResponse& r)
+static std::string respString(const yomk::payload::Response& r)
 {
     if (r.data && r.data->name() == "String")
     {
-        auto p = std::dynamic_pointer_cast<yomk::String_>(r.data);
+        auto p = std::dynamic_pointer_cast<yomk::msgs::String>(r.data);
         if (p)
         {
             return p->d;
@@ -59,7 +59,7 @@ static std::string respString(const YomkResponse& r)
 }
 
 /* 组合断言：eNo 且错误文案含子串 */
-static void expectNo(const YomkResponse& r, const std::string& substr, const std::string& desc)
+static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(!isOk(r) && r.msg.find(substr) != std::string::npos, desc);
 }
@@ -99,10 +99,10 @@ static void writeManifest(const std::string& name, const std::string& content)
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoInstances();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, InstanceInfoArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
         out = arr->d;
     }
     return out;
@@ -112,38 +112,38 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
-    if (resp.status == ResStatus::Succeeded)
+    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        YomkUnPackPkg(resp.data, PluginMetaArray, arr);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 /* 白盒：Manager create_instance 直调 */
-static YomkResponse createInst(const std::string& name)
+static yomk::payload::Response createInst(const std::string& name)
 {
     yomk::payload::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceFile = fp("inst.txt");
-    return YOMK_REQUEST("/YomkPluginManager/create_instance", YomkMkPtr(CreateReq, req));
+    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
 }
 
 /* 白盒：Manager destroy_instance 直调 */
-static YomkResponse destroyInst(const std::string& name)
+static yomk::payload::Response destroyInst(const std::string& name)
 {
     yomk::payload::DestroyReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
-    return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));
+    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(req)).request();
 }
 
 /* S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
-static bool s4MsgAllowed(const YomkResponse& r)
+static bool s4MsgAllowed(const yomk::payload::Response& r)
 {
-    if (r.status == ResStatus::Succeeded)
+    if (r.status == yomk::payload::ResStatus::Succeeded)
     {
         return true;
     }
@@ -167,8 +167,8 @@ static int64_t perSec(int64_t count, int64_t ms)
 
 int main()
 {
-    YOMK_INIT();
-    check(YOMK_NEW_SERVICE(YomkPluginSystemBuilder) == 0, "register YomkPluginSystemBuilder");
+    yomk::server().init();
+    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -193,9 +193,9 @@ int main()
         }
         writeManifest("s200.yomk", oss.str());
     }
-    check(isOk(YOMKPLUGIN_BUILD(fp("s200.yomk"))), "S0 build 200-entry manifest ok");
-    YomkResponse s0Info = YOMKPLUGIN_INFO_BUILDER();
-    YomkUnPackPkg(s0Info.data, BuilderInfo, s0Builder);
+    check(isOk(yomk::plugin().build(fp("s200.yomk"))), "S0 build 200-entry manifest ok");
+    yomk::payload::Response s0Info = yomk::plugin().infoBuilder();
+    auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
     /* ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ---------- */
@@ -204,8 +204,8 @@ int main()
     int spotBad = 0;
     for (int round = 1; round <= 250; ++round)
     {
-        const bool unloadOk = isOk(YOMKPLUGIN_UNLOAD("TestPlugin"));
-        const bool buildOk = isOk(YOMKPLUGIN_BUILD(fp("s200.yomk")));
+        const bool unloadOk = isOk(yomk::plugin().unload("TestPlugin"));
+        const bool buildOk = isOk(yomk::plugin().build(fp("s200.yomk")));
         if (unloadOk && buildOk)
         {
             ++churnOk;
@@ -221,13 +221,13 @@ int main()
     check(churnOk == 250, "S1 250 churn rounds all ok (unload+build)");
     check(spotBad == 0, "S1 spot checks instances==200 all pass");
     check(
-        isOk(YOMKPLUGIN_UNLOAD("TestPlugin")) && listInstances().empty() && listPlugins().empty(),
+        isOk(yomk::plugin().unload("TestPlugin")) && listInstances().empty() && listPlugins().empty(),
         "S1 final unload leaves zero residue");
 
     /* ---------- S2 2000 对 create/destroy ---------- */
     /* 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留） */
     writeManifest("pre.yomk", "#! yomk_plugin_system\npre-i1@libTestPlugin.so@inst.txt\n");
-    YOMKPLUGIN_BUILD(fp("pre.yomk"));
+    yomk::plugin().build(fp("pre.yomk"));
     destroyInst("pre-i1");
 
     const auto s2Start = std::chrono::steady_clock::now();
@@ -295,7 +295,7 @@ int main()
                     int i = 0;
                     while (!s4Stop.load())
                     {
-                        YomkResponse r = createInst("s4-" + std::to_string(t) + "-" + std::to_string(i++));
+                        yomk::payload::Response r = createInst("s4-" + std::to_string(t) + "-" + std::to_string(i++));
                         if (!s4MsgAllowed(r))
                         {
                             ++s4MsgBad;
@@ -321,7 +321,7 @@ int main()
                  * 此后 create 全被拒，终态必空 */
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(YOMKPLUGIN_UNLOAD("TestPlugin")))
+                    if (isOk(yomk::plugin().unload("TestPlugin")))
                     {
                         break;
                     }
@@ -338,7 +338,7 @@ int main()
     check(
         listInstances().empty() && listPlugins().empty(),
         "S4 terminal instances and plugins empty after retry convergence");
-    expectNo(YOMKPLUGIN_UNLOAD("TestPlugin"), "plugin not loaded: TestPlugin", "S4 double unload rejects");
+    expectNo(yomk::plugin().unload("TestPlugin"), "plugin not loaded: TestPlugin", "S4 double unload rejects");
 
     /* ---------- 收尾终态零残留 ---------- */
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty at end");
