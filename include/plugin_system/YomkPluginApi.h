@@ -147,7 +147,7 @@ public:
      */
     // @zh: 内省最近一次构建：清单条目、清单路径、结果、插件数与实例数。
     // @zh: return Response，data 为 BuilderInfo 包。
-    yomk::payload::Response infoBuilder() { return yomk::server().url(yomk::url::pluginBuilderInfo).request(); }
+    yomk::payload::Response builder() { return yomk::server().url(yomk::url::pluginBuilderInfo).request(); }
 
     /**
      * @brief Introspect all loaded plugins

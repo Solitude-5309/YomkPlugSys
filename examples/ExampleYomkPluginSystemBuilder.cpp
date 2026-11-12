@@ -54,7 +54,7 @@ int main()
     }
 
     // 2. 构建插件工程并查看构建信息
-    // 接口：yomk::plugin().manifest(workflowPath).build() + yomk::plugin().infoBuilder()
+    // 接口：yomk::plugin().manifest(workflowPath).build() + yomk::plugin().builder()
     // 输入：清单文件路径。首行 #! yomk_plugin_system，之后每行一个条目：
     //       实例名@动态库相对路径@实例文件相对路径
     // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
@@ -66,7 +66,7 @@ int main()
     {
         fail("构建", resp.msg);
     }
-    resp = yomk::plugin().infoBuilder();
+    resp = yomk::plugin().builder();
     if (!isOk(resp))
     {
         fail("查询构建信息", resp.msg);

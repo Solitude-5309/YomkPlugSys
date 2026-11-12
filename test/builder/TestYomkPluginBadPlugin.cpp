@@ -97,7 +97,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
 // 最近构建信息（对账 recordBuild 侧效）
 static yomk::payload::BuilderInfo builderInfo()
 {
-    yomk::payload::Response resp = yomk::plugin().infoBuilder();
+    yomk::payload::Response resp = yomk::plugin().builder();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);

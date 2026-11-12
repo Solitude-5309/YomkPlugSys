@@ -76,14 +76,14 @@ int main()
     }
 
     // ---------- 空态内省契约 ----------
-    resp = yomk::plugin().infoBuilder();
-    check(isOk(resp), "infoBuilder() returns Succeeded");
+    resp = yomk::plugin().builder();
+    check(isOk(resp), "builder() returns Succeeded");
     auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
-    check(info != nullptr, "infoBuilder() unpacks BuilderInfo");
+    check(info != nullptr, "builder() unpacks BuilderInfo");
     check(
         info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
             info->d.manifest.empty(),
-        "infoBuilder() empty-state defaults (empty path/result, zero counts, no manifest lines)");
+        "builder() empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
     resp = yomk::plugin().infoPluginBy("no-inst");
     check(

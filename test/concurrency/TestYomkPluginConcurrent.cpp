@@ -378,7 +378,7 @@ int main()
                     {
                         // 门面内省三连：churn 期间恒 Succeeded
                         if (!isOk(yomk::plugin().infoPlugins()) || !isOk(yomk::plugin().infoInstances()) ||
-                            !isOk(yomk::plugin().infoBuilder()))
+                            !isOk(yomk::plugin().builder()))
                         {
                             ++c4FacadeBad;
                         }
