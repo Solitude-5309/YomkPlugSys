@@ -28,7 +28,9 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
         auto data = yomk::msgs::unpack<yomk::msgs::PluginPath>(pkg);
         if (!data)
         {
-            return invalidReqMsg(pkg, yomk::msgs::PluginPath::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginPath::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
         void* handle = nullptr;
         YomkPluginMetaFunc metaFn = nullptr;
@@ -99,7 +101,9 @@ yomk::payload::Response YomkPluginLoader::unload(YomkMsgPtr pkg)
         auto data = yomk::msgs::unpack<yomk::msgs::String>(pkg);
         if (!data)
         {
-            return invalidReqMsg(pkg, yomk::msgs::String::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::String::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
         const std::string pluginName = data->d;
         void* handle = nullptr;
@@ -144,7 +148,9 @@ yomk::payload::Response YomkPluginLoader::meta(YomkMsgPtr pkg)
         auto data = yomk::msgs::unpack<yomk::msgs::String>(pkg);
         if (!data)
         {
-            return invalidReqMsg(pkg, yomk::msgs::String::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::String::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_plugins.find(data->d);
@@ -183,7 +189,9 @@ yomk::payload::Response YomkPluginLoader::createInstance(YomkMsgPtr pkg)
         auto req = yomk::msgs::unpack<yomk::msgs::CreateReq>(pkg);
         if (!req)
         {
-            return invalidReqMsg(pkg, yomk::msgs::CreateReq::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::CreateReq::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
         std::shared_ptr<YomkPluginInterface> inst;
         {
@@ -224,7 +232,9 @@ yomk::payload::Response YomkPluginLoader::deleteInstance(YomkMsgPtr pkg)
         auto data = yomk::msgs::unpack<yomk::msgs::PluginInstance>(pkg);
         if (!data)
         {
-            return invalidReqMsg(pkg, yomk::msgs::PluginInstance::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginInstance::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
         /* shared_ptr 拷贝随响应包销毁时 reset，自动触发 delete_instance */
         std::lock_guard<std::mutex> lock(m_mutex);

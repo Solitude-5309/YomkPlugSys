@@ -154,7 +154,9 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
         auto req = yomk::msgs::unpack<yomk::msgs::BuildReq>(pkg);
         if (!req)
         {
-            return invalidReqMsg(pkg, yomk::msgs::BuildReq::kName);
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::BuildReq::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
         }
 
         std::vector<ManifestEntry> entries;

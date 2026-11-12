@@ -32,12 +32,3 @@ YOMK_DEFINE_MSG(std::vector<yomk::payload::InstanceInfo>, InstanceInfoArray, d)
 /* shared_ptr 经消息包在进程内直接持有传递（无序列化，仅限同进程内请求，不可跨进程） */
 YOMK_DEFINE_MSG(std::shared_ptr<YomkPluginInterface>, PluginInstance, d)
 // clang-format on
-
-/* 请求侧消息包类型校验辅助：unpack 未命中（pkg 为空或类型不匹配）时构造失败响应。
- * YomkServer 3.x 的 unpack 不抛异常返回 nullptr（2.x 宏为抛异常转 eNo），
- * 服务函数须判空并用本辅助返回失败，具体值原则报出期望与实际类型 */
-inline yomk::payload::Response invalidReqMsg(const YomkMsgPtr& pkg, const char* expectType)
-{
-    return {yomk::payload::ResStatus::Failed,
-            std::string("invalid request msg type: expect ") + expectType + ", got " + yomk::msgs::typeOf(pkg)};
-}
