@@ -77,9 +77,13 @@ if [ ${RUN_CPPCHECK} -eq 1 ]; then
     done
     echo "-- cppcheck 开始扫描（共 ${#CPPCHECK_FILES[@]} 个文件，Checking 行即逐文件进度，完整 verbose 日志落盘）..."
     CPPCHECK_OUT="${LOG_ROOT}/cppcheck.log"
+    # passedByValue 定向抑制：cppcheck 2.7 不识别 std::string_view 的 cheap-copy 语义，
+    # 对按值传递的 string_view 参数误报（建议 const&，与 string_view 按值传递的实践相悖）。
+    # 公开 API 头内所有字符串参数均为 string_view，故只按文件名抑制该文件，不放宽到全局。
     cppcheck --enable=warning,performance,portability --std=c++17 --language=c++ \
         --verbose -j"$(nproc)" \
         --inline-suppr --suppress=missingIncludeSystem --suppress=toomanyconfigs \
+        --suppress='passedByValue:*YomkPluginApi.h' \
         -I "${REPO_DIR}/include" -I /opt/yomk/include \
         -i"${REPO_DIR}/examples/build" \
         --error-exitcode=1 \
