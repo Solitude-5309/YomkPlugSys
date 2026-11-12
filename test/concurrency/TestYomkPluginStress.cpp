@@ -202,7 +202,7 @@ int main()
     int spotBad = 0;
     for (int round = 1; round <= 250; ++round)
     {
-        const bool unloadOk = isOk(yomk::plugin().unload("TestPlugin"));
+        const bool unloadOk = isOk(yomk::plugin().plg_name("TestPlugin").unload());
         const bool buildOk = isOk(yomk::plugin().manifest(fp("s200.yomk")).build());
         if (unloadOk && buildOk)
         {
@@ -219,7 +219,7 @@ int main()
     check(churnOk == 250, "S1 250 churn rounds all ok (unload+build)");
     check(spotBad == 0, "S1 spot checks instances==200 all pass");
     check(
-        isOk(yomk::plugin().unload("TestPlugin")) && listInstances().empty() && listPlugins().empty(),
+        isOk(yomk::plugin().plg_name("TestPlugin").unload()) && listInstances().empty() && listPlugins().empty(),
         "S1 final unload leaves zero residue");
 
     // ---------- S2 2000 对 create/destroy ----------
@@ -319,7 +319,7 @@ int main()
                 // 此后 create 全被拒，终态必空
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(yomk::plugin().unload("TestPlugin")))
+                    if (isOk(yomk::plugin().plg_name("TestPlugin").unload()))
                     {
                         break;
                     }
@@ -336,7 +336,7 @@ int main()
     check(
         listInstances().empty() && listPlugins().empty(),
         "S4 terminal instances and plugins empty after retry convergence");
-    expectNo(yomk::plugin().unload("TestPlugin"), "plugin not loaded: TestPlugin", "S4 double unload rejects");
+    expectNo(yomk::plugin().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "S4 double unload rejects");
 
     // ---------- 收尾终态零残留 ----------
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty at end");

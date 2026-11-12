@@ -4,8 +4,8 @@
 // YomkPluginSystem 公开 API 聚合头（四件套之 Api）.
 // 设计取舍:
 // 1. 域入口 yomk::plugin() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
-//    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;需带清单的构建
-//    采用两段链 manifest(path) 绑定 -> build() 终结,终结方法保持零参;
+//    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;带参数的终结方法
+//    统一走两段链 manifest(path)/plg_name(name) 绑定 -> 零参终结;
 // 2. 分层单向:Interface(ABI 叶子) -> Url(常量叶子) -> Payload -> Msg -> Builder,
 //    本文件为聚合入口,无人反向依赖;
 // 3. 机制层 src/YomkPluginLoader.h 与数据层 src/YomkPluginManager.h 不随安装导出,
@@ -58,6 +58,51 @@ private:
 };
 
 /**
+ * @brief Intermediate chain node binding a plugin name, terminated by unload() or try_unload()
+ * Returned by PluginBuilder::plg_name(); both terminators share the bound name and differ only
+ * in the unload policy.
+ * @note Holds a copy of the plugin name; use inline in a single chained expression only,
+ *       never store or reuse it.
+ */
+// @zh: 中间链节点：绑定插件名，链以 unload() 或 try_unload() 终结。
+// @zh: 由 PluginBuilder::plg_name() 返回；两个终结方法共用绑定的名字，仅在卸载策略上不同。
+// @zh: note 持有插件名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
+class PluginNameBuilder
+{
+public:
+    explicit PluginNameBuilder(std::string_view pluginName) : m_pluginName(pluginName) {}
+
+    /**
+     * @brief Force-unload the bound plugin library: clear its instance table first, then close the library
+     * @return Response carrying a String packet "ok" on success; failure reason in msg
+     * @note References held outside the manager still block the library close (liveness check);
+     *       the instance table is already cleared at that point, so the plugin stays loaded,
+     *       without instances.
+     */
+    // @zh: 强制卸载绑定的插件库：先清空该插件的实例表，再卸载动态库（不夺走外部已持有的实例引用）。
+    // @zh: return Response，成功时 data 为 String 包 "ok"；失败原因见 msg。
+    // @zh: note 外部仍持有实例引用时库不会被关闭（判活拒绝）；此时实例表已清空、插件保持加载但无实例。
+    yomk::payload::Response unload() const
+    {
+        return yomk::server().url(yomk::url::pluginUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
+    }
+
+    /**
+     * @brief Try to unload the bound plugin library: refused while any instance is still alive
+     * @return Response carrying a String packet "ok" on success; refused if instances remain alive
+     */
+    // @zh: 尝试卸载绑定的插件库：仍有存活实例时拒绝卸载。
+    // @zh: return Response，成功时 data 为 String 包 "ok"；实例存活时返回失败。
+    yomk::payload::Response try_unload() const
+    {
+        return yomk::server().url(yomk::url::pluginTryUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
+    }
+
+private:
+    std::string m_pluginName;
+};
+
+/**
  * @brief Chainable domain entry of the YomkPluginSystem extension
  * Every terminator is a thin wrapper over the unified request channel
  * (yomk::server().url(...).msg(...).request()), which hides raw URLs.
@@ -87,37 +132,14 @@ public:
     PluginManifestBuilder manifest(std::string_view workflowPath) { return PluginManifestBuilder(workflowPath); }
 
     /**
-     * @brief Force-unload a plugin library: clear its instance table first, then close the library
+     * @brief Bind a plugin name for unloading, terminating with unload() or try_unload()
      * @param pluginName Plugin name (meta name, must not contain '.')
-     * @return Response carrying a String packet "ok" on success; failure reason in msg
-     * @note References held outside the manager still block the library close (liveness check);
-     *       the instance table is already cleared at that point, so the plugin stays loaded,
-     *       without instances.
+     * @return Intermediate chain node carrying the name; call unload() or try_unload() on it
      */
-    // @zh: 强制卸载插件库：先清空该插件的实例表，再卸载动态库（不夺走外部已持有的实例引用）。
+    // @zh: 绑定要卸载的插件名，链以 unload() 或 try_unload() 终结。
     // @zh: param pluginName 插件名（meta 名，不得含 '.'）。
-    // @zh: return Response，成功时 data 为 String 包 "ok"；失败原因见 msg。
-    // @zh: note 外部仍持有实例引用时库不会被关闭（判活拒绝）；此时实例表已清空、插件保持加载但无实例。
-    yomk::payload::Response unload(std::string_view pluginName)
-    {
-        return yomk::server().url(yomk::url::pluginUnload).msg(yomk::msgs::String::shared(std::string(pluginName))).request();
-    }
-
-    /**
-     * @brief Try to unload a plugin library: refused while any instance is still alive
-     * @param pluginName Plugin name
-     * @return Response carrying a String packet "ok" on success; refused if instances remain alive
-     */
-    // @zh: 尝试卸载插件库：仍有存活实例时拒绝卸载。
-    // @zh: param pluginName 插件名。
-    // @zh: return Response，成功时 data 为 String 包 "ok"；实例存活时返回失败。
-    yomk::payload::Response tryUnload(std::string_view pluginName)
-    {
-        return yomk::server()
-            .url(yomk::url::pluginTryUnload)
-            .msg(yomk::msgs::String::shared(std::string(pluginName)))
-            .request();
-    }
+    // @zh: return 携带该名字的中间链节点；在其上调用 unload() 或 try_unload()。
+    PluginNameBuilder plg_name(std::string_view pluginName) { return PluginNameBuilder(pluginName); }
 
     /**
      * @brief Introspect the latest build performed by this builder

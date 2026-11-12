@@ -54,8 +54,8 @@ int main()
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
 
     // 卸载（有存活实例拒绝；强制卸载用 unload）
-    auto r = yomk::plugin().tryUnload("ConnectionService");
-    std::cout << "tryUnload: " << r.msg << std::endl;
+    auto r = yomk::plugin().plg_name("ConnectionService").try_unload();
+    std::cout << "try_unload: " << r.msg << std::endl;
     return 0;
 }
 ```
@@ -86,7 +86,7 @@ cmake --build build -j
 ./build/demo
 ```
 
-预期输出（节选）：`build: ok (plugins:2 instances:2)`、两行 `plugin: ConnectionService v1.0.0` 与 `plugin: WorkspaceService v1.0.0`、`tryUnload: instances still alive: ConnectionService`（实例仍存活，保守语义拒绝卸载）。
+预期输出（节选）：`build: ok (plugins:2 instances:2)`、两行 `plugin: ConnectionService v1.0.0` 与 `plugin: WorkspaceService v1.0.0`、`try_unload: instances still alive: ConnectionService`（实例仍存活，保守语义拒绝卸载）。
 
 ## 第 3 步：观察完整流程
 

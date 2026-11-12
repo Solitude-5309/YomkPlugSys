@@ -57,8 +57,8 @@
 
 | 接口 | 有存活实例 | 无存活实例 |
 |---|---|---|
-| `tryUnload(pluginName)` | `Failed`（插件保持加载，实例不受影响） | 卸载成功 |
-| `unload(pluginName)` | 先清空该插件的实例表再卸载；实例引用全部释放后成功 | 卸载成功 |
+| `plg_name(n).try_unload()` | `Failed`（插件保持加载，实例不受影响） | 卸载成功 |
+| `plg_name(n).unload()` | 先清空该插件的实例表再卸载；实例引用全部释放后成功 | 卸载成功 |
 
 > `unload` 的"强制"仅指清空 Manager 实例表（不再等待实例自然销毁），**不夺走宿主已持有的引用**：Loader 卸载前仍按存活表统一判活，只要还有引用存在就返回 `Failed`（`instances still alive`）。此时插件保持已加载、实例表已被清空（半完成态），须释放全部引用后重新 `unload`，或重新 `build`/`create` 恢复实例。因为 dlclose 不会在有存活引用时发生，宿主持有的 shared_ptr 不会悬空——引用保护是双向的。
 
@@ -72,7 +72,7 @@
 | `/YomkPluginManager` | 数据层 | 插件表（meta 深拷贝）+ 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期编排 |
 
 - 门面 `build/unload/...` 全部经请求代理到 Manager 完成，自身不持有插件/实例
-- 判活只有一处：Loader 的 weak 存活表。`tryUnload` 直接委托它；`unload` 先清 Manager 实例表、再委托同一判活，因此外部仍有引用时两者都会被拒绝
+- 判活只有一处：Loader 的 weak 存活表。`try_unload` 直接委托它；`unload` 先清 Manager 实例表、再委托同一判活，因此外部仍有引用时两者都会被拒绝
 - 门面服务 init 时注册二者、deinit 逆序注销；未注册门面则内部服务也不存在
 
 ## 注意事项
@@ -80,7 +80,7 @@
 - 所有生命周期接口为**同步阻塞**调用；无异步版本。
 - 实例与插件状态仅存于进程内存：进程退出即全部卸载，无持久化。
 - `build` 中途失败的清单**不回滚**已成功条目；重复执行同一清单时已加载插件幂等跳过，仅重名实例会失败——修正清单后重新 `build` 即可收敛。
-- 宿主持有 `PluginInstance`（shared_ptr，含响应包 `data` 内的一份）期间，对应插件既不能被 `tryUnload` 也不能被 `unload`（Loader 判活拒绝）；跨请求传递实例时注意归还时机。
+- 宿主持有 `PluginInstance`（shared_ptr，含响应包 `data` 内的一份）期间，对应插件既不能被 `try_unload` 也不能被 `unload`（Loader 判活拒绝）；跨请求传递实例时注意归还时机。
 
 ## 常见问题 FAQ
 

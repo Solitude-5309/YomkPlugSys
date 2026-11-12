@@ -172,17 +172,17 @@ int main()
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
     check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-b ok");
-    expectNo(yomk::plugin().tryUnload("TestPlugin"), "instances still alive", "R2 try_unload rejects after destroy r-b");
+    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "instances still alive", "R2 try_unload rejects after destroy r-b");
     dreq.instanceName = "r-a";
     check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-a ok");
     check(listInstances().empty(), "R2 instances empty after all destroys");
 
     // ---------- R3 空卸与重载循环 ----------
-    check(isOk(yomk::plugin().tryUnload("TestPlugin")), "R3 try_unload ok while alive:0");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").try_unload()), "R3 try_unload ok while alive:0");
     check(listPlugins().empty(), "R3 plugins empty after try_unload");
-    expectNo(yomk::plugin().tryUnload("TestPlugin"), "plugin not loaded: TestPlugin", "R3 try_unload again rejects");
+    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "plugin not loaded: TestPlugin", "R3 try_unload again rejects");
     expectNo(
-        yomk::plugin().unload("TestPlugin"),
+        yomk::plugin().plg_name("TestPlugin").unload(),
         "plugin not loaded: TestPlugin",
         "R3 force unload not-loaded rejects with same message");
 
@@ -207,8 +207,8 @@ int main()
         "yomk_plugin_system\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
         "inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("r4.yomk")).build(), "plugins:1 instances:3", "R4 build three instances");
-    expectNo(yomk::plugin().tryUnload("TestPlugin"), "instances still alive", "R4 try_unload rejects while three alive");
-    check(isOk(yomk::plugin().unload("TestPlugin")), "R4 force unload with three alive instances ok");
+    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "instances still alive", "R4 try_unload rejects while three alive");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "R4 force unload with three alive instances ok");
     check(listInstances().empty(), "R4 instances destroyed by force unload");
     check(listPlugins().empty(), "R4 plugins empty after force unload");
 

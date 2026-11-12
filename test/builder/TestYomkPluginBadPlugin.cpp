@@ -201,9 +201,9 @@ int main()
         "B13 dot in plugin name rejects");
 
     // ---------- 清理现场 ----------
-    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
-    check(isOk(yomk::plugin().unload("BadCreateNull")), "cleanup: force_unload BadCreateNull");
-    check(isOk(yomk::plugin().unload("BadCreateThrow")), "cleanup: force_unload BadCreateThrow");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
+    check(isOk(yomk::plugin().plg_name("BadCreateThrow").unload()), "cleanup: force_unload BadCreateThrow");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
     yomk::payload::Response inst = yomk::plugin().infoInstances();
     bool instEmpty = false;

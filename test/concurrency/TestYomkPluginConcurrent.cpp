@@ -240,7 +240,7 @@ int main()
     check(listInstances().empty(), "C1 instances conserved back to zero");
 
     // ---------- C2 并发 build 幂等收敛：4 线程并发同一清单 ----------
-    check(isOk(yomk::plugin().unload("TestPlugin")), "C2 preload unload for build race");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "C2 preload unload for build race");
     writeManifest("c2.yomk", "#! yomk_plugin_system\nc2-i1@libTestPlugin.so@inst.txt\n");
     std::atomic<int> c2Ok{0};
     std::atomic<int> c2MsgBad{0};
@@ -315,7 +315,7 @@ int main()
                 // 此后 create 全被拒，终态必空
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(yomk::plugin().unload("TestPlugin")))
+                    if (isOk(yomk::plugin().plg_name("TestPlugin").unload()))
                     {
                         break;
                     }
@@ -331,7 +331,7 @@ int main()
     check(c3MsgBad.load() == 0, "C3 create results all in allowed message set");
     check(listInstances().empty(), "C3 terminal instances empty after unload race");
     check(listPlugins().empty(), "C3 terminal plugins empty after unload race");
-    expectNo(yomk::plugin().unload("TestPlugin"), "plugin not loaded: TestPlugin", "C3 double unload rejects");
+    expectNo(yomk::plugin().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "C3 double unload rejects");
 
     // ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ----------
     // 前置：C3 结束插件已卸载，重建加载态（churn 需要插件在库中）
@@ -404,7 +404,7 @@ int main()
     check(listInstances().empty(), "C4 terminal instances empty after churn");
 
     // ---------- 收尾终态清零 ----------
-    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

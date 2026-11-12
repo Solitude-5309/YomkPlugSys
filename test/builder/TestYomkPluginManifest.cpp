@@ -257,7 +257,7 @@ int main()
         "H7 /builder keeps completed entry lines");
 
     // ---------- 清理现场 ----------
-    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     yomk::payload::Response inst = yomk::plugin().infoInstances();
     bool instEmpty = false;
     if (isOk(inst))

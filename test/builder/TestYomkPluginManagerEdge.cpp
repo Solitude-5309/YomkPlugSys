@@ -414,11 +414,11 @@ int main()
     check(
         isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dcrossB)).request()),
         "M6 destroy SecondPlugin/shared-i");
-    check(isOk(yomk::plugin().unload("SecondPlugin")), "M6 cleanup: force_unload SecondPlugin");
+    check(isOk(yomk::plugin().plg_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
 
     // ---------- M7 清理现场 ----------
-    check(isOk(yomk::plugin().unload("BadCreateNull")), "cleanup: force_unload BadCreateNull");
-    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

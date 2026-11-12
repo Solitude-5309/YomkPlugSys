@@ -213,23 +213,23 @@ int main()
 
     // ---------- S4 try_unload 拒绝与放行 ----------
     expectNo(
-        yomk::plugin().tryUnload("TestPlugin"),
+        yomk::plugin().plg_name("TestPlugin").try_unload(),
         "instances still alive: TestPlugin",
         "S4 try_unload rejected while instance alive");
     dreq.instanceName = "s1-i1";
     check(
         isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()),
         "S4 destroy for unload");
-    check(isOk(yomk::plugin().tryUnload("TestPlugin")), "S4 try_unload ok after destroy");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").try_unload()), "S4 try_unload ok after destroy");
     check(listPlugins().empty(), "S4 plugins empty after try_unload");
-    expectNo(yomk::plugin().tryUnload("NoSuchLib"), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
+    expectNo(yomk::plugin().plg_name("NoSuchLib").try_unload(), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
     // ---------- S5 unload 强卸含存活实例 ----------
     writeManifest("s5.yomk", "#! yomk_plugin_system\ns5-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("s5.yomk")).build(), "plugins:1 instances:1", "S5 rebuild for force unload");
-    check(isOk(yomk::plugin().unload("TestPlugin")), "S5 force unload with alive instance ok");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
-    expectNo(yomk::plugin().unload("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
+    expectNo(yomk::plugin().plg_name("NoSuchLib").unload(), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
 
     // ---------- S6 卸载后重载 ----------
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");
@@ -247,7 +247,7 @@ int main()
     expectNo(yomk::plugin().manifest(fp("s7c.yomk")).build(), "instance file not found", "S7 instance file checked before lib");
 
     // ---------- 清理现场 ----------
-    check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listInstances().empty(), "cleanup: instances empty after unload");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;
