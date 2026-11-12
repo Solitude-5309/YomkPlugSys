@@ -219,7 +219,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
             }
             else
             {
-                PluginPath path;
+                yomk::payload::PluginPath path;
                 path.path = soPath;
                 resp = request("/YomkPluginManager/load", yomk::msgs::PluginPath::shared(path));
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
@@ -241,7 +241,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
             loadedPlugins.insert(pluginName);
 
             /* 创建实例：实例文件路径作为 instanceFile 透传，不读取内容 */
-            CreateReq createReq;
+            yomk::payload::CreateReq createReq;
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
             createReq.instanceFile = instancePath;
@@ -296,7 +296,7 @@ yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
     try
     {
         /* BuilderInfo 快照：最近一次构建的清单条目与状态 */
-        BuilderInfo info;
+        yomk::payload::BuilderInfo info;
         std::lock_guard<std::mutex> lock(m_mutex);
         info.manifest = m_lastEntries;
         info.path = m_lastManifest;

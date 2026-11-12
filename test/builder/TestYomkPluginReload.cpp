@@ -100,9 +100,9 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 /* INFO_INSTANCES 解包；失败返回空表 */
-static std::vector<InstanceInfo> listInstances()
+static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
-    std::vector<InstanceInfo> out;
+    std::vector<yomk::payload::InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -113,9 +113,9 @@ static std::vector<InstanceInfo> listInstances()
 }
 
 /* INFO_PLUGINS 解包；失败返回空表 */
-static std::vector<PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
-    std::vector<PluginMeta> out;
+    std::vector<yomk::payload::PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -149,28 +149,28 @@ int main()
     expectOkSummary(YOMKPLUGIN_BUILD(fp("r1.yomk")), "plugins:1 instances:2", "R1 build two instances baseline");
 
     /* 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重 */
-    YomkPkgPtr samePath = YomkMkPtr(PluginPath, PluginPath{fp("libTestPlugin.so")});
+    YomkPkgPtr samePath = YomkMkPtr(PluginPath, yomk::payload::PluginPath{fp("libTestPlugin.so")});
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/load", samePath),
         "plugin already loaded: TestPlugin",
         "R1 load same path rejects");
 
     /* 不同路径同 meta 的 so 副本：判重与路径无关，同样命中 */
-    YomkPkgPtr copyPath = YomkMkPtr(PluginPath, PluginPath{fp("libTestPluginCopy.so")});
+    YomkPkgPtr copyPath = YomkMkPtr(PluginPath, yomk::payload::PluginPath{fp("libTestPluginCopy.so")});
     expectNo(
         YOMK_REQUEST("/YomkPluginManager/load", copyPath),
         "plugin already loaded: TestPlugin",
         "R1 load copy so with same meta rejects");
 
     /* 失败路径无状态污染：插件表仍恰 1 条，实例仍 2 个 */
-    std::vector<PluginMeta> names = listPlugins();
+    std::vector<yomk::payload::PluginMeta> names = listPlugins();
     check(
         names.size() == 1 && !names.empty() && names[0].name == "TestPlugin",
         "R1 manager list still exactly one TestPlugin after rejected loads");
     check(listInstances().size() == 2, "R1 instances still two after rejected loads");
 
     /* ---------- R2 存活表递减：destroy 后引用保护随之解除 ---------- */
-    DestroyReq dreq;
+    yomk::payload::DestroyReq dreq;
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
     check(isOk(YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq))), "R2 destroy r-b ok");

@@ -208,7 +208,7 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
         }
 
         /* 锁外请求 Loader 创建实例：传限定名（插件名.实例名，全局唯一），插件以此作为实例身份 */
-        CreateReq loaderReq = req->d;
+        yomk::payload::CreateReq loaderReq = req->d;
         loaderReq.instanceName = qualifiedName(req->d.pluginName, req->d.instanceName);
         yomk::payload::Response resp = request("/YomkPluginLoader/create", yomk::msgs::CreateReq::shared(loaderReq));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
@@ -305,7 +305,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
             }
         }
 
-        std::vector<PluginMeta> metas;
+        std::vector<yomk::payload::PluginMeta> metas;
         std::lock_guard<std::mutex> lock(m_mutex);
         for (const auto& kv : m_plugins)
         {
@@ -313,7 +313,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
             {
                 continue;
             }
-            PluginMeta m;
+            yomk::payload::PluginMeta m;
             m.abi_version = YOMKPLUGIN_ABI_VERSION;
             m.name = kv.second.name;
             m.type = kv.second.type;
@@ -374,7 +374,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
         }
-        PluginMeta m;
+        yomk::payload::PluginMeta m;
         m.abi_version = YOMKPLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
@@ -464,7 +464,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             }
         }
 
-        std::vector<InstanceInfo> infos;
+        std::vector<yomk::payload::InstanceInfo> infos;
         std::lock_guard<std::mutex> lock(m_mutex);
         if (!filter.empty())
         {
@@ -477,7 +477,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             {
                 for (const auto& instKv : it->second)
                 {
-                    InstanceInfo info;
+                    yomk::payload::InstanceInfo info;
                     info.pluginName = filter;
                     info.instanceName = qualifiedName(filter, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
@@ -491,7 +491,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             {
                 for (const auto& instKv : kv.second)
                 {
-                    InstanceInfo info;
+                    yomk::payload::InstanceInfo info;
                     info.pluginName = kv.first;
                     info.instanceName = qualifiedName(kv.first, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";

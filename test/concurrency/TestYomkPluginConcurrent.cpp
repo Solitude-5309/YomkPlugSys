@@ -101,9 +101,9 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 /* INFO_INSTANCES 解包；失败返回空表 */
-static std::vector<InstanceInfo> listInstances()
+static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
-    std::vector<InstanceInfo> out;
+    std::vector<yomk::payload::InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -114,9 +114,9 @@ static std::vector<InstanceInfo> listInstances()
 }
 
 /* INFO_PLUGINS 解包；失败返回空表 */
-static std::vector<PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
-    std::vector<PluginMeta> out;
+    std::vector<yomk::payload::PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -129,7 +129,7 @@ static std::vector<PluginMeta> listPlugins()
 /* 白盒：Manager create_instance 直调 */
 static YomkResponse createInst(const std::string& name)
 {
-    CreateReq req;
+    yomk::payload::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceFile = fp("inst.txt");
@@ -139,7 +139,7 @@ static YomkResponse createInst(const std::string& name)
 /* 白盒：Manager destroy_instance 直调 */
 static YomkResponse destroyInst(const std::string& name)
 {
-    DestroyReq req;
+    yomk::payload::DestroyReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     return YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, req));

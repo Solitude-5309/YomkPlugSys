@@ -70,13 +70,3 @@ struct BuilderInfo
     int instances = 0;
 };
 }  // namespace yomk::payload
-
-/* 裸名兼容：数据结构体自全局命名空间迁入 yomk::payload，逐个 using 声明引入
- * （不用 using namespace 污染），历史代码以裸名访问业务字段零改动 */
-using yomk::payload::BuildReq;
-using yomk::payload::BuilderInfo;
-using yomk::payload::CreateReq;
-using yomk::payload::DestroyReq;
-using yomk::payload::InstanceInfo;
-using yomk::payload::PluginMeta;
-using yomk::payload::PluginPath;

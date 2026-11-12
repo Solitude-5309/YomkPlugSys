@@ -100,9 +100,9 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 /* INFO_INSTANCES 解包；失败返回空表 */
-static std::vector<InstanceInfo> listInstances()
+static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
-    std::vector<InstanceInfo> out;
+    std::vector<yomk::payload::InstanceInfo> out;
     YomkResponse resp = YOMKPLUGIN_INFO_INSTANCES();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -113,9 +113,9 @@ static std::vector<InstanceInfo> listInstances()
 }
 
 /* INFO_PLUGINS 解包；失败返回空表 */
-static std::vector<PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
-    std::vector<PluginMeta> out;
+    std::vector<yomk::payload::PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -145,14 +145,14 @@ int main()
     writeManifest("s1.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(YOMKPLUGIN_BUILD(fp("s1.yomk")), "plugins:1 instances:1", "S1 build single entry ok");
 
-    std::vector<InstanceInfo> insts = listInstances();
+    std::vector<yomk::payload::InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
     check(
         !insts.empty() && insts[0].pluginName == "TestPlugin" && insts[0].instanceName == "TestPlugin.s1-i1",
         "S1 instance pluginName and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
 
-    std::vector<PluginMeta> metas = listPlugins();
+    std::vector<yomk::payload::PluginMeta> metas = listPlugins();
     check(metas.size() == 1, "S1 exactly one plugin listed");
     check(
         !metas.empty() && metas[0].name == "TestPlugin" && metas[0].type == "demo" && metas[0].version == "0.0.1",
@@ -182,7 +182,7 @@ int main()
     check(listInstances().size() == 2, "S2 two instances alive after dup-build failure");
 
     /* ---------- S3 create 重名与 destroy 重建（白盒 URL） ---------- */
-    CreateReq dupReq;
+    yomk::payload::CreateReq dupReq;
     dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
     dupReq.instanceFile = fp("inst.txt");
@@ -191,7 +191,7 @@ int main()
         "duplicate instance name: s2-i1",
         "S3 direct create duplicate rejects");
 
-    DestroyReq dreq;
+    yomk::payload::DestroyReq dreq;
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "s2-i1";
     check(
@@ -204,7 +204,7 @@ int main()
         YOMK_REQUEST("/YomkPluginManager/destroy_instance", YomkMkPtr(DestroyReq, dreq)),
         "instance not found: TestPlugin/s1-i1",
         "S3 destroy nonexistent rejects");
-    CreateReq reReq;
+    yomk::payload::CreateReq reReq;
     reReq.pluginName = "TestPlugin";
     reReq.instanceName = "s1-i1";
     reReq.instanceFile = fp("inst.txt");

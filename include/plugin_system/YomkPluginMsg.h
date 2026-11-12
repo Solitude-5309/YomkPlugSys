@@ -15,7 +15,8 @@
  * yomk::payload（业务字段访问），消息包类在 yomk::msgs（跨请求传递）。
  * 数组类直接以 std::vector 为 DataType，同框架内置 StringArray 风格。
  * 注：框架宏生成 MsgName(const DataType&) 构造，消息包类名与数据结构体同名会与拷贝
- * 构造签名冲突，故同名者类名加 Msg 后缀定义，再以 using 别名恢复原名（调用处零改动）；
+ * 构造签名冲突，故同名者类名加 Msg 后缀定义，再以命名空间内 using 别名把调用侧类型名
+ * 映射回业务名（对齐 SDK 消息包以业务名调用的惯例，如 unpack<yomk::msgs::String>）；
  * 运行时消息名（kName，内省展示用）相应带 Msg 后缀。
  */
 // clang-format off
@@ -32,7 +33,8 @@ YOMK_DEFINE_MSG(std::vector<yomk::payload::InstanceInfo>, InstanceInfoArray, d)
 /* shared_ptr 经消息包在进程内直接持有传递（无序列化，仅限同进程内请求，不可跨进程） */
 YOMK_DEFINE_MSG(std::shared_ptr<YomkPluginInterface>, PluginInstance, d)
 
-/* 消息包类原名别名（yomk::msgs::PluginPath 即 PluginPathMsg，供 YomkMkPtr/unpack 调用） */
+/* 消息包业务名映射（yomk::msgs::PluginPath 即 PluginPathMsg）：Msg 后缀仅是同名冲突
+ * 下的定义侧产物，调用侧（YomkMkPtr/unpack）经别名以业务名访问，对齐 SDK 惯例 */
 namespace yomk::msgs
 {
 using PluginPath = PluginPathMsg;

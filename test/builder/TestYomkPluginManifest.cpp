@@ -121,7 +121,7 @@ static void linkPlugin()
 }
 
 /* 最近构建信息（对账 recordBuild 侧效） */
-static BuilderInfo builderInfo()
+static yomk::payload::BuilderInfo builderInfo()
 {
     YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
     if (resp.status == ResStatus::Succeeded)
@@ -132,7 +132,7 @@ static BuilderInfo builderInfo()
             return info->d;
         }
     }
-    return BuilderInfo{};
+    return yomk::payload::BuilderInfo{};
 }
 
 int main()
@@ -226,7 +226,7 @@ int main()
     expectOkSummary(YOMKPLUGIN_BUILD(fp("m-g5.yomk")), "plugins:1 instances:1", "G5 space in instance name accepts");
 
     /* ---------- H /builder 对账（recordBuild 侧效） ---------- */
-    const BuilderInfo dump = builderInfo();
+    const yomk::payload::BuilderInfo dump = builderInfo();
     check(
         dump.path == fp("m-g5.yomk") && dump.result == "ok" && dump.plugins == 1 && dump.instances == 1,
         "H1 /builder shows manifest path and ok result");
@@ -237,7 +237,7 @@ int main()
 
     writeManifest("m-hfail.yomk", "#! yomk_plugin_system\n@lib@file\n");
     expectNo(YOMKPLUGIN_BUILD(fp("m-hfail.yomk")), emptyErr, "H3 failure build eNo");
-    const BuilderInfo hfail = builderInfo();
+    const yomk::payload::BuilderInfo hfail = builderInfo();
     check(
         hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: empty segment" && hfail.plugins == 0 &&
             hfail.instances == 0 && hfail.manifest.empty(),
@@ -247,7 +247,7 @@ int main()
         "m-part.yomk",
         "#! yomk_plugin_system\ngood1@libTestPlugin.so@inst.txt\nbad2@libTestPlugin.so@missing_inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("m-part.yomk")), "manifest line 3: instance file not found", "H5 partial build fails");
-    const BuilderInfo partDump = builderInfo();
+    const yomk::payload::BuilderInfo partDump = builderInfo();
     check(
         partDump.path == fp("m-part.yomk") &&
             partDump.result == "manifest line 3: instance file not found: " + fp("missing_inst.txt") &&

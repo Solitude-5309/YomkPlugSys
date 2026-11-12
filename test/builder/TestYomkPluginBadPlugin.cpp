@@ -84,9 +84,9 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
     }
 }
 
-static std::vector<PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
-    std::vector<PluginMeta> out;
+    std::vector<yomk::payload::PluginMeta> out;
     YomkResponse resp = YOMKPLUGIN_INFO_PLUGINS();
     if (resp.status == ResStatus::Succeeded)
     {
@@ -97,7 +97,7 @@ static std::vector<PluginMeta> listPlugins()
 }
 
 /* 最近构建信息（对账 recordBuild 侧效） */
-static BuilderInfo builderInfo()
+static yomk::payload::BuilderInfo builderInfo()
 {
     YomkResponse resp = YOMKPLUGIN_INFO_BUILDER();
     if (resp.status == ResStatus::Succeeded)
@@ -108,7 +108,7 @@ static BuilderInfo builderInfo()
             return info->d;
         }
     }
-    return BuilderInfo{};
+    return yomk::payload::BuilderInfo{};
 }
 
 int main()
@@ -189,7 +189,7 @@ int main()
     writeManifest("b9.yomk", "#! yomk_plugin_system\ntp1@libTestPlugin.so@inst.txt\nx1@libBadNoSymbol.so@inst.txt\n");
     expectNo(YOMKPLUGIN_BUILD(fp("b9.yomk")), "manifest line 3: load failed: missing plugin export symbols",
         "B11 build stops at failed line 3");
-    const BuilderInfo b12Info = builderInfo();
+    const yomk::payload::BuilderInfo b12Info = builderInfo();
     const bool b12Kept =
         std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "tp1@libTestPlugin.so@inst.txt") !=
         b12Info.manifest.end();

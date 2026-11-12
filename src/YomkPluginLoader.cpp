@@ -157,7 +157,7 @@ yomk::payload::Response YomkPluginLoader::meta(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "invalid plugin meta"};
         }
-        PluginMeta out;
+        yomk::payload::PluginMeta out;
         out.abi_version = meta->abi_version;
         out.name = meta->name ? meta->name : "";
         out.type = meta->type ? meta->type : "";
