@@ -43,7 +43,8 @@ private:
     yomk::payload::Response forceUnload(YomkMsgPtr pkg);       // String pluginName -> ok（先删全部实例）
     yomk::payload::Response createInstance(YomkMsgPtr pkg);    // CreateReq -> InstanceInfo
     yomk::payload::Response destroyInstance(YomkMsgPtr pkg);   // DestroyReq -> ok
-    yomk::payload::Response list(YomkMsgPtr pkg);              // [String pluginName] -> PluginMetaArray
+    yomk::payload::Response list(YomkMsgPtr pkg);              // 无 -> PluginMetaArray（全量列表）
+    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
     yomk::payload::Response listInstances(YomkMsgPtr pkg);     // [String pluginName] -> InstanceInfoArray
     yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
     yomk::payload::Response instancesFile(YomkMsgPtr pkg);     // String 限定名实例名 -> String 实例文件内容

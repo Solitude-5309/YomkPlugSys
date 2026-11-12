@@ -80,7 +80,8 @@ private:
     yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> String 构建汇总
     yomk::payload::Response version(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
     yomk::payload::Response infoBuilder(YomkMsgPtr pkg);       // 无 -> BuilderInfo 最近构建信息
-    yomk::payload::Response plugins(YomkMsgPtr pkg);           // [String pluginName] -> PluginMetaArray
+    yomk::payload::Response plugins(YomkMsgPtr pkg);           // 无 -> PluginMetaArray（全量列表）
+    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
     yomk::payload::Response instances(YomkMsgPtr pkg);         // [String pluginName] -> InstanceInfoArray
     yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
     yomk::payload::Response instancesFile(YomkMsgPtr pkg);     // String 限定名实例名 -> String 实例文件内容

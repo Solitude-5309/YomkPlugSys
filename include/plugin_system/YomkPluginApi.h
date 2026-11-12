@@ -58,19 +58,30 @@ private:
 };
 
 /**
- * @brief Intermediate chain node binding a plugin name, terminated by unload() or try_unload()
- * Returned by PluginBuilder::plg_name(); both terminators share the bound name and differ only
- * in the unload policy.
+ * @brief Intermediate chain node binding a plugin name, terminated by get_info(), unload() or try_unload()
+ * Returned by PluginBuilder::plg_name(); every terminator shares the bound name and differs only
+ * in the action taken on it.
  * @note Holds a copy of the plugin name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
-// @zh: 中间链节点：绑定插件名，链以 unload() 或 try_unload() 终结。
-// @zh: 由 PluginBuilder::plg_name() 返回；两个终结方法共用绑定的名字，仅在卸载策略上不同。
+// @zh: 中间链节点：绑定插件名，链以 get_info()、unload() 或 try_unload() 终结。
+// @zh: 由 PluginBuilder::plg_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
 // @zh: note 持有插件名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class PluginNameBuilder
 {
 public:
     explicit PluginNameBuilder(std::string_view pluginName) : m_pluginName(pluginName) {}
+
+    /**
+     * @brief Query the bound plugin, returning a single plugin record
+     * @return Response carrying a PluginMeta packet; an unknown name yields a failed response
+     */
+    // @zh: 查询绑定的插件，返回单条插件信息（与 plugins() 列表接口职责分离）。
+    // @zh: return Response，data 为 PluginMeta 包；未知插件返回失败。
+    yomk::payload::Response get_info() const
+    {
+        return yomk::server().url(yomk::url::pluginByName).msg(yomk::msgs::String::shared(m_pluginName)).request();
+    }
 
     /**
      * @brief Force-unload the bound plugin library: clear its instance table first, then close the library
@@ -156,22 +167,6 @@ public:
     // @zh: 内省全部已加载插件。
     // @zh: return Response，data 为 PluginMetaArray 包。
     yomk::payload::Response plugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
-
-    /**
-     * @brief Introspect loaded plugins filtered by plugin name
-     * @param pluginName Plugin name; an unknown name yields a failed response
-     * @return Response carrying a PluginMetaArray packet
-     */
-    // @zh: 内省指定插件（按插件名过滤）。
-    // @zh: param pluginName 插件名；未知插件返回失败。
-    // @zh: return Response，data 为 PluginMetaArray 包。
-    yomk::payload::Response plugins(std::string_view pluginName)
-    {
-        return yomk::server()
-            .url(yomk::url::pluginListPlugins)
-            .msg(yomk::msgs::String::shared(std::string(pluginName)))
-            .request();
-    }
 
     /**
      * @brief Introspect all created instances

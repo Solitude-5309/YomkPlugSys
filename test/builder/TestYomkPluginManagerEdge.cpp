@@ -176,19 +176,28 @@ int main()
         "instance not found: /",
         "M1 destroy with empty req rejects");
 
-    // ---------- M2 filter 三态 ----------
-    yomk::payload::Response resp = yomk::server().url("/YomkPluginManager/list").msg(yomk::msgs::String::shared("TestPlugin")).request();
-    bool hitOne = false;
+    // ---------- M2 列表与单查分离 ----------
+    yomk::payload::Response resp = yomk::server().url("/YomkPluginManager/list").request();
+    bool listOk = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
-        hitOne = arr->d.size() == 1 && arr->d[0].name == "TestPlugin";
+        listOk = arr && arr->d.size() >= 2;
     }
-    check(hitOne, "M2 list filter hit returns single plugin");
+    check(listOk, "M2 list returns all loaded plugins");
+
+    resp = yomk::server().url("/YomkPluginManager/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    bool hitOne = false;
+    if (isOk(resp))
+    {
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        hitOne = meta && meta->d.name == "TestPlugin";
+    }
+    check(hitOne, "M2 plugin query returns single plugin meta");
     expectNo(
-        yomk::server().url("/YomkPluginManager/list").msg(yomk::msgs::String::shared("Nope")).request(),
+        yomk::server().url("/YomkPluginManager/plugin").msg(yomk::msgs::String::shared("Nope")).request(),
         "plugin not loaded: Nope",
-        "M2 list filter miss rejects");
+        "M2 plugin query miss rejects");
 
     resp = yomk::server().url("/YomkPluginManager/list_instances").msg(yomk::msgs::String::shared("TestPlugin")).request();
     bool hitTwo = false;
@@ -211,8 +220,8 @@ int main()
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
 
-    resp = yomk::server().url("/YomkPluginSystemBuilder/plugins").msg(yomk::msgs::String::shared("TestPlugin")).request();
-    check(isOk(resp), "M2 builder proxy /plugins filter hit");
+    resp = yomk::server().url("/YomkPluginSystemBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    check(isOk(resp), "M2 builder proxy /plugin hit");
 
     // ---------- M2.5 宏门面：infoInstances(pluginName)(pluginName) 与直调 filter 等价 ----------
     resp = yomk::plugin().infoInstances("TestPlugin");

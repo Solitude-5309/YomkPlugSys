@@ -43,7 +43,8 @@ int YomkPluginSystemBuilder::init()
     installFunc("/build", &YomkPluginSystemBuilder::build, yomk::msgs::BuildReq::kName);
     installFunc("/version", &YomkPluginSystemBuilder::version);
     installFunc("/builder", &YomkPluginSystemBuilder::infoBuilder);
-    installFunc("/plugins", &YomkPluginSystemBuilder::plugins, yomk::msgs::String::kName);
+    installFunc("/plugins", &YomkPluginSystemBuilder::plugins);
+    installFunc("/plugin", &YomkPluginSystemBuilder::plugin, yomk::msgs::String::kName);
     installFunc("/instances", &YomkPluginSystemBuilder::instances, yomk::msgs::String::kName);
     installFunc("/plugin_by_instance", &YomkPluginSystemBuilder::pluginByInstance, yomk::msgs::String::kName);
     installFunc("/instances_file", &YomkPluginSystemBuilder::instancesFile, yomk::msgs::String::kName);
@@ -316,7 +317,7 @@ yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/list", pkg);
+        return request("/YomkPluginManager/list", nullptr);
     }
     catch (const std::exception& e)
     {
@@ -325,6 +326,23 @@ yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
     catch (...)
     {
         return {yomk::payload::ResStatus::Failed, "plugins exception"};
+    }
+}
+
+// 代理接口：按插件名查询单个插件（与列表接口分离，响应 data 为单条 PluginMeta）
+yomk::payload::Response YomkPluginSystemBuilder::plugin(YomkMsgPtr pkg)
+{
+    try
+    {
+        return request("/YomkPluginManager/plugin", pkg);
+    }
+    catch (const std::exception& e)
+    {
+        return {yomk::payload::ResStatus::Failed, std::string("plugin exception: ") + e.what()};
+    }
+    catch (...)
+    {
+        return {yomk::payload::ResStatus::Failed, "plugin exception"};
     }
 }
 

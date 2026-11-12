@@ -17,7 +17,8 @@ int YomkPluginManager::init()
     installFunc("/force_unload", &YomkPluginManager::forceUnload, yomk::msgs::String::kName);
     installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::CreateReq::kName);
     installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::DestroyReq::kName);
-    installFunc("/list", &YomkPluginManager::list, yomk::msgs::String::kName);
+    installFunc("/list", &YomkPluginManager::list);
+    installFunc("/plugin", &YomkPluginManager::plugin, yomk::msgs::String::kName);
     installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName);
     installFunc("/plugin_by_instance", &YomkPluginManager::pluginByInstance, yomk::msgs::String::kName);
     installFunc("/instances_file", &YomkPluginManager::instancesFile, yomk::msgs::String::kName);
@@ -300,29 +301,15 @@ yomk::payload::Response YomkPluginManager::destroyInstance(YomkMsgPtr pkg)
     }
 }
 
+// 全量列表：只做列举，不承担按名查询（按名查询见 plugin()）
 yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 {
     try
     {
-        // 可选入参：指定 pluginName 时只返回该插件
-        std::string filter;
-        if (pkg)
-        {
-            auto s = yomk::msgs::unpack<yomk::msgs::String>(pkg);
-            if (s)
-            {
-                filter = s->d;
-            }
-        }
-
         std::vector<yomk::payload::PluginMeta> metas;
         std::lock_guard<std::mutex> lock(m_mutex);
         for (const auto& kv : m_plugins)
         {
-            if (!filter.empty() && kv.first != filter)
-            {
-                continue;
-            }
             yomk::payload::PluginMeta m;
             m.abi_version = YOMKPLUGIN_ABI_VERSION;
             m.name = kv.second.name;
@@ -333,10 +320,6 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
             m.path = kv.second.path;
             metas.push_back(m);
         }
-        if (!filter.empty() && metas.empty())
-        {
-            return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + filter};
-        }
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMetaArray::shared(metas)};
     }
     catch (const std::exception& e)
@@ -346,6 +329,44 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
     catch (...)
     {
         return {yomk::payload::ResStatus::Failed, "list exception"};
+    }
+}
+
+// 按插件名查询单个插件：响应 data 为单条 PluginMeta，未加载返回 Failed
+yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
+{
+    try
+    {
+        auto data = yomk::msgs::unpack<yomk::msgs::String>(pkg);
+        if (!data)
+        {
+            return {yomk::payload::ResStatus::Failed,
+                    std::string("invalid request msg type: expect ") + yomk::msgs::String::kName +
+                        ", got " + yomk::msgs::typeOf(pkg)};
+        }
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_plugins.find(data->d);
+        if (it == m_plugins.end())
+        {
+            return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + data->d};
+        }
+        yomk::payload::PluginMeta m;
+        m.abi_version = YOMKPLUGIN_ABI_VERSION;
+        m.name = it->second.name;
+        m.type = it->second.type;
+        m.version = it->second.version;
+        m.author = it->second.author;
+        m.description = it->second.description;
+        m.path = it->second.path;
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMeta::shared(m)};
+    }
+    catch (const std::exception& e)
+    {
+        return {yomk::payload::ResStatus::Failed, std::string("plugin exception: ") + e.what()};
+    }
+    catch (...)
+    {
+        return {yomk::payload::ResStatus::Failed, "plugin exception"};
     }
 }
 

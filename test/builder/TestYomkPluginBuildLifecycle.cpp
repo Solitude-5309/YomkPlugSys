@@ -143,6 +143,18 @@ int main()
     writeManifest("s1.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("s1.yomk")).build(), "plugins:1 instances:1", "S1 build single entry ok");
 
+    // 按插件名查询（两段链 plg_name 绑定 + get_info 终结，返回单条 PluginMeta）
+    yomk::payload::Response infoResp = yomk::plugin().plg_name("TestPlugin").get_info();
+    bool infoHit = false;
+    if (isOk(infoResp))
+    {
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(infoResp.data);
+        infoHit = meta && meta->d.name == "TestPlugin" && meta->d.version == "0.0.1";
+    }
+    check(infoHit, "S1 plg_name().get_info() returns single TestPlugin meta");
+    expectNo(
+        yomk::plugin().plg_name("NoSuch").get_info(), "plugin not loaded: NoSuch", "S1 get_info unknown plugin rejects");
+
     std::vector<yomk::payload::InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
     check(
@@ -160,14 +172,15 @@ int main()
         "S1 plugin meta author and abi version");
     check(!metas.empty() && metas[0].path == fp("libTestPlugin.so"), "S1 plugin meta path");
 
-    yomk::payload::Response resp = yomk::server().url("/YomkPluginSystemBuilder/plugins").msg(yomk::msgs::String::shared("TestPlugin")).request();
-    bool filtered = false;
+    yomk::payload::Response resp =
+        yomk::server().url("/YomkPluginSystemBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    bool queried = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
-        filtered = arr->d.size() == 1;
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        queried = meta && meta->d.name == "TestPlugin";
     }
-    check(filtered, "S1 proxy /plugins with filter hit");
+    check(queried, "S1 proxy /plugin returns single plugin meta");
 
     // ---------- S2 so 复用幂等与实例重名 ----------
     writeManifest("s2.yomk", "#! yomk_plugin_system\ns2-i1@libTestPlugin.so@inst.txt\n");

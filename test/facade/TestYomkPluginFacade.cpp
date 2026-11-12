@@ -104,6 +104,11 @@ int main()
     }
     check(pluginsEmpty, "plugins() Succeeded + empty array");
 
+    resp = yomk::plugin().plg_name("no-plugin").get_info();
+    check(
+        isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
+        "plg_name(name).get_info() empty-state rejects unknown plugin");
+
     resp = yomk::plugin().infoInstances();
     bool instEmpty = false;
     if (isOk(resp))

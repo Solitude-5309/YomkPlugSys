@@ -24,7 +24,8 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 强制卸载 | `yomk::plugin().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plugin().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plugin().builder()` | → `Response`（data 为 `BuilderInfo`） |
-| 插件列表 | `yomk::plugin().plugins()` / `.plugins(pluginName)` | → `Response`（data 为 `PluginMetaArray`；按名查询时未知插件 `Failed`） |
+| 插件列表 | `yomk::plugin().plugins()` | → `Response`（data 为 `PluginMetaArray`） |
+| 插件信息 | `yomk::plugin().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
 | 实例明细 | `yomk::plugin().infoInstances()` / `.infoInstances(pluginName)` | → `Response`（data 为 `InstanceInfoArray`；按插件过滤时未知插件 `Failed`） |
 | 实例查插件 | `yomk::plugin().infoPluginBy(instanceName)` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
 | 实例文件 | `yomk::plugin().infoInstancesFile(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |

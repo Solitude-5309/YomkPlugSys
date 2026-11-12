@@ -12,6 +12,7 @@ inline constexpr std::string_view pluginBuild = "/YomkPluginSystemBuilder/build"
 inline constexpr std::string_view pluginVersion = "/YomkPluginSystemBuilder/version";
 inline constexpr std::string_view pluginBuilderInfo = "/YomkPluginSystemBuilder/builder";
 inline constexpr std::string_view pluginListPlugins = "/YomkPluginSystemBuilder/plugins";
+inline constexpr std::string_view pluginByName = "/YomkPluginSystemBuilder/plugin";
 inline constexpr std::string_view pluginListInstances = "/YomkPluginSystemBuilder/instances";
 inline constexpr std::string_view pluginByInstance = "/YomkPluginSystemBuilder/plugin_by_instance";
 inline constexpr std::string_view pluginInstancesFile = "/YomkPluginSystemBuilder/instances_file";
