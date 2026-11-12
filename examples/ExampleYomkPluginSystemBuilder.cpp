@@ -88,11 +88,11 @@ int main()
     std::cout << "  instances:" << builder->d.instances << std::endl;
 
     // 3. 查询插件列表
-    // 接口：yomk::plugin().infoPlugins()
+    // 接口：yomk::plugin().plugins()
     // 输入：无
     // 输出：PluginMetaArray，元数据来自插件导出的 yomk_plugin_meta
-    section("3. 插件列表 yomk::plugin().infoPlugins()");
-    resp = yomk::plugin().infoPlugins();
+    section("3. 插件列表 yomk::plugin().plugins()");
+    resp = yomk::plugin().plugins();
     if (!isOk(resp))
     {
         fail("查询插件", resp.msg);

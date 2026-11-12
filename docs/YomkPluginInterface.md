@@ -62,7 +62,7 @@ add_library(MyPlugin SHARED MyPlugin.cpp)
 target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
 ```
 
-预期行为：`yomk::plugin().manifest(...).build()` 装载后，`infoPlugins()` 可见 `MyPlugin v0.0.1`；创建的实例名为宿主指定的限定名。
+预期行为：`yomk::plugin().manifest(...).build()` 装载后，`plugins()` 可见 `MyPlugin v0.0.1`；创建的实例名为宿主指定的限定名。
 
 ## 契约三件套
 

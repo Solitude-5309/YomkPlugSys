@@ -85,7 +85,7 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    yomk::payload::Response resp = yomk::plugin().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);

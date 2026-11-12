@@ -111,11 +111,11 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     return out;
 }
 
-// infoPlugins() 解包；失败返回空表
+// plugins() 解包；失败返回空表
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    yomk::payload::Response resp = yomk::plugin().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
@@ -377,7 +377,7 @@ int main()
                     while (!c4Done.load())
                     {
                         // 门面内省三连：churn 期间恒 Succeeded
-                        if (!isOk(yomk::plugin().infoPlugins()) || !isOk(yomk::plugin().infoInstances()) ||
+                        if (!isOk(yomk::plugin().plugins()) || !isOk(yomk::plugin().infoInstances()) ||
                             !isOk(yomk::plugin().builder()))
                         {
                             ++c4FacadeBad;

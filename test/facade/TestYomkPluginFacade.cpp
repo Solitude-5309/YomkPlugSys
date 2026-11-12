@@ -95,14 +95,14 @@ int main()
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "infoInstancesFile(instanceName) empty-state rejects unknown instance");
 
-    resp = yomk::plugin().infoPlugins();
+    resp = yomk::plugin().plugins();
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
         pluginsEmpty = arr->d.empty();
     }
-    check(pluginsEmpty, "infoPlugins() Succeeded + empty array");
+    check(pluginsEmpty, "plugins() Succeeded + empty array");
 
     resp = yomk::plugin().infoInstances();
     bool instEmpty = false;

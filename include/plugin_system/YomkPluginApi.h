@@ -155,7 +155,7 @@ public:
      */
     // @zh: 内省全部已加载插件。
     // @zh: return Response，data 为 PluginMetaArray 包。
-    yomk::payload::Response infoPlugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
+    yomk::payload::Response plugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
 
     /**
      * @brief Introspect loaded plugins filtered by plugin name
@@ -165,7 +165,7 @@ public:
     // @zh: 内省指定插件（按插件名过滤）。
     // @zh: param pluginName 插件名；未知插件返回失败。
     // @zh: return Response，data 为 PluginMetaArray 包。
-    yomk::payload::Response infoPlugins(std::string_view pluginName)
+    yomk::payload::Response plugins(std::string_view pluginName)
     {
         return yomk::server()
             .url(yomk::url::pluginListPlugins)

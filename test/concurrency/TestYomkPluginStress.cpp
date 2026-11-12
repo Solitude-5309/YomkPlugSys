@@ -106,11 +106,11 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     return out;
 }
 
-// infoPlugins() 解包；失败返回空表
+// plugins() 解包；失败返回空表
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().infoPlugins();
+    yomk::payload::Response resp = yomk::plugin().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
