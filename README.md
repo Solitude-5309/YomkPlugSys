@@ -2,215 +2,70 @@
 
 基于 [YomkServer](https://github.com/Solitude-5309/YomkServer) 框架的动态插件系统扩展：运行时加载 so 插件、管理插件实例生命周期、提供内省与两种卸载语义。本库为独立设计，不依赖任何第三方插件框架。
 
-## 架构：门面 + 机制层 / 数据层
+## 架构速览
 
 | 服务 | 定位 | 职责 |
 |------|------|------|
-| `/YomkPluginSystemBuilder` | 编排层（唯一用户门面） | 解析 .yomk 清单驱动构建、聚合内省、卸载代理；init 注册并托管 Loader/Manager，deinit 注销 |
+| `/YomkPluginSystemBuilder` | 编排层（唯一用户门面） | 解析 manifest.yomk 清单驱动构建、聚合内省、卸载代理；托管内部服务生命周期 |
 | `/YomkPluginLoader` | 机制层（内部服务） | dlopen/dlsym/dlclose、meta 读取、实例创建机制；不登记插件、不拥有实例 |
-| `/YomkPluginManager` | 数据层（内部服务） | 插件表（meta 深拷贝）+ 实例表（shared_ptr 唯一所有者）、命名管理、实例生命周期管理 |
+| `/YomkPluginManager` | 数据层（内部服务） | 插件表 + 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期管理 |
 
-三服务纯请求通信。用户仅注册/请求 Builder：其 init 内部注册 Loader/Manager、deinit 逆序注销；两个内部服务的 URL 仅供扩展内部与白盒测试直调，宏 API 不暴露。Loader 仅持有句柄表与 weak_ptr 实例存活表（引用计数保护：有存活实例时拒绝卸载）；业务数据全部由 Manager 统一管理。
+三服务纯请求通信。用户仅注册/请求门面服务，接口经 `yomk::plugin()` 链式域入口或 `YOMKPLUGIN_*` 门面宏发起；内部服务 URL 仅供扩展内部与白盒测试直调。
 
-## 用户 API（唯一门面）
+## 快速开始
 
-### /YomkPluginSystemBuilder（7 个接口）
-
-| URL | 入参 | 说明 |
-|-----|------|------|
-| `/YomkPluginSystemBuilder/build` | `BuildReq{workflowPath}` | 解析清单并组装插件系统，返回 `String` 汇总 `plugins:N instances:M` |
-| `/YomkPluginSystemBuilder/version` | 无 | 返回 `String` 扩展版本描述（值由 CMake 编译期注入，来源 `project(VERSION)`） |
-| `/YomkPluginSystemBuilder/builder` | 无 | 内省：`BuilderInfo` 最近构建信息（清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances） |
-| `/YomkPluginSystemBuilder/plugins` | 无 / String pluginName | 内省：插件列表 `PluginMetaArray`（代理 Manager /list） |
-| `/YomkPluginSystemBuilder/instances` | 无 / String pluginName | 内省：实例明细 `InstanceInfoArray`（代理 Manager /list_instances） |
-| `/YomkPluginSystemBuilder/plugin_by_instance` | String instanceName | 内省：实例所属插件的元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`；未知实例拒绝）（代理 Manager /plugin_by_instance） |
-| `/YomkPluginSystemBuilder/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`；创建时透传的实例配置文件，未知实例/文件不可读拒绝）（代理 Manager /instances_file） |
-| `/YomkPluginSystemBuilder/unload` | String pluginName | 强制卸载：先销毁全部实例再卸载（代理 Manager /force_unload） |
-| `/YomkPluginSystemBuilder/try_unload` | String pluginName | 尝试卸载：有存活实例拒绝，插件保持加载（代理 Manager /try_unload） |
-
-清单文件（如 `examples/workflow/manifest.yomk`）首行必须为格式标识 `#! yomk_plugin_system`（`.yomk` 后缀文件因用处不同格式各异，以首行标识区分；缺失、不在首行或不匹配则解析失败并报错），其后每行一个条目，格式为 `实例名@动态库相对路径@实例配置文件相对路径`（`@` 分隔三段，后两段均为相对清单所在目录的完整路径；实例名为裸名，同插件内唯一，系统登记与内省时自动拼接插件名为全局唯一限定名 `插件名.实例名`）：
-
-```
-#! yomk_plugin_system
-
-# 连接器
-ConnectionService@ConnectionService/lib/libConnectionService.so@ConnectionService/instances/ConnectionService.txt
+```bash
+source build_ubuntu.sh    # 交互式：输入 YomkServer 安装路径与扩展安装路径（默认均取 $YOMK_PREFIX_PATH）
 ```
 
-- 以 `#` 开头的整行为注释，条目行中 `#` 之后为行内注释，解析时均忽略；空行跳过
-- 动态库名须含平台相关文件名全名（Linux `libX.so` / macOS `libX.dylib` / Windows `X.dll`），跨平台部署时各平台使用各自清单文件；库名与目录布局完全解耦
-- 实例配置文件的绝对路径作为 `instanceFile` 透传给插件工厂（不读取内容）
-- `<模块>/lib/`、`<模块>/instances/` 仅为示例工程的目录组织约定，Builder 不强制
-
-build 流程：解析清单 → 校验实例配置文件/动态库存在 → `/YomkPluginManager/load` 加载（已加载幂等跳过）→ `/YomkPluginManager/create_instance` 按清单实例名创建（登记为限定名 `插件名.实例名`）。任一步失败返回 `eNo` 并指明清单行号。
-
-完整可构建示例见 `examples/workflow/`（两个示例插件模块 + 清单），配套入门示例见 `examples/ExampleYomkPluginSystemBuilder.cpp`（随扩展默认编译安装，运行可逐步演示构建/内省/卸载全流程的接口输入与输出）。
-
-## 内部服务接口（Builder 托管，扩展内部与白盒测试专用）
-
-### /YomkPluginLoader（机制层，5 个接口）
-
-| URL | 入参 | 说明 |
-|-----|------|------|
-| `/YomkPluginLoader/load` | `PluginPath{path}` | dlopen + 符号解析 + abi/重名校验，返回 pluginName（= meta.name） |
-| `/YomkPluginLoader/unload` | String pluginName | 有存活实例拒绝（引用计数保护）；否则移登记 + dlclose |
-| `/YomkPluginLoader/meta` | String pluginName | 实时调用 meta 导出函数返回 `PluginMeta`，不缓存 |
-| `/YomkPluginLoader/create` | `CreateReq{pluginName, instanceName, instanceFile}` | 调插件工厂创建实例（instanceName 为限定名 `插件名.实例名`），shared_ptr 绑定 delete_instance 为 deleter |
-| `/YomkPluginLoader/delete` | `PluginInstance` | 释放实例（自动触发 delete_instance）并清理存活表失效项 |
-
-### /YomkPluginManager（数据层，9 个接口）
-
-| URL | 入参 | 说明 |
-|-----|------|------|
-| `/YomkPluginManager/load` | `PluginPath{path}` | 加载并登记插件表；仅加载与登记，不自动建实例 |
-| `/YomkPluginManager/try_unload` | String pluginName | 尝试卸载：有存活实例（含 Manager 之外的持有者）返回 eNo，插件保持加载 |
-| `/YomkPluginManager/force_unload` | String pluginName | 强制卸载：先删除该插件全部实例，再卸载 |
-| `/YomkPluginManager/create_instance` | `CreateReq{pluginName, instanceName, instanceFile}` | 按 instanceName（裸名）创建并登记为限定名 `插件名.实例名`（同插件内重名拒绝；不同插件允许同名，限定名全局唯一） |
-| `/YomkPluginManager/destroy_instance` | `DestroyReq{pluginName, instanceName}` | 销毁指定实例 |
-| `/YomkPluginManager/list` | 无 / String pluginName | 插件表 `PluginMetaArray` |
-| `/YomkPluginManager/list_instances` | 无 / String pluginName | 实例表 `InstanceInfoArray`（name 为限定名 `插件名.实例名`/type/pluginName） |
-| `/YomkPluginManager/plugin_by_instance` | String instanceName | 内省：实例所属插件元数据 `PluginMeta`（instanceName 为限定名 `插件名.实例名`） |
-| `/YomkPluginManager/instances_file` | String instanceName | 内省：实例文件内容 `String`（instanceName 为限定名 `插件名.实例名`） |
-
-所有功能函数均用三参 `installFunc` 安装（消息类型标识经消息包类 `kName` 传入），服务器层 `/YomkServerInfo` 内省可见类型标记。
-
-## ABI 契约（插件开发者接口）
-
-安装后对外头文件位于 `<安装路径>/include/yomk/plugin_system/`（对外引用统一 `<yomk/plugin_system/...>`，与 SDK 各域共用 `<prefix>/include` 同一 include 根）：
-
-| 头文件 | 内容 |
-|--------|------|
-| `YomkPluginInterface.h` | 插件侧 ABI 契约：`YomkPluginMeta` 元数据 C 结构体 + `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）+ 实例抽象接口：instanceName（全局唯一限定名 插件名.实例名，系统唯一主键）、instanceType、userData + `YOMKPLUGIN_EXPORT` 一键导出宏 |
-| `YomkPluginUrl.h` | 模块 URL 常量（`yomk::url` 开放命名空间，`plugin` 前缀 string_view 编译期常量） |
-| `YomkPluginPayload.h` | 模块专属载荷：数据结构体（`yomk::payload`，业务字段访问用） |
-| `YomkPluginMsg.h` | 模块专属消息包：YOMK_DEFINE_MSG 注册（`yomk::msgs`，跨请求传递用）+ 请求侧类型校验辅助 |
-| `YomkPluginApi.h` | 模块 API 头（四件套之 Api）：聚合全部对外头 + `yomk::plugin()` 链式域入口 + 10 个门面宏（BUILD / UNLOAD / TRY_UNLOAD / INFO_BUILDER / INFO_PLUGINS / INFO_PLUGIN_BY / INFO_INSTANCES / INFO_INSTANCES_BY / INFO_INSTANCES_FILE / VERSION） |
-| `YomkPluginSystemBuilder.h` | 门面服务声明（唯一用户服务） |
-
-位于 `src/`、不随 install 分发的内部声明头（仅编译扩展内部可见）：
-
-| 头文件 | 内容 |
-|--------|------|
-| `YomkPluginLoader.h` | 机制层服务声明 + 宿主 dlsym 契约（导出符号宏与函数类型），内部用 |
-| `YomkPluginManager.h` | 数据层服务声明，内部用 |
-
-头文件单向分层（四件套形态，与 SDK 各 Yomk{Module}Url/Payload/Msg/Api.h 同一设计）：ABI 叶子（Interface，含元数据 C 结构）→ URL 常量（Url，零依赖）→ 模块载荷（Payload，yomk::payload）→ 模块消息包（Msg，yomk::msgs）→ 服务声明头（Builder / 内部 Loader/Manager）→ 模块 API 头（Api：域入口 + 门面宏 + 兼容层），无 include 环。随 install 分发的公共头仅上述 6 个；插件开发者与宿主用户统一 `#include <yomk/plugin_system/YomkPluginApi.h>` 即可，内部服务（Loader/Manager）声明对用户不可见，白盒测试亦仅经门面宏或 URL 直调访问。
-
-插件须以 `extern "C"` 导出三个固定符号：
-
-```cpp
-const YomkPluginMeta *yomk_plugin_meta();                                         // 返回静态常量指针
-YomkPluginInterface *yomk_plugin_create_instance(const char *instance_name, const char *instance_file);
-void yomk_plugin_delete_instance(YomkPluginInterface *instance);                  // 内部 delete
-```
-
-`instance_name` 为宿主指定的实例限定名 `插件名.实例名`（全局唯一），插件须以传入名称作为实例名。`instance_file` 为透传参数：插件系统不读不解析，原样传给插件工厂，由插件实现自行决定是否使用（允许传空）。实例文件的设计与自动化编排由独立的构建服务负责，不在本扩展范围内。
-
-## 插件开发指南
-
-以示例插件 `test/test_plugin/TestPlugin.cpp` 为例：
+安装后以最小程序跑通（构建示例插件工程 → 内省 → 卸载）：
 
 ```cpp
 #include <yomk/plugin_system/YomkPluginApi.h>
-#include <string>
+#include <iostream>
 
-class MyInstance : public YomkPluginInterface
+using namespace yomk;
+
+int main()
 {
-public:
-    MyInstance(const std::string &name) : m_name(name) {}
-    virtual const char *instanceName() const override { return m_name.c_str(); }
-    virtual const char *instanceType() const override { return "demo"; }
+    yomk::server().init();
 
-private:
-    std::string m_name; /* 返回的 const char* 必须在实例存活期内有效 */
-};
+    // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
+    yomk::server().srv<YomkPluginSystemBuilder>().create();
 
-static const YomkPluginMeta g_meta = {
-    YOMKPLUGIN_ABI_VERSION, "MyPlugin", "demo", "0.0.1", "author", "description"
-};
+    // 按清单构建插件工程（清单语法见 docs/PluginManifest.md）
+    auto build = yomk::plugin().build("/abs/path/to/manifest.yomk");
 
-static const YomkPluginMeta *metaFn() { return &g_meta; }
-static YomkPluginInterface *createFn(const char *instance_name, const char *instance_file)
-{
-    try { return new MyInstance(instance_name); }
-    catch (...) { return nullptr; } /* 导出函数必须捕获异常 */
+    // 内省：插件列表
+    auto plugins = yomk::plugin().infoPlugins();
+    auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(plugins.data);
+    if (arr)
+        for (const auto& m : arr->d)
+            std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
+
+    // 尝试卸载（有存活实例拒绝；强制卸载用 unload）
+    auto r = yomk::plugin().tryUnload("ConnectionService");
+    std::cout << "tryUnload: " << r.msg << std::endl;
+    return 0;
 }
-static void deleteFn(YomkPluginInterface *instance) { delete instance; }
-
-YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
 ```
 
-编译为 SHARED 库（`find_package(YomkPluginSystem)` 后包含安装头文件）：
+可直接运行随扩展安装的入门示例观察全流程输出：`<安装路径>/bin/ExampleYomkPluginSystemBuilder`。
 
-```cmake
-add_library(MyPlugin SHARED MyPlugin.cpp)
-target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
-```
+## 文档
 
-要求：插件与宿主同编译器、共用本扩展安装的头文件。
+按需跳跃阅读，每个分片自包含（遵循 [yomk文档原则](../../YomkServer/docs/yomk文档原则.md)）：
 
-## 前置条件
+| 我想要… | 分片 |
+|---|---|
+| 5 分钟跑通全流程 | [快速开始](docs/quickstart.md) |
+| 查接口用法（构建/内省/卸载/版本） | [门面服务](docs/YomkPluginSystemBuilder.md) |
+| 理解生命周期语义（何时拒绝、何时幂等） | [插件生命周期](docs/PluginLifecycle.md) |
+| 开发一个 so 插件 | [插件开发指南](docs/YomkPluginInterface.md) |
+| 编写 manifest.yomk 清单 | [清单格式](docs/PluginManifest.md) |
+| 编译安装 / CMake 集成 / 运行测试 | [构建与验证](docs/BuildCmake.md) |
 
-- C++17 编译器
-- CMake >= 3.14
-- YomkServer 已安装（通过 `build_ubuntu.sh` 安装后会自动配置环境变量 `YOMK_PREFIX_PATH` 指向安装路径）
-
-## 编译
-
-```bash
-source build_ubuntu.sh
-```
-
-> 交互式编译：依次询问 YomkServer 安装路径（前置路径）与扩展安装路径，默认均取 `$YOMK_PREFIX_PATH`，可修改。扩展库与 YomkServer 安装到一起（头文件由 `YomkServer::YomkServer` 的 INTERFACE include 统一提供）。示例程序默认编译并随扩展安装 （到 `<安装路径>/bin`），安装后可直接运行 `ExampleYomkPluginSystemBuilder` 验证 workflow 构建示例。测试程序询问是否编译（直接回车默认编译，输入 n 跳过），仅本地构建不安装（产物在 `test/build/` 下），可直接运行 `TestYomkPluginSystem` 验证。
-
-## 测试
-
-### 1. 编译测试
-
-测试为独立 CMake 工程（`test/CMakeLists.txt`），不随扩展默认编译，需显式构建：
-
-```bash
-cmake -S test -B test/build -DCMAKE_PREFIX_PATH="${YOMK_PREFIX_PATH}" -DCMAKE_BUILD_TYPE=Release
-cmake --build test/build -j
-```
-
-> `CMAKE_PREFIX_PATH` 需能同时定位 YomkServer 与本扩展的安装路径（二者默认安装到同一前缀 `/opt/yomk`，`YOMK_PREFIX_PATH` 即指向该前缀）。
-
-构建产物输出到 `test/build/`：
-
-| 类型 | 产物 | 说明 |
-|---|---|---|
-| 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_PLUGINS/INFO_INSTANCES/INFO_BUILDER 等） |
-| 测试插件库 | test_plugin/libTestPlugin.so | 供测试程序 dlopen 加载的示例插件（不安装） |
-
-### 2. 一键运行全量测试
-
-```bash
-./test/run_tests.sh              # 默认使用 <仓库>/test/build 下的测试产物
-./test/run_tests.sh --bin DIR    # 指定测试可执行目录
-./test/run_tests.sh --timeout N  # 单测试超时秒数（默认 300）
-./test/run_tests.sh -h           # 显示用法
-```
-
-运行器行为：
-
-- **失败即停**：任一测试退出码非 0（含超时被杀）立即终止，终端输出该测试的 `[FAIL]` 用例摘要与完整日志路径
-- **日志落盘**：`test/test_logs/<时间戳>/` 下每个测试一份日志 + `summary.log` 汇总（`test_logs/` 已被 .gitignore 忽略）
-- **现场清理**：每个测试在独立临时目录运行（隔离 CWD，防意外写文件污染仓库）；运行前清理上次遗留的 `/tmp/yomk_logger_*`，结束后复查残留，发现则清理并判定整体失败
-- **超时保护**：每个测试由 `timeout` 包裹，防卡死
-- **插件路径健壮性**：运行器自动导出 `YOMK_TEST_PLUGIN` 指向与测试可执行同目录的 `test_plugin/libTestPlugin.so`（测试程序优先读该环境变量），仓库迁移后仍可直接测试
-
-测试程序本身经白盒审计无写盘操作（无文件日志、无缓存、无生成文件），残留检查主要为防御性保留。
-
-### 3. 单独运行
-
-测试为独立可执行（纯 `main()` + 断言，返回 0 = 全部通过，非 0 = 存在失败用例），可直接运行：
-
-```bash
-./test/build/TestYomkPluginSystem
-```
-
-插件路径查找顺序：环境变量 `YOMK_TEST_PLUGIN` → 编译期固化的 `test/build/test_plugin/libTestPlugin.so` 路径。
+完整分片目录见 [docs/README.md](docs/README.md)。
 
 ## 工程结构
 
@@ -230,13 +85,14 @@ YomkPluginSystem/
 │   ├── YomkPluginLoader.cpp      # 机制层服务
 │   ├── YomkPluginManager.cpp     # 数据层服务
 │   └── YomkPluginSystemBuilder.cpp # 编排层服务
+├── docs/                         # 文档（分片自包含，入口见 docs/README.md）
 ├── examples/                     # 演示示例
-│   ├── ExampleYomkPluginSystemBuilder.cpp  # Builder 演示程序（随扩展默认编译安装）
+│   ├── ExampleYomkPluginSystemBuilder.cpp  # 入门示例（随扩展默认编译安装）
 │   └── workflow/                 # workflow 示例插件模块 + 清单
-├── test/
-│   ├── test_plugin/               # 示例插件（SHARED 库）
-│   ├── TestYomkPluginSystem.cpp  # 测试程序
-│   └── run_tests.sh              # 全量测试一键运行器
+├── test/                         # 测试（8 闭环 + 一键运行器）
+│   ├── test_plugin/              # 示例插件（SHARED 库）
+│   ├── bad_plugin/ builder/ concurrency/ facade/  # 分目录测试源码
+│   └── run_tests.sh / run_static_checks.sh
 ├── cmake/
 │   ├── AbiInfo.cmake             # 编译器预选 + ABI 环境指纹
 │   ├── YomkServerVersionCheck.cmake # YomkServer 版本检测（3.6.18 及以上）
@@ -246,31 +102,16 @@ YomkPluginSystem/
 └── README.md
 ```
 
-## 使用示例
+## 测试
 
-将以下完整程序拷贝为 main.cpp，安装扩展后可直接编译运行（注册唯一门面服务 → 版本号直取）：
-
-```cpp
-#include <yomk/plugin_system/YomkPluginApi.h>
-#include <iostream>
-
-using namespace yomk;
-
-int main(int argc, char *argv[])
-{
-    YOMK_INIT();
-
-    // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
-    YOMK_NEW_SERVICE(YomkPluginSystemBuilder);
-
-    // 查询扩展版本（请求 /YomkPluginSystemBuilder/version，成功走 yomk::log().info 打印、失败走 yomk::log().error，无返回值）
-    YOMKPLUGIN_VERSION(); // 输出: YomkPluginSystem v0.2.9 (WIP)
-
-    // 链式域入口（等价请求：yomk::server().url(yomk::url::pluginVersion).request()）
-    yomk::payload::Response resp = yomk::plugin().version();
-
-    return 0;
-}
+```bash
+cmake -S test -B test/build -DCMAKE_PREFIX_PATH="${YOMK_PREFIX_PATH}" -DCMAKE_BUILD_TYPE=Release
+cmake --build test/build -j
+./test/run_tests.sh              # 8 个测试闭环，失败即停，日志落盘 test/test_logs/
 ```
 
-完整流程（load → create_instance → list_instances → 内省 → try_unload/force_unload）参见 `test/TestYomkPluginSystem.cpp`。
+测试体系与静态检查的完整说明见[构建与验证](docs/BuildCmake.md)。
+
+## License
+
+[Apache License 2.0](LICENSE)
