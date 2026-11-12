@@ -9,7 +9,7 @@
 # 行为:
 #   1. 运行前清理 /tmp/yomk_logger_* 残留（防御性保留，本套测试当前不产生该模式）
 #   2. 逐个运行测试（每个测试在独立临时工作目录运行），优先通过 YOMK_TEST_PLUGIN
-#      指向与测试可执行同目录的 TestPlugin/libTestPlugin.so（仓库迁移后仍可测）
+#      指向与测试可执行同目录的 test_plugin/libTestPlugin.so（仓库迁移后仍可测）
 #   3. 任一测试失败（退出码非 0 / 超时）→ 立即停止，终端输出 [FAIL] 行摘要与日志路径
 #   4. 日志落盘: test/test_logs/<时间戳>/<测试名>.log + summary.log
 #   5. 全部结束后复查现场残留，发现则清理并计为失败
@@ -100,7 +100,7 @@ precheck_bin() {
         [ -x "${BIN_DIR}/${t}" ] || missing+=("${t}")
     done
     # 测试程序 dlopen 的插件库：缺失时测试将失败，一并纳入预检
-    [ -f "${BIN_DIR}/TestPlugin/libTestPlugin.so" ] || missing+=("TestPlugin/libTestPlugin.so")
+    [ -f "${BIN_DIR}/test_plugin/libTestPlugin.so" ] || missing+=("test_plugin/libTestPlugin.so")
     if [ ${#missing[@]} -gt 0 ]; then
         echo "错误: ${BIN_DIR} 缺少以下测试产物（共 ${#missing[@]} 个）:"
         for m in "${missing[@]}"; do echo "   - ${m}"; done
@@ -229,8 +229,8 @@ main() {
     precheck_bin
 
     # 测试程序优先读 YOMK_TEST_PLUGIN；指向与测试可执行同目录的插件 so，仓库迁移后仍可测
-    if [ -f "${BIN_DIR}/TestPlugin/libTestPlugin.so" ]; then
-        export YOMK_TEST_PLUGIN="${BIN_DIR}/TestPlugin/libTestPlugin.so"
+    if [ -f "${BIN_DIR}/test_plugin/libTestPlugin.so" ]; then
+        export YOMK_TEST_PLUGIN="${BIN_DIR}/test_plugin/libTestPlugin.so"
     fi
 
     local log_root="${SCRIPT_DIR}/test_logs/$(date +%Y%m%d_%H%M%S)"

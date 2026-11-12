@@ -108,7 +108,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface *instance);                
 
 ## 插件开发指南
 
-以示例插件 `test/TestPlugin/TestPlugin.cpp` 为例：
+以示例插件 `test/test_plugin/TestPlugin.cpp` 为例：
 
 ```cpp
 #include <yomk/plugin_system/YomkPluginApi.h>
@@ -181,7 +181,7 @@ cmake --build test/build -j
 | 类型 | 产物 | 说明 |
 |---|---|---|
 | 测试程序 (1) | TestYomkPluginSystem | 白盒全量覆盖：load/list、create_instance/list_instances、重名/空实例名拒绝、try_unload/force_unload、卸载引用保护、内省（INFO_PLUGINS/INFO_INSTANCES/INFO_BUILDER 等） |
-| 测试插件库 | TestPlugin/libTestPlugin.so | 供测试程序 dlopen 加载的示例插件（不安装） |
+| 测试插件库 | test_plugin/libTestPlugin.so | 供测试程序 dlopen 加载的示例插件（不安装） |
 
 ### 2. 一键运行全量测试
 
@@ -198,7 +198,7 @@ cmake --build test/build -j
 - **日志落盘**：`test/test_logs/<时间戳>/` 下每个测试一份日志 + `summary.log` 汇总（`test_logs/` 已被 .gitignore 忽略）
 - **现场清理**：每个测试在独立临时目录运行（隔离 CWD，防意外写文件污染仓库）；运行前清理上次遗留的 `/tmp/yomk_logger_*`，结束后复查残留，发现则清理并判定整体失败
 - **超时保护**：每个测试由 `timeout` 包裹，防卡死
-- **插件路径健壮性**：运行器自动导出 `YOMK_TEST_PLUGIN` 指向与测试可执行同目录的 `TestPlugin/libTestPlugin.so`（测试程序优先读该环境变量），仓库迁移后仍可直接测试
+- **插件路径健壮性**：运行器自动导出 `YOMK_TEST_PLUGIN` 指向与测试可执行同目录的 `test_plugin/libTestPlugin.so`（测试程序优先读该环境变量），仓库迁移后仍可直接测试
 
 测试程序本身经白盒审计无写盘操作（无文件日志、无缓存、无生成文件），残留检查主要为防御性保留。
 
@@ -210,7 +210,7 @@ cmake --build test/build -j
 ./test/build/TestYomkPluginSystem
 ```
 
-插件路径查找顺序：环境变量 `YOMK_TEST_PLUGIN` → 编译期固化的 `test/build/TestPlugin/libTestPlugin.so` 路径。
+插件路径查找顺序：环境变量 `YOMK_TEST_PLUGIN` → 编译期固化的 `test/build/test_plugin/libTestPlugin.so` 路径。
 
 ## 工程结构
 
@@ -234,7 +234,7 @@ YomkPluginSystem/
 │   ├── ExampleYomkPluginSystemBuilder.cpp  # Builder 演示程序（随扩展默认编译安装）
 │   └── workflow/                 # workflow 示例插件模块 + 清单
 ├── test/
-│   ├── TestPlugin/               # 示例插件（SHARED 库）
+│   ├── test_plugin/               # 示例插件（SHARED 库）
 │   ├── TestYomkPluginSystem.cpp  # 测试程序
 │   └── run_tests.sh              # 全量测试一键运行器
 ├── cmake/
