@@ -1,10 +1,12 @@
 #pragma once
 
-/*
- * 插件侧 ABI 契约（单文件承载）：
- * 元数据 C 结构 YomkPluginMeta（跨 dlsym 边界，C 兼容）+ 实例抽象接口
- * YomkPluginInterface + 导出契约（三个固定符号 + YOMKPLUGIN_EXPORT 一键导出宏）。
- */
+// 插件侧 ABI 契约（单文件承载）.
+// 设计取舍:
+// 1. 元数据 C 结构与三个导出符号共用本头:插件作者只依赖一个文件即可完成导出,
+//    宿主侧仅额外持有 dlsym 用的符号名宏（src/YomkPluginLoader.h）;
+// 2. YomkPluginMeta 跨 dlsym 边界且由宿主按 C 语义读取,故保持 POD + 裸 char 指针;
+// 3. ABI 版本是独立常量,不与 project(VERSION) 绑定:仅当 YomkPluginMeta 布局或导出
+//    符号签名变化时递增.历史:v2 为实例接口虚表布局变化（删除 instanceId）.
 
 /* ------------------------- 插件元数据（C 兼容） ------------------------- */
 
@@ -13,24 +15,29 @@ extern "C"
 {
 #endif
 
-/* ABI 版本为独立常量，不与 project(VERSION) 绑定；仅当 YomkPluginMeta 布局或导出符号签名变化时才递增。
- * v2：实例接口虚表布局变化（删除 instanceId） */
+/**
+ * @brief ABI contract version expected by host and plugin
+ * @note Independent of the project version; bumped only when the YomkPluginMeta layout
+ *       or the export symbol signatures change. A mismatch rejects the load.
+ */
+// @zh: 宿主与插件共同约定的 ABI 契约版本。
+// @zh: note 独立于工程版本号，仅当 YomkPluginMeta 布局或导出符号签名变化时递增；不匹配则加载被拒绝。
 #define YOMKPLUGIN_ABI_VERSION 2
 
-    /* 插件元数据（常量），由插件 meta 导出函数返回静态指针 */
+    /**
+     * @brief Static plugin metadata returned by the meta export function
+     * @note All string members are read-only during the plugin lifetime.
+     */
+    // @zh: 插件元数据，由 meta 导出函数返回的静态常量。
+    // @zh: note 字符串成员在插件存活期内只读。
     struct YomkPluginMeta
     {
-        int abi_version;
-        /* 插件名 */
-        const char* name;
-        /* 插件类型 */
-        const char* type;
-        /* 插件版本 */
-        const char* version;
-        /* 作者 */
-        const char* author;
-        /* 说明 */
-        const char* description;
+        int abi_version;            // ABI 契约版本
+        const char* name;           // 插件名（全局唯一，不得含 '.'）
+        const char* type;           // 插件类型
+        const char* version;        // 插件版本
+        const char* author;         // 作者
+        const char* description;    // 说明
     };
 
 #ifdef __cplusplus
@@ -39,35 +46,67 @@ extern "C"
 
 /* ------------------------- 插件实例接口 ------------------------- */
 
-/* 插件实例抽象接口（C++ 抽象类，要求宿主与插件同编译器、共用本头文件） */
+/**
+ * @brief Abstract interface of a plugin instance
+ * @warning Host and plugin must be built with the same compiler and this same header;
+ *          crossing distinct standard libraries or compiler ABIs is undefined behavior.
+ */
+// @zh: 插件实例抽象接口。
+// @zh: warning 宿主与插件须使用同一编译器与本头文件构建；跨标准库或编译器 ABI 属未定义行为。
 class YomkPluginInterface
 {
 public:
     virtual ~YomkPluginInterface() = default;
-    /* 实例名：全局唯一限定名 插件名.实例名（宿主创建实例时拼接指定，登记/查找/内省均基于它）；
-     * 返回指针须在实例存活期内有效 */
+
+    /**
+     * @brief Get the instance name
+     * @return Fully qualified instance name assigned by the host (pluginName.instanceName)
+     * @note Registration, lookup and introspection all key on this name;
+     *       the returned pointer must stay valid while the instance is alive.
+     */
+    // @zh: 获取实例名。
+    // @zh: return 宿主指定的限定名（插件名.实例名）。
+    // @zh: note 登记、查找与内省均以此名为键；返回指针须在实例存活期内有效。
     [[nodiscard]] virtual const char* instanceName() const = 0;
-    /* 实例类型 */
+
+    /**
+     * @brief Get the instance type
+     * @return Instance type string owned by the plugin
+     */
+    // @zh: 获取实例类型。
+    // @zh: return 插件提供的类型字符串。
     [[nodiscard]] virtual const char* instanceType() const = 0;
-    /* 用户数据，默认为空 */
-    void* userData = nullptr;
+
+    void* userData = nullptr;   // 用户数据，默认为空
 };
 
 /* ------------------------- 插件导出契约 ------------------------- */
 
-/*
- * 插件导出契约：以 extern "C" 导出三个固定符号（符号名宏与导出函数类型
- * 定义在内部头 src/YomkPluginLoader.h，仅宿主 dlsym 使用；插件侧无需直接使用）：
- *   const YomkPluginMeta *yomk_plugin_meta(); 返回静态常量指针
- *   YomkPluginInterface *yomk_plugin_create_instance(const char *instance_name, const char *instance_file);
- *   void yomk_plugin_delete_instance(YomkPluginInterface *instance);  内部 delete
- *
- * instance_name 为宿主指定的实例名，插件须以传入名称作为实例名。
- * instance_file 为透传参数（允许传空），插件系统不读不解析，由插件实现自行决定是否使用。
- * 所有导出函数在插件侧 try/catch，异常时 create 返回 nullptr。
+/**
+ * @brief Export the three fixed C symbols a plugin must provide
+ * @param MetaFn Function returning the static metadata pointer
+ * @param CreateFn Function creating an instance from (instance_name, instance_file)
+ * @param DeleteFn Function destroying an instance
+ * @note The host resolves the symbols below through dlsym; plugins only use this macro:
+ *       const YomkPluginMeta* yomk_plugin_meta();
+ *       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file);
+ *       void yomk_plugin_delete_instance(YomkPluginInterface* instance);
+ * @note instance_name is the fully qualified name chosen by the host and must be adopted as is;
+ *       instance_file is an opaque pass-through parameter (may be empty) that the framework never reads.
+ * @warning All three functions must be exception-safe; catch on the plugin side and
+ *          return nullptr from create on failure.
  */
-
-/* 插件侧一键导出宏：三个 C 函数即完整契约 */
+// @zh: 导出插件必须提供的三个固定 C 符号。
+// @zh: param MetaFn 返回静态元数据指针的函数。
+// @zh: param CreateFn 由（实例名，实例文件）创建实例的函数。
+// @zh: param DeleteFn 销毁实例的函数。
+// @zh: note 宿主经 dlsym 解析下述符号，插件只需使用本宏：
+// @zh:       const YomkPluginMeta* yomk_plugin_meta();
+// @zh:       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file);
+// @zh:       void yomk_plugin_delete_instance(YomkPluginInterface* instance);
+// @zh: note instance_name 为宿主指定的限定名，插件须原样采用；instance_file 为不透明透传参数
+// @zh:      （可为空），框架不读取不解析。
+// @zh: warning 三个函数均须异常安全：插件侧自行捕获，创建失败返回空指针。
 #define YOMKPLUGIN_EXPORT(MetaFn, CreateFn, DeleteFn)                                                                 \
     extern "C" const YomkPluginMeta* yomk_plugin_meta()                                                               \
     {                                                                                                                 \

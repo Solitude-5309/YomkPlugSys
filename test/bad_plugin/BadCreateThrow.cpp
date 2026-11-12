@@ -1,7 +1,5 @@
-/*
- * BadCreateThrow：meta 合法（load 成功注册），create_instance 抛异常。
- * 预期宿主 Loader try/catch 兜底判定："create exception: bad create boom"。
- */
+// BadCreateThrow：meta 合法（load 成功注册），create_instance 抛异常。
+// 预期宿主 Loader try/catch 兜底判定："create exception: bad create boom"。
 #include <yomk/plugin_system/YomkPluginInterface.h>
 
 #include <stdexcept>

@@ -1,7 +1,5 @@
-/*
- * BadNullName：meta.name = nullptr。
- * 预期宿主判定："invalid plugin meta"（复合条件子分支 !meta->name）。
- */
+// BadNullName：meta.name = nullptr。
+// 预期宿主判定："invalid plugin meta"（复合条件子分支 !meta->name）。
 #include <yomk/plugin_system/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {

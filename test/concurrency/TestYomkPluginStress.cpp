@@ -1,11 +1,9 @@
-/*
- * TestYomkPluginStress：压力测试（闭环8）
- * 规模放大下的稳定性与吞吐基线：200 条目大清单构建、250 轮 build/unload churn
- * （约 10.2 万次内部链路服务请求）、2000 对 create/destroy、64 个 4KB 名称大批量、
- * 短时并发 unload vs create durability 收敛。
- * 硬断言仅收敛性与终态；吞吐以 [PERF] 行打印作基线参考，不作断言。
- * 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
- */
+// TestYomkPluginStress：压力测试（闭环8）
+// 规模放大下的稳定性与吞吐基线：200 条目大清单构建、250 轮 build/unload churn
+// （约 10.2 万次内部链路服务请求）、2000 对 create/destroy、64 个 4KB 名称大批量、
+// 短时并发 unload vs create durability 收敛。
+// 硬断言仅收敛性与终态；吞吐以 [PERF] 行打印作基线参考，不作断言。
+// 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
 #include <yomk/plugin_system/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
@@ -58,13 +56,13 @@ static std::string respString(const yomk::payload::Response& r)
     return "";
 }
 
-/* 组合断言：eNo 且错误文案含子串 */
+// 组合断言：Failed 且错误文案含子串
 static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(!isOk(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
-/* 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径 */
+// 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径
 static std::string pluginLibPath()
 {
     const char* env = std::getenv("YOMK_TEST_PLUGIN");
@@ -75,27 +73,27 @@ static std::string pluginLibPath()
     return TEST_PLUGIN_BUILD_PATH;
 }
 
-/* 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录 */
+// 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录
 static std::filesystem::path fixtureDir()
 {
     namespace fs = std::filesystem;
     return fs::canonical("/proc/self/exe").parent_path() / "manifest";
 }
 
-/* 夹具：夹具目录内文件完整路径 */
+// 夹具：夹具目录内文件完整路径
 static std::string fp(const std::string& name)
 {
     return (fixtureDir() / name).string();
 }
 
-/* 夹具：写清单文件 */
+// 夹具：写清单文件
 static void writeManifest(const std::string& name, const std::string& content)
 {
     std::ofstream f(fp(name));
     f << content;
 }
 
-/* INFO_INSTANCES 解包；失败返回空表 */
+// infoInstances() 解包；失败返回空表
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
@@ -108,7 +106,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     return out;
 }
 
-/* INFO_PLUGINS 解包；失败返回空表 */
+// infoPlugins() 解包；失败返回空表
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
@@ -121,7 +119,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
     return out;
 }
 
-/* 白盒：Manager create_instance 直调 */
+// 白盒：Manager create_instance 直调
 static yomk::payload::Response createInst(const std::string& name)
 {
     yomk::payload::CreateReq req;
@@ -131,7 +129,7 @@ static yomk::payload::Response createInst(const std::string& name)
     return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
 }
 
-/* 白盒：Manager destroy_instance 直调 */
+// 白盒：Manager destroy_instance 直调
 static yomk::payload::Response destroyInst(const std::string& name)
 {
     yomk::payload::DestroyReq req;
@@ -140,7 +138,7 @@ static yomk::payload::Response destroyInst(const std::string& name)
     return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(req)).request();
 }
 
-/* S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层） */
+// S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层）
 static bool s4MsgAllowed(const yomk::payload::Response& r)
 {
     if (r.status == yomk::payload::ResStatus::Succeeded)
@@ -153,13 +151,13 @@ static bool s4MsgAllowed(const yomk::payload::Response& r)
            r.msg.find("plugin not loaded") != std::string::npos;
 }
 
-/* 毫秒计时（steady_clock） */
+// 毫秒计时（steady_clock）
 static int64_t elapsedMs(const std::chrono::steady_clock::time_point& start)
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
 }
 
-/* 速率换算（防除零） */
+// 速率换算（防除零）
 static int64_t perSec(int64_t count, int64_t ms)
 {
     return ms > 0 ? count * 1000 / ms : 0;
@@ -181,7 +179,7 @@ int main()
         std::ofstream f(fp("inst.txt"));
     }
 
-    /* ---------- S0 大清单基线：200 条目 ---------- */
+    // ---------- S0 大清单基线：200 条目 ----------
     {
         std::ostringstream oss;
         oss << "#! yomk_plugin_system\n";
@@ -198,7 +196,7 @@ int main()
     auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
-    /* ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ---------- */
+    // ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ----------
     const auto s1Start = std::chrono::steady_clock::now();
     int churnOk = 0;
     int spotBad = 0;
@@ -224,8 +222,8 @@ int main()
         isOk(yomk::plugin().unload("TestPlugin")) && listInstances().empty() && listPlugins().empty(),
         "S1 final unload leaves zero residue");
 
-    /* ---------- S2 2000 对 create/destroy ---------- */
-    /* 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留） */
+    // ---------- S2 2000 对 create/destroy ----------
+    // 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留）
     writeManifest("pre.yomk", "#! yomk_plugin_system\npre-i1@libTestPlugin.so@inst.txt\n");
     yomk::plugin().build(fp("pre.yomk"));
     destroyInst("pre-i1");
@@ -253,7 +251,7 @@ int main()
     check(s2CreateOk == 2000 && s2DestroyOk == 2000, "S2 2000 create/destroy pairs all ok");
     check(listInstances().empty(), "S2 instances empty after mass destroy");
 
-    /* ---------- S3 4KB 名称大批量：64 个精确 4096 字符 ---------- */
+    // ---------- S3 4KB 名称大批量：64 个精确 4096 字符 ----------
     const auto s3Start = std::chrono::steady_clock::now();
     const std::string base(4092, 'N');
     int s3CreateOk = 0;
@@ -281,7 +279,7 @@ int main()
     std::cout << "[PERF] S3 4KB-name batch: 64 instances in " << s3Ms << " ms" << std::endl;
     check(s3DestroyOk == 64 && listInstances().empty(), "S3 4KB-name instances destroyed to empty");
 
-    /* ---------- S4 durability churn：并发 create vs 强卸重试收敛 ---------- */
+    // ---------- S4 durability churn：并发 create vs 强卸重试收敛 ----------
     std::atomic<bool> s4Stop{false};
     std::atomic<int> s4Created{0};
     std::atomic<int> s4MsgBad{0};
@@ -310,15 +308,15 @@ int main()
         pool.emplace_back(
             [&]()
             {
-                /* 等待存在存活实例再强卸（上限 200ms），覆盖整组移出路径 */
+                // 等待存在存活实例再强卸（上限 200ms），覆盖整组移出路径
                 const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
                 while (s4Created.load() < 10 && std::chrono::steady_clock::now() < deadline)
                 {
                     std::this_thread::yield();
                 }
-                /* force_unload 锁外段窗口允许 create 继续登记（unload 以 instances still
-                 * alive 失败属合法竞争结果），重试强卸直至收敛：成功 UNLOAD 后 plugins 必空，
-                 * 此后 create 全被拒，终态必空 */
+                // force_unload 锁外段窗口允许 create 继续登记（unload 以 instances still
+                // alive 失败属合法竞争结果），重试强卸直至收敛：成功 UNLOAD 后 plugins 必空，
+                // 此后 create 全被拒，终态必空
                 for (int retry = 0; retry < 200; ++retry)
                 {
                     if (isOk(yomk::plugin().unload("TestPlugin")))
@@ -340,7 +338,7 @@ int main()
         "S4 terminal instances and plugins empty after retry convergence");
     expectNo(yomk::plugin().unload("TestPlugin"), "plugin not loaded: TestPlugin", "S4 double unload rejects");
 
-    /* ---------- 收尾终态零残留 ---------- */
+    // ---------- 收尾终态零残留 ----------
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty at end");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

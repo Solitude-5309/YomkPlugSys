@@ -1,10 +1,8 @@
-/*
- * TestYomkPluginBadPlugin：坏插件失败路径测试（闭环4）
- * 覆盖宿主加载/创建全部失败分支：缺符号、元数据三类（null meta/null name/空名）、
- * abi 不匹配、插件名含 '.'、垃圾 so（dlopen 失败）、create 返回 nullptr、create 抛异常；
- * 以及坏 create 后插件仍注册的内省侧效、部分成功后前序条目保留。
- * 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
- */
+// TestYomkPluginBadPlugin：坏插件失败路径测试（闭环4）
+// 覆盖宿主加载/创建全部失败分支：缺符号、元数据三类（null meta/null name/空名）、
+// abi 不匹配、插件名含 '.'、垃圾 so（dlopen 失败）、create 返回 nullptr、create 抛异常；
+// 以及坏 create 后插件仍注册的内省侧效、部分成功后前序条目保留。
+// 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
 #include <yomk/plugin_system/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
@@ -44,33 +42,33 @@ static bool isNo(const yomk::payload::Response& r)
     return r.status == yomk::payload::ResStatus::Failed;
 }
 
-/* 组合断言：eNo 且错误文案含子串 */
+// 组合断言：Failed 且错误文案含子串
 static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
-/* 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录 */
+// 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录
 static std::filesystem::path fixtureDir()
 {
     namespace fs = std::filesystem;
     return fs::canonical("/proc/self/exe").parent_path() / "manifest";
 }
 
-/* 夹具：夹具目录内文件完整路径 */
+// 夹具：夹具目录内文件完整路径
 static std::string fp(const std::string& name)
 {
     return (fixtureDir() / name).string();
 }
 
-/* 夹具：写清单文件 */
+// 夹具：写清单文件
 static void writeManifest(const std::string& name, const std::string& content)
 {
     std::ofstream f(fp(name));
     f << content;
 }
 
-/* 夹具：符号链接插件 so 到夹具目录（清单 lib 段用相对路径引用） */
+// 夹具：符号链接插件 so 到夹具目录（清单 lib 段用相对路径引用）
 static void linkLib(const char* compileTimePath, const std::string& linkName)
 {
     namespace fs = std::filesystem;
@@ -96,7 +94,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
     return out;
 }
 
-/* 最近构建信息（对账 recordBuild 侧效） */
+// 最近构建信息（对账 recordBuild 侧效）
 static yomk::payload::BuilderInfo builderInfo()
 {
     yomk::payload::Response resp = yomk::plugin().infoBuilder();
@@ -132,7 +130,7 @@ int main()
     linkLib(BAD_CREATE_NULL_PATH, "libBadCreateNull.so");
     linkLib(BAD_CREATE_THROW_PATH, "libBadCreateThrow.so");
     {
-        /* 垃圾 so：非 ELF 文本文件，零编译覆盖 dlopen 失败分支 */
+        // 垃圾 so：非 ELF 文本文件，零编译覆盖 dlopen 失败分支
         std::ofstream f(fp("garbage.so"));
         f << "this is not an elf file";
     }
@@ -140,7 +138,7 @@ int main()
         std::ofstream f(fp("inst.txt"));
     }
 
-    /* ---------- 加载失败分支（build 包装为 load failed） ---------- */
+    // ---------- 加载失败分支（build 包装为 load failed） ----------
     writeManifest("b1.yomk", "#! yomk_plugin_system\nx1@libBadNoSymbol.so@inst.txt\n");
     expectNo(yomk::plugin().build(fp("b1.yomk")), "manifest line 2: load failed: missing plugin export symbols",
         "B1 missing export symbols rejects");
@@ -166,7 +164,7 @@ int main()
     expectNo(yomk::plugin().build(fp("b6.yomk")), "manifest line 2: load failed: dlopen failed:",
         "B6 garbage so dlopen rejects");
 
-    /* ---------- 创建失败分支（build 包装为 create failed） ---------- */
+    // ---------- 创建失败分支（build 包装为 create failed） ----------
     writeManifest("b7.yomk", "#! yomk_plugin_system\nx1@libBadCreateNull.so@inst.txt\n");
     expectNo(yomk::plugin().build(fp("b7.yomk")), "manifest line 2: create failed: create instance failed: BadCreateNull",
         "B7 create returns nullptr rejects");
@@ -185,7 +183,7 @@ int main()
     expectNo(yomk::plugin().build(fp("b8.yomk")), "manifest line 2: create failed: create exception: bad create boom",
         "B10 create exception caught and reported");
 
-    /* ---------- 部分成功：前序条目保留、失败行号短路 ---------- */
+    // ---------- 部分成功：前序条目保留、失败行号短路 ----------
     writeManifest("b9.yomk", "#! yomk_plugin_system\ntp1@libTestPlugin.so@inst.txt\nx1@libBadNoSymbol.so@inst.txt\n");
     expectNo(yomk::plugin().build(fp("b9.yomk")), "manifest line 3: load failed: missing plugin export symbols",
         "B11 build stops at failed line 3");
@@ -195,14 +193,14 @@ int main()
         b12Info.manifest.end();
     check(b12Kept, "B12 builder info keeps earlier successful entry lines");
 
-    /* ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ---------- */
+    // ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ----------
     writeManifest("b13.yomk", "#! yomk_plugin_system\nbd1@libBadDotName.so@inst.txt\n");
     expectNo(
         yomk::plugin().build(fp("b13.yomk")),
         "load failed: plugin name must not contain '.'",
         "B13 dot in plugin name rejects");
 
-    /* ---------- 清理现场 ---------- */
+    // ---------- 清理现场 ----------
     check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
     check(isOk(yomk::plugin().unload("BadCreateNull")), "cleanup: force_unload BadCreateNull");
     check(isOk(yomk::plugin().unload("BadCreateThrow")), "cleanup: force_unload BadCreateThrow");

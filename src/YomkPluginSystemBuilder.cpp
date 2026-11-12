@@ -10,7 +10,6 @@
 #include "YomkPluginLoader.h"
 #include "YomkPluginManager.h"
 
-/* 去除首尾空白 */
 static std::string trim(const std::string& s)
 {
     size_t begin = s.find_first_not_of(" \t\r\n");
@@ -29,7 +28,7 @@ YomkPluginSystemBuilder::YomkPluginSystemBuilder(YomkServer* server) : YomkServi
 
 int YomkPluginSystemBuilder::init()
 {
-    /* 内部机制/数据服务由门面接管生命周期：先注册 Loader，再注册 Manager */
+    // 内部服务由本服务接管生命周期：先注册 Loader，再注册 Manager（顺序即依赖次序）
     if (yomk::server().srv<YomkPluginLoader>().create() != 0)
     {
         yomk::log().tag("YomkPluginSystemBuilder").error("init: register YomkPluginLoader failed");
@@ -55,11 +54,10 @@ int YomkPluginSystemBuilder::init()
 
 void YomkPluginSystemBuilder::deinit()
 {
-    /* 逆序注销 init 注册的内部服务。
-     * 须直调 server 接口而非 yomk::server() 域入口：进程析构兜底走 shutdown()
-     * （先清空服务表再锁外逐个 deinit），此时内部服务已被清出表（delService 返
-     * 回 -1 忽略即可）；若经域入口，其快照会持有正在 shutdown 的 server，返回时
-     * 触发二次释放导致段错误。显式注销 Builder（服务仍在表）时二者均正常清理 */
+    // 逆序注销 init 注册的内部服务。
+    // 必须直调注入的 server 指针：进程退出兜底走 shutdown（先清表再锁外逐个 deinit），
+    // 此时内部服务已不在表内，delService 返回 -1 忽略即可；若经 yomk::server() 域入口，
+    // 其快照会持有正在 shutdown 的 server 并在返回时二次释放（YomkServer 已知缺陷）
     if (m_server)
     {
         m_server->delService("/YomkPluginManager");
@@ -84,8 +82,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
     }
     workflowDir = manifest.parent_path().string();
 
-    /* 首行格式标识：.yomk
-     * 后缀文件因用处不同格式各异，以标识区分；插件系统清单必须以此开头 */
+    // 首行格式标识：.yomk 后缀文件按用处格式各异，以标识区分；插件系统清单必须以此开头
     static const char* kFormatMarker = "#! yomk_plugin_system";
     std::string firstLine;
     if (!std::getline(in, firstLine) || trim(firstLine) != kFormatMarker)
@@ -95,13 +92,13 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
             "manifest line 1: format marker not found (expect '" + std::string(kFormatMarker) + "')"};
     }
 
-    /* 首行已消费为格式标识，条目行号从 2 起 */
+    // 首行已消费为格式标识，条目行号从 2 起
     int lineNo = 1;
     std::string line;
     while (std::getline(in, line))
     {
         ++lineNo;
-        /* 去除 # 注释：整行注释与行内注释统一截断 */
+        // 整行注释与行内注释统一按首个 # 截断
         size_t hashPos = line.find('#');
         if (hashPos != std::string::npos)
         {
@@ -112,8 +109,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
         {
             continue;
         }
-        /* 按 @ 切分，必须恰好三段：实例名@动态库相对路径@实例配置文件相对路径
-         */
+        // 按 @ 切分，必须恰好三段：实例名@动态库相对路径@实例配置文件相对路径
         size_t p1 = line.find('@');
         size_t p2 = (p1 == std::string::npos) ? std::string::npos : line.find('@', p1 + 1);
         size_t p3 = (p2 == std::string::npos) ? std::string::npos : line.find('@', p2 + 1);
@@ -132,7 +128,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
         {
             return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": empty segment"};
         }
-        /* 格式契约为相对路径：路径段拒绝绝对路径 */
+        // 格式契约为相对路径：路径段拒绝绝对路径
         if (entry.libRelPath[0] == '/')
         {
             return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": lib path must be relative"};
@@ -169,7 +165,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
         }
 
         namespace fs = std::filesystem;
-        /* 预查插件表：同一 so 已加载时幂等跳过 */
+        // 预查插件表：同一 so 已加载时幂等跳过
         std::map<std::string, std::string> pathToPlugin;
         resp = request("/YomkPluginManager/list", nullptr);
         if (resp.status == yomk::payload::ResStatus::Succeeded)
@@ -212,7 +208,6 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, msg};
             }
 
-            /* 加载插件（已加载则复用，幂等） */
             std::string pluginName;
             auto it = pathToPlugin.find(soPath);
             if (it != pathToPlugin.end())
@@ -242,7 +237,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
             }
             loadedPlugins.insert(pluginName);
 
-            /* 创建实例：实例文件路径作为 instanceFile 透传，不读取内容 */
+            // 实例文件路径作为 instanceFile 透传，不读取内容
             yomk::payload::CreateReq createReq;
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
@@ -274,8 +269,8 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
     }
 }
 
-/* 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源
- * project(VERSION)）， 经 yomk::plugin().version() 对外 */
+// 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源 project(VERSION)），
+// 经 yomk::plugin().version() 对外
 yomk::payload::Response YomkPluginSystemBuilder::version(YomkMsgPtr pkg)
 {
     try
@@ -297,7 +292,6 @@ yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
 {
     try
     {
-        /* BuilderInfo 快照：最近一次构建的清单条目与状态 */
         yomk::payload::BuilderInfo info;
         std::lock_guard<std::mutex> lock(m_mutex);
         info.manifest = m_lastEntries;
@@ -317,7 +311,7 @@ yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
     }
 }
 
-/* 代理接口：纯透传入参包给 Manager，参数校验与响应语义归 Manager */
+// 代理接口：透传入参包给 Manager，参数校验与响应语义归 Manager
 yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
 {
     try

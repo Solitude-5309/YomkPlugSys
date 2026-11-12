@@ -1,7 +1,5 @@
-/*
- * BadAbi：abi_version 与宿主不匹配（宿主宏 +1）。
- * 预期宿主判定："abi version mismatch: plugin <N+1>, host <N>"。
- */
+// BadAbi：abi_version 与宿主不匹配（宿主宏 +1）。
+// 预期宿主判定："abi version mismatch: plugin <N+1>, host <N>"。
 #include <yomk/plugin_system/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {

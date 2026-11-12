@@ -2,71 +2,88 @@
 #include <string>
 #include <vector>
 
-/*
- * YomkPluginSystem 扩展专属载荷（namespace yomk::payload，与 SDK 各
- * Yomk{Module}Payload.h 同一设计）：数据结构体承载业务字段（服务端与用户共用），
- * 对应消息包目录见 YomkPluginMsg.h。
- */
+// YomkPluginSystem 扩展专属载荷（namespace yomk::payload）.
+// 设计取舍: 数据与消息分离——结构体只承载业务字段,同名的消息包类（见 YomkPluginMsg.h）
+// 负责跨请求传递;服务端与调用方共用同一结构体定义,字段语义即请求契约.
+
 namespace yomk::payload
 {
+/**
+ * @brief Plugin library load request
+ */
+// @zh: 插件库加载请求。
 struct PluginPath
 {
-    /* so 文件路径 */
-    std::string path;
+    std::string path;   // 动态库文件路径
 };
 
+/**
+ * @brief Plugin metadata as registered by the manager
+ */
+// @zh: Manager 登记后的插件元数据。
 struct PluginMeta
 {
-    int abi_version = 0;
-    std::string name;
-    std::string type;
-    std::string version;
-    std::string author;
-    std::string description;
-    /* so 文件路径（Manager 登记时补充） */
-    std::string path;
+    int abi_version = 0;   // ABI 契约版本
+    std::string name;      // 插件名（全局唯一，不得含 '.'）
+    std::string type;      // 插件类型
+    std::string version;   // 插件版本
+    std::string author;    // 作者
+    std::string description;   // 说明
+    std::string path;          // 动态库文件路径（Manager 登记时补充）
 };
 
+/**
+ * @brief Instance creation request
+ */
+// @zh: 实例创建请求。
 struct CreateReq
 {
-    std::string pluginName;
-    /* 调用方指定的实例名（裸名，同一插件内唯一）；Manager 创建时拼接限定名 插件名.实例名 传给插件 */
+    std::string pluginName;   // 插件名
+    // 调用方指定的实例裸名（同一插件内唯一）；Manager 拼接限定名 插件名.实例名 后传给插件
     std::string instanceName;
-    /* 透传参数：允许为空，插件系统不读不解析 */
-    std::string instanceFile;
+    std::string instanceFile;   // 不透明透传参数：允许为空，插件系统不读取不解析
 };
 
+/**
+ * @brief Instance destruction request
+ */
+// @zh: 实例销毁请求。
 struct DestroyReq
 {
-    std::string pluginName;
-    std::string instanceName;
+    std::string pluginName;   // 插件名
+    std::string instanceName;   // 实例裸名（同一插件内唯一）
 };
 
+/**
+ * @brief Manifest build request
+ */
+// @zh: 清单构建请求。
 struct BuildReq
 {
-    /* manifest.yomk 清单文件路径 */
-    std::string workflowPath;
+    std::string workflowPath;   // manifest.yomk 清单文件路径
 };
 
+/**
+ * @brief Instance summary used by introspection
+ */
+// @zh: 内省用实例摘要。
 struct InstanceInfo
 {
-    std::string pluginName;
-    /* 全局唯一限定名：插件名.实例名 */
-    std::string instanceName;
-    std::string instanceType;
+    std::string pluginName;     // 所属插件名
+    std::string instanceName;   // 限定名实例名（插件名.实例名）
+    std::string instanceType;   // 实例类型
 };
 
+/**
+ * @brief Latest build state recorded by the builder
+ */
+// @zh: Builder 记录的最新一次构建状态。
 struct BuilderInfo
 {
-    /* 最近构建的清单条目行（实例名@动态库相对路径@实例文件相对路径） */
-    std::vector<std::string> manifest;
-    /* 最近构建的清单路径（空 = 尚未构建） */
-    std::string path;
-    /* 最近构建结果："ok" 或失败原因（空 = 尚未构建） */
-    std::string result;
-    /* 最近构建加载的插件数 */
-    int plugins = 0;
-    /* 最近构建创建的实例数 */
-    int instances = 0;
+    std::vector<std::string> manifest;   // 最近构建的清单条目行（实例名@动态库相对路径@实例文件相对路径）
+    std::string path;                    // 最近构建的清单路径（空 = 尚未构建）
+    std::string result;                  // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
+    int plugins = 0;                     // 最近构建加载的插件数
+    int instances = 0;                   // 最近构建创建的实例数
 };
 }  // namespace yomk::payload

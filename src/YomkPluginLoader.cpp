@@ -60,7 +60,7 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
         }
         if (meta->abi_version != YOMKPLUGIN_ABI_VERSION)
         {
-            /* meta 指向插件 so 内静态存储，必须先取值再 dlclose，否则悬垂解引用 */
+            // meta 指向插件 so 内静态存储：必须先取值再 dlclose，否则悬垂解引用
             const int pluginAbi = meta->abi_version;
             dlclose(handle);
             return {
@@ -115,17 +115,16 @@ yomk::payload::Response YomkPluginLoader::unload(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
             }
             purgeDead(pluginName);
+            // 前置条件：存活表为空，否则拒绝卸载
             if (aliveCount(pluginName) > 0)
             {
-                /* 引用计数保护：仍有存活实例时拒绝卸载 */
                 return {yomk::payload::ResStatus::Failed, "instances still alive: " + pluginName};
             }
             handle = it->second.handle;
             m_plugins.erase(it);
             m_alive.erase(pluginName);
-            /* dlclose 必须持锁：与 create 持锁的插件工厂调用、meta/info 系列持锁的 metaFn
-             * 调用互斥，防止插件代码在 unmap 之后被执行（段错误）。dlclose 毫秒级且卸载
-             * 低频，锁内执行可接受 */
+            // dlclose 必须持锁：与 create 持锁的工厂调用、meta 持锁的 metaFn 调用互斥，
+            // 防止插件代码在 unmap 之后被执行。dlclose 毫秒级且卸载低频，锁内可接受
             dlclose(handle);
         }
         yomk::log().tag("YomkPluginLoader").info("unload: ", pluginName);
@@ -201,15 +200,14 @@ yomk::payload::Response YomkPluginLoader::createInstance(YomkMsgPtr pkg)
             {
                 return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + req->d.pluginName};
             }
-            /* 插件工厂必须持锁调用：与 unload 锁内 dlclose 互斥，否则锁外工厂调用
-             * 可能落在已 unmap 的插件代码上（段错误）。
-             * 契约：createFn 为纯函数、不得回调宿主服务，锁内调用无死锁 */
+            // 工厂必须持锁调用：与 unload 锁内 dlclose 互斥，否则可能落到已 unmap 的代码上。
+            // 契约：createFn 为纯函数、不得回调宿主服务，锁内调用无死锁
             YomkPluginInterface* raw = it->second.createFn(req->d.instanceName.c_str(), req->d.instanceFile.c_str());
             if (!raw)
             {
                 return {yomk::payload::ResStatus::Failed, "create instance failed: " + req->d.pluginName};
             }
-            /* shared_ptr 自定义 deleter 绑定该库的 delete_instance；登记 alive 后再返回 */
+            // 自定义 deleter 绑定该库的 delete_instance：实例引用归零即销毁；登记存活表后再返回
             inst.reset(raw, it->second.deleteFn);
             m_alive[req->d.pluginName].push_back(inst);
         }
@@ -236,7 +234,7 @@ yomk::payload::Response YomkPluginLoader::deleteInstance(YomkMsgPtr pkg)
                     std::string("invalid request msg type: expect ") + yomk::msgs::PluginInstance::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
-        /* shared_ptr 拷贝随响应包销毁时 reset，自动触发 delete_instance */
+        // 入参拷贝随请求结束释放；实例由 Manager 持有，本接口只回收存活表中的失效项
         std::lock_guard<std::mutex> lock(m_mutex);
         for (auto& kv : m_alive)
         {

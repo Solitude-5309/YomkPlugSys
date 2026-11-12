@@ -1,7 +1,5 @@
-/*
- * BadNullMeta：导出完整三符号，但 yomk_plugin_meta 返回 nullptr。
- * 预期宿主判定："invalid plugin meta"（复合条件子分支 !meta）。
- */
+// BadNullMeta：导出完整三符号，但 yomk_plugin_meta 返回 nullptr。
+// 预期宿主判定："invalid plugin meta"（复合条件子分支 !meta）。
 #include <yomk/plugin_system/YomkPluginInterface.h>
 
 static YomkPluginInterface* createNull(const char*, const char*)

@@ -1,7 +1,5 @@
-/*
- * BadDotName：meta 合法但插件名含 '.'。
- * 预期 Manager load 拒绝："plugin name must not contain '.'"（限定名拼接唯一性防护）。
- */
+// BadDotName：meta 合法但插件名含 '.'。
+// 预期 Manager load 拒绝："plugin name must not contain '.'"（限定名拼接唯一性防护）。
 #include <yomk/plugin_system/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {

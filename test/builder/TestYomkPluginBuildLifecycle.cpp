@@ -1,10 +1,8 @@
-/*
- * TestYomkPluginBuildLifecycle：构建生命周期端到端测试（闭环3）
- * 覆盖：合法构建与内省基线（实例元数据/instance_file 透传观测/插件 meta）、
- * so 复用幂等与实例重名、destroy 重建（白盒 URL）、try_unload 拒绝与放行、
- * unload 强卸含存活实例、卸载后重载、缺文件行号错误。
- * 夹具模式同 TestYomkPluginManifest：<测试可执行目录>/manifest，与工作目录无关。
- */
+// TestYomkPluginBuildLifecycle：构建生命周期端到端测试（闭环3）
+// 覆盖：合法构建与内省基线（实例元数据/instance_file 透传观测/插件 meta）、
+// so 复用幂等与实例重名、destroy 重建（白盒 URL）、try_unload 拒绝与放行、
+// unload 强卸含存活实例、卸载后重载、缺文件行号错误。
+// 夹具模式同 TestYomkPluginManifest：<测试可执行目录>/manifest，与工作目录无关。
 #include <yomk/plugin_system/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
@@ -56,19 +54,19 @@ static std::string respString(const yomk::payload::Response& r)
     return "";
 }
 
-/* 组合断言：eNo 且错误文案含子串 */
+// 组合断言：Failed 且错误文案含子串
 static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
-/* 组合断言：eOk 且汇总串精确匹配 */
+// 组合断言：Succeeded 且汇总串精确匹配
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
     check(isOk(r) && respString(r) == summary, desc + " (" + summary + ")");
 }
 
-/* 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径 */
+// 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径
 static std::string pluginLibPath()
 {
     const char* env = std::getenv("YOMK_TEST_PLUGIN");
@@ -79,27 +77,27 @@ static std::string pluginLibPath()
     return TEST_PLUGIN_BUILD_PATH;
 }
 
-/* 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录 */
+// 夹具根目录：<测试可执行目录>/manifest，跟随测试程序而非当前工作目录
 static std::filesystem::path fixtureDir()
 {
     namespace fs = std::filesystem;
     return fs::canonical("/proc/self/exe").parent_path() / "manifest";
 }
 
-/* 夹具：夹具目录内文件完整路径 */
+// 夹具：夹具目录内文件完整路径
 static std::string fp(const std::string& name)
 {
     return (fixtureDir() / name).string();
 }
 
-/* 夹具：写清单文件 */
+// 夹具：写清单文件
 static void writeManifest(const std::string& name, const std::string& content)
 {
     std::ofstream f(fp(name));
     f << content;
 }
 
-/* INFO_INSTANCES 解包；失败返回空表 */
+// infoInstances() 解包；失败返回空表
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
@@ -112,7 +110,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     return out;
 }
 
-/* INFO_PLUGINS 解包；失败返回空表 */
+// infoPlugins() 解包；失败返回空表
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
@@ -141,7 +139,7 @@ int main()
         std::ofstream f(fp("inst.txt"));
     }
 
-    /* ---------- S1 合法构建与内省基线 ---------- */
+    // ---------- S1 合法构建与内省基线 ----------
     writeManifest("s1.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().build(fp("s1.yomk")), "plugins:1 instances:1", "S1 build single entry ok");
 
@@ -171,7 +169,7 @@ int main()
     }
     check(filtered, "S1 proxy /plugins with filter hit");
 
-    /* ---------- S2 so 复用幂等与实例重名 ---------- */
+    // ---------- S2 so 复用幂等与实例重名 ----------
     writeManifest("s2.yomk", "#! yomk_plugin_system\ns2-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().build(fp("s2.yomk")), "plugins:1 instances:1", "S2 same lib reused, not reloaded");
     writeManifest("s2dup.yomk", "#! yomk_plugin_system\ns1-i1@libTestPlugin.so@inst.txt\n");
@@ -181,7 +179,7 @@ int main()
         "S2 duplicate instance name through build");
     check(listInstances().size() == 2, "S2 two instances alive after dup-build failure");
 
-    /* ---------- S3 create 重名与 destroy 重建（白盒 URL） ---------- */
+    // ---------- S3 create 重名与 destroy 重建（白盒 URL） ----------
     yomk::payload::CreateReq dupReq;
     dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
@@ -213,7 +211,7 @@ int main()
         "S3 recreate after destroy ok");
     check(listInstances().size() == 1, "S3 instance back after recreate");
 
-    /* ---------- S4 try_unload 拒绝与放行 ---------- */
+    // ---------- S4 try_unload 拒绝与放行 ----------
     expectNo(
         yomk::plugin().tryUnload("TestPlugin"),
         "instances still alive: TestPlugin",
@@ -226,20 +224,20 @@ int main()
     check(listPlugins().empty(), "S4 plugins empty after try_unload");
     expectNo(yomk::plugin().tryUnload("NoSuchLib"), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
-    /* ---------- S5 unload 强卸含存活实例 ---------- */
+    // ---------- S5 unload 强卸含存活实例 ----------
     writeManifest("s5.yomk", "#! yomk_plugin_system\ns5-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().build(fp("s5.yomk")), "plugins:1 instances:1", "S5 rebuild for force unload");
     check(isOk(yomk::plugin().unload("TestPlugin")), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
     expectNo(yomk::plugin().unload("NoSuchLib"), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
 
-    /* ---------- S6 卸载后重载 ---------- */
+    // ---------- S6 卸载后重载 ----------
     writeManifest("s6.yomk", "#! yomk_plugin_system\ns6-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().build(fp("s6.yomk")), "plugins:1 instances:1", "S6 reload after unload ok");
     insts = listInstances();
     check(insts.size() == 1 && insts[0].instanceName == "TestPlugin.s6-i1", "S6 instance back after reload");
 
-    /* ---------- S7 缺文件行号错误 ---------- */
+    // ---------- S7 缺文件行号错误 ----------
     writeManifest("s7a.yomk", "#! yomk_plugin_system\ns7-i1@no_such.so@inst.txt\n");
     expectNo(yomk::plugin().build(fp("s7a.yomk")), "manifest line 2: plugin lib not found", "S7 missing lib path error");
     writeManifest("s7b.yomk", "#! yomk_plugin_system\ns7-i2@libTestPlugin.so@missing_inst.txt\n");
@@ -248,7 +246,7 @@ int main()
     writeManifest("s7c.yomk", "#! yomk_plugin_system\ns7-i3@no_such.so@missing_inst.txt\n");
     expectNo(yomk::plugin().build(fp("s7c.yomk")), "instance file not found", "S7 instance file checked before lib");
 
-    /* ---------- 清理现场 ---------- */
+    // ---------- 清理现场 ----------
     check(isOk(yomk::plugin().unload("TestPlugin")), "cleanup: force_unload TestPlugin");
     check(listInstances().empty(), "cleanup: instances empty after unload");
 

@@ -1,8 +1,6 @@
-/*
- * SecondPlugin：第二个可加载示例插件（仅测试用，不安装）
- * 与 TestPlugin 同构、meta 名不同，覆盖跨插件同名实例场景：
- * 实例规范名为宿主拼接的限定名（插件名.实例名，全局唯一），跨插件允许同名裸名。
- */
+// SecondPlugin：第二个可加载示例插件（仅测试用，不安装）
+// 与 TestPlugin 同构、meta 名不同，覆盖跨插件同名实例场景：
+// 实例规范名为宿主拼接的限定名（插件名.实例名，全局唯一），跨插件允许同名裸名。
 #include <yomk/plugin_system/YomkPluginApi.h>
 
 #include <string>
@@ -17,9 +15,9 @@ public:
     virtual const char* instanceType() const override { return "demo"; }
 
 private:
-    /* 宿主指定的实例限定名 */
+    // 宿主指定的实例限定名
     std::string m_name;
-    /* 透传实例文件，插件自行决定是否使用 */
+    // 透传实例文件，插件自行决定是否使用
     std::string m_instanceFile;
 };
 
@@ -37,7 +35,7 @@ static YomkPluginInterface* createFn(const char* instance_name, const char* inst
     {
         if (!instance_name || !*instance_name)
         {
-            /* 实例名由宿主指定，必填 */
+            // 实例名由宿主指定，必填
             return nullptr;
         }
         return new SecondInstance(instance_name, instance_file ? instance_file : "");

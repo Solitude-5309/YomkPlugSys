@@ -36,7 +36,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
 
-        /* 锁外请求 Loader：dlopen + 符号解析 + abi/重名校验 + 登记句柄 */
+        // 跨服务请求一律在锁外：避免本服务锁与 Loader 锁形成嵌套
         yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::PluginPath::shared(data->d));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
@@ -49,7 +49,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         }
         const std::string pluginName = pluginNamePkg->d;
 
-        /* 锁外请求 meta（Loader 不缓存，实时调 meta 导出函数） */
+        // meta 由 Loader 实时调用导出函数，不缓存
         resp = request("/YomkPluginLoader/meta", yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
@@ -63,7 +63,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         }
         if (metaPkg->d.name.find('.') != std::string::npos)
         {
-            /* 限定名 = 插件名.实例名，插件名含 '.' 会破坏限定名全局唯一性 */
+            // 限定名 = 插件名.实例名；插件名含 '.' 会破坏限定名的全局唯一性
             request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
             return {yomk::payload::ResStatus::Failed, "plugin name must not contain '.'"};
         }
@@ -79,11 +79,11 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_plugins.count(pluginName))
         {
-            /* 并发竞争兜底：正常路径 Loader 已拒绝重名 */
+            // 并发竞争兜底：正常路径 Loader 已拒绝重名
             return {yomk::payload::ResStatus::Failed, "plugin already loaded: " + pluginName};
         }
         m_plugins[pluginName] = rec;
-        /* 保证实例组存在，不变量：实例表外层 pluginName 必在插件表中 */
+        // 不变量：实例表外层 pluginName 必在插件表中
         m_instances[pluginName];
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(pluginName)};
     }
@@ -116,7 +116,7 @@ yomk::payload::Response YomkPluginManager::tryUnload(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
             }
         }
-        /* 尝试卸载：委托 Loader /unload 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者） */
+        // 尝试卸载：委托 Loader /unload 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者）
         yomk::payload::Response resp = request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
@@ -164,7 +164,7 @@ yomk::payload::Response YomkPluginManager::forceUnload(YomkMsgPtr pkg)
                 m_instances.erase(it);
             }
         }
-        /* 锁外析构全部实例（触发 delete_instance，代码在 so 中，必须先于 dlclose） */
+        // 锁外析构全部实例（触发 delete_instance，其代码在 so 中，必须先于 dlclose）
         group.clear();
 
         yomk::payload::Response resp = request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
@@ -215,7 +215,7 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
             }
         }
 
-        /* 锁外请求 Loader 创建实例：传限定名（插件名.实例名，全局唯一），插件以此作为实例身份 */
+        // 传限定名（插件名.实例名，全局唯一），插件以此作为实例身份
         yomk::payload::CreateReq loaderReq = req->d;
         loaderReq.instanceName = qualifiedName(req->d.pluginName, req->d.instanceName);
         yomk::payload::Response resp = request("/YomkPluginLoader/create", yomk::msgs::CreateReq::shared(loaderReq));
@@ -237,12 +237,12 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
         std::lock_guard<std::mutex> lock(m_mutex);
         if (!m_plugins.count(req->d.pluginName))
         {
-            /* 创建期间插件被卸载，inst 随响应销毁 */
+            // 创建期间插件被卸载，inst 随响应销毁
             return {yomk::payload::ResStatus::Failed, "plugin unloaded during create: " + req->d.pluginName};
         }
         if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceFile}).second)
         {
-            /* 并发兜底：创建期间同名实例已被登记 */
+            // 并发兜底：创建期间同名实例已被登记
             return {yomk::payload::ResStatus::Failed, "duplicate instance name: " + req->d.instanceName};
         }
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(req->d.instanceName)};
@@ -286,7 +286,7 @@ yomk::payload::Response YomkPluginManager::destroyInstance(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "instance not found: " + req->d.pluginName + "/" + req->d.instanceName};
         }
-        /* 锁外 reset，自动触发 delete_instance */
+        // 锁外 reset，触发 delete_instance
         inst.reset();
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared("ok")};
     }
@@ -304,7 +304,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 {
     try
     {
-        /* 可选入参：指定 pluginName 只返回单个插件 */
+        // 可选入参：指定 pluginName 时只返回该插件
         std::string filter;
         if (pkg)
         {
@@ -349,7 +349,6 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
     }
 }
 
-/* 按实例名反查所属插件元数据：遍历实例表二级 map 定位插件，再取插件表记录 */
 yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
 {
     try
@@ -362,7 +361,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
         std::lock_guard<std::mutex> lock(m_mutex);
-        /* 输入为限定名（插件名.实例名）：按插件组前缀匹配 + 组内裸名查找，不做字符串反解析 */
+        // 输入为限定名：按插件组前缀 + 组内裸名查找，不做字符串反解析
         std::string pluginName;
         for (const auto& kv : m_instances)
         {
@@ -406,7 +405,6 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
     }
 }
 
-/* 按实例名返回创建时透传的实例文件内容（未知实例/文件不可读拒绝） */
 yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
 {
     try
@@ -419,7 +417,7 @@ yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
         std::lock_guard<std::mutex> lock(m_mutex);
-        /* 输入为限定名（插件名.实例名）：按插件组前缀匹配 + 组内裸名查找 */
+        // 输入为限定名：按插件组前缀 + 组内裸名查找
         bool found = false;
         std::string instanceFile;
         for (const auto& kv : m_instances)
@@ -467,7 +465,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
 {
     try
     {
-        /* 可选入参：指定 pluginName 只返回该插件的实例 */
+        // 可选入参：指定 pluginName 时只返回该插件的实例
         std::string filter;
         if (pkg)
         {

@@ -1,7 +1,4 @@
-/*
- * WorkspaceService：workflow 示例插件（工作空间）
- * 演示 Builder 按清单加载插件并创建实例，实例文件透传给插件。
- */
+// WorkspaceService：workflow 示例插件，演示宿主按清单加载并创建实例、实例文件透传给插件
 #include <yomk/plugin_system/YomkPluginApi.h>
 
 #include <string>
@@ -18,10 +15,8 @@ public:
     virtual const char* instanceType() const override { return "workflow"; }
 
 private:
-    /* 宿主指定的实例限定名 */
-    std::string m_name;
-    /* 透传实例文件，插件自行决定是否使用 */
-    std::string m_instanceFile;
+    std::string m_name;          // 限定名由宿主指定
+    std::string m_instanceFile;  // 不透明透传，插件自行决定是否使用
 };
 
 static const YomkPluginMeta g_meta = {
@@ -43,8 +38,7 @@ static YomkPluginInterface* createFn(const char* instance_name, const char* inst
     {
         if (!instance_name || !*instance_name)
         {
-            /* 实例名由宿主指定，必填 */
-            return nullptr;
+            return nullptr;  // 实例名必填：宿主按清单条目传入
         }
         return new WorkspaceServiceInstance(instance_name, instance_file ? instance_file : "");
     }

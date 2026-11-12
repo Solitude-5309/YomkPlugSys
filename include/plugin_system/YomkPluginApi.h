@@ -1,58 +1,55 @@
 #pragma once
 #include <string_view>
 
-/*
- * YomkPluginSystem 模块 API 头（四件套之 Api，与 SDK 各 Yomk{Module}Api.h 同一
- * 链式域入口设计）：插件开发者与宿主用户均只需
- *   #include <yomk/plugin_system/YomkPluginApi.h>
- * 即可获得框架 API、ABI 契约、模块载荷、消息数据类、URL 常量、服务声明与
- * yomk::plugin() 域入口。
- *
- * 设计约定（同 SDK 各域）：
- * 1. Api 头是模块自己的 API，只写本模块业务的终结方法（yomk::plugin()，
- *    屏蔽裸 URL、不另造请求通道），不重复封装通用请求链（url/msg/request 归
- *    yomk::server()）；也可不经域入口直接 yomk::server().url(yomk::url::pluginXxx).request()；
- * 2. 请求一律优先使用统一请求接口 yomk::server().url(<url>).request()，
- *    扩展终结方法只是其上的薄封装。
- *
- * 头文件分层（单向依赖，无 include 环；对外引用统一 <yomk/plugin_system/...>）：
- *   YomkPluginInterface.h（ABI 叶子：插件侧契约——元数据 C 结构 + 实例接口 + 导出契约）
- *   → YomkPluginUrl.h（URL 常量，yomk::url，零依赖叶子）
- *   → YomkPluginPayload.h（扩展专属载荷，yomk::payload）
- *   → YomkPluginMsg.h（扩展专属消息包，yomk::msgs）
- *   → YomkPluginSystemBuilder.h（编排层，唯一用户可感知服务）
- *   → 本文件聚合入口（域入口），无人反向依赖。
- * 内部服务声明头 src/YomkPluginLoader.h（机制层）/ src/YomkPluginManager.h
- * （数据层）不随安装导出，仅编译扩展内部可见。
- */
-/* 框架 API：server() 链式请求/服务管理 + payload::Response/ResStatus + yomk::msgs 消息目录 */
-#include <yomk/server/YomkServerApi.h>
-/* 框架 API：log() 链式日志发射（宿主侧版本打印等场景使用；域入口本体仅依赖 server/msgs） */
+// YomkPluginSystem 公开 API 聚合头（四件套之 Api）.
+// 设计取舍:
+// 1. 域入口 yomk::plugin() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
+//    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;
+// 2. 分层单向:Interface(ABI 叶子) -> Url(常量叶子) -> Payload -> Msg -> Builder,
+//    本文件为聚合入口,无人反向依赖;
+// 3. 机制层 src/YomkPluginLoader.h 与数据层 src/YomkPluginManager.h 不随安装导出,
+//    仅扩展内部可见;对外可见面即本文件包含的五个头.
 #include <yomk/log/YomkLoggerApi.h>
+#include <yomk/server/YomkServerApi.h>
 
-/* ABI 契约：插件侧契约（元数据 C 结构 + 实例接口 + 导出契约） */
 #include "YomkPluginInterface.h"
-/* 模块 URL 常量（yomk::url 开放命名空间） */
-#include "YomkPluginUrl.h"
-/* 模块载荷 + 消息数据类（YomkPluginUrl.h 无依赖、YomkPluginMsg.h 依赖 YomkPluginPayload.h） */
 #include "YomkPluginMsg.h"
-/* 编排层服务声明 */
 #include "YomkPluginSystemBuilder.h"
+#include "YomkPluginUrl.h"
 
 /* ------------------------- 模块域入口（yomk::plugin()） ------------------------- */
 
-/*
- * 扩展模块链式域入口：各终结方法为统一请求接口的薄封装（屏蔽裸 URL），
- * 阻塞至服务应答，返回 payload::Response。消息包类经 YOMK_DEFINE_MSG 生成于
- * yomk::msgs 命名空间，数据结构体在 yomk::payload（业务字段访问用），
- * 构造请求包时先聚合初始化结构体再包入消息类。
- */
 namespace yomk::detail
 {
+/**
+ * @brief Chainable domain entry of the YomkPluginSystem extension
+ * Every terminator is a thin wrapper over the unified request channel
+ * (yomk::server().url(...).msg(...).request()), which hides raw URLs.
+ * All terminators block until the service replies and return a payload::Response:
+ * check status first, then unpack data by the message type documented on the terminator.
+ * @note Request packets are built by aggregate-initializing the payload struct,
+ *       then wrapping it into the yomk::msgs message class.
+ * @warning Holds no state; intended for single-expression chains only, never store or reuse it.
+ */
+// @zh: YomkPluginSystem 扩展的链式域入口
+// @zh: 各终结方法均为统一请求通道（yomk::server().url(...).msg(...).request()）的薄封装，屏蔽裸 URL。
+// @zh: 所有终结方法阻塞至服务应答并返回 payload::Response：先判 status，再按终结方法注明的
+// @zh: 消息类型解包 data。
+// @zh: note 请求包先聚合初始化 payload 结构体，再包入 yomk::msgs 消息类。
+// @zh: warning 无状态值类型，仅用于单表达式链式调用，禁止缓存或复用。
 class PluginBuilder
 {
 public:
-    /* 按清单构建插件工程（加载所列 so 并创建实例），返回 String(plugins:N instances:N 汇总) */
+    /**
+     * @brief Build a plugin project from a manifest: load every listed library and create its instances
+     * @param workflowPath Path of the .yomk manifest file
+     * @return Response carrying a String packet with the summary "plugins:N instances:N"
+     * @note Blocking; stops at the first failing manifest line, later lines are not processed
+     */
+    // @zh: 按清单构建插件工程：加载条目列出的全部动态库并创建实例。
+    // @zh: param workflowPath .yomk 清单文件路径。
+    // @zh: return Response，data 为 String 包，内容为汇总 plugins:N instances:N。
+    // @zh: note 阻塞；遇到首个失败条目即停止，后续条目不再处理。
     yomk::payload::Response build(std::string_view workflowPath)
     {
         return yomk::server()
@@ -61,13 +58,27 @@ public:
             .request();
     }
 
-    /* 强制卸载插件库：先销毁全部实例再卸载，返回 String(ok/msg) */
+    /**
+     * @brief Force-unload a plugin library: destroy all its instances first, then close the library
+     * @param pluginName Plugin name (meta name, must not contain '.')
+     * @return Response carrying a String packet "ok" on success; failure reason in msg
+     */
+    // @zh: 强制卸载插件库：先销毁该插件的全部实例，再卸载动态库。
+    // @zh: param pluginName 插件名（meta 名，不得含 '.'）。
+    // @zh: return Response，成功时 data 为 String 包 "ok"；失败原因见 msg。
     yomk::payload::Response unload(std::string_view pluginName)
     {
         return yomk::server().url(yomk::url::pluginUnload).msg(yomk::msgs::String::shared(std::string(pluginName))).request();
     }
 
-    /* 尝试卸载插件库：有存活实例则拒绝，返回 String(ok/msg) */
+    /**
+     * @brief Try to unload a plugin library: refused while any instance is still alive
+     * @param pluginName Plugin name
+     * @return Response carrying a String packet "ok" on success; refused if instances remain alive
+     */
+    // @zh: 尝试卸载插件库：仍有存活实例时拒绝卸载。
+    // @zh: param pluginName 插件名。
+    // @zh: return Response，成功时 data 为 String 包 "ok"；实例存活时返回失败。
     yomk::payload::Response tryUnload(std::string_view pluginName)
     {
         return yomk::server()
@@ -76,13 +87,30 @@ public:
             .request();
     }
 
-    /* 内省：Builder 最近构建信息（清单条目/路径/结果/插件与实例数），返回 BuilderInfo */
+    /**
+     * @brief Introspect the latest build performed by this builder
+     * @return Response carrying a BuilderInfo packet: manifest entries, path, result, plugin and instance counts
+     */
+    // @zh: 内省最近一次构建：清单条目、清单路径、结果、插件数与实例数。
+    // @zh: return Response，data 为 BuilderInfo 包。
     yomk::payload::Response infoBuilder() { return yomk::server().url(yomk::url::pluginBuilderInfo).request(); }
 
-    /* 内省：插件列表，返回 PluginMetaArray */
+    /**
+     * @brief Introspect all loaded plugins
+     * @return Response carrying a PluginMetaArray packet
+     */
+    // @zh: 内省全部已加载插件。
+    // @zh: return Response，data 为 PluginMetaArray 包。
     yomk::payload::Response infoPlugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
 
-    /* 内省：指定插件下的插件列表（可选过滤），返回 PluginMetaArray */
+    /**
+     * @brief Introspect loaded plugins filtered by plugin name
+     * @param pluginName Plugin name; an unknown name yields a failed response
+     * @return Response carrying a PluginMetaArray packet
+     */
+    // @zh: 内省指定插件（按插件名过滤）。
+    // @zh: param pluginName 插件名；未知插件返回失败。
+    // @zh: return Response，data 为 PluginMetaArray 包。
     yomk::payload::Response infoPlugins(std::string_view pluginName)
     {
         return yomk::server()
@@ -91,10 +119,22 @@ public:
             .request();
     }
 
-    /* 内省：实例明细列表，返回 InstanceInfoArray */
+    /**
+     * @brief Introspect all created instances
+     * @return Response carrying an InstanceInfoArray packet
+     */
+    // @zh: 内省全部已创建实例。
+    // @zh: return Response，data 为 InstanceInfoArray 包。
     yomk::payload::Response infoInstances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
 
-    /* 内省：指定插件下的实例明细列表（可选过滤），返回 InstanceInfoArray */
+    /**
+     * @brief Introspect instances filtered by plugin name
+     * @param pluginName Plugin name; an unknown name yields a failed response
+     * @return Response carrying an InstanceInfoArray packet
+     */
+    // @zh: 内省指定插件下的实例（按插件名过滤）。
+    // @zh: param pluginName 插件名；未知插件返回失败。
+    // @zh: return Response，data 为 InstanceInfoArray 包。
     yomk::payload::Response infoInstances(std::string_view pluginName)
     {
         return yomk::server()
@@ -103,7 +143,14 @@ public:
             .request();
     }
 
-    /* 内省：按实例名查所属插件的元数据（未知实例报错），返回 PluginMeta */
+    /**
+     * @brief Introspect the metadata of the plugin owning an instance
+     * @param instanceName Fully qualified instance name (pluginName.instanceName)
+     * @return Response carrying a PluginMeta packet; an unknown instance yields a failed response
+     */
+    // @zh: 内省实例所属插件的元数据。
+    // @zh: param instanceName 限定名实例名（插件名.实例名）。
+    // @zh: return Response，data 为 PluginMeta 包；未知实例返回失败。
     yomk::payload::Response infoPluginBy(std::string_view instanceName)
     {
         return yomk::server()
@@ -112,7 +159,14 @@ public:
             .request();
     }
 
-    /* 内省：按实例名返回其创建时透传的实例文件内容（未知实例报错），返回 String */
+    /**
+     * @brief Introspect the instance file content passed through when the instance was created
+     * @param instanceName Fully qualified instance name (pluginName.instanceName)
+     * @return Response carrying a String packet; an unknown instance or unreadable file yields a failed response
+     */
+    // @zh: 内省实例创建时透传的实例文件内容。
+    // @zh: param instanceName 限定名实例名（插件名.实例名）。
+    // @zh: return Response，data 为 String 包；未知实例或文件不可读返回失败。
     yomk::payload::Response infoInstancesFile(std::string_view instanceName)
     {
         return yomk::server()
@@ -121,7 +175,12 @@ public:
             .request();
     }
 
-    /* 版本查询，返回 String("YomkPluginSystem vX.Y.Z (WIP)") */
+    /**
+     * @brief Query the extension version string
+     * @return Response carrying a String packet "YomkPluginSystem vX.Y.Z (WIP)"
+     */
+    // @zh: 查询扩展版本号。
+    // @zh: return Response，data 为 String 包 "YomkPluginSystem vX.Y.Z (WIP)"。
     yomk::payload::Response version() { return yomk::server().url(yomk::url::pluginVersion).request(); }
 };
 }  // namespace yomk::detail
@@ -129,9 +188,11 @@ public:
 namespace yomk
 {
 /**
- * @brief YomkPluginSystem 扩展域链式入口
- * @return PluginBuilder（按值, 仅用于单表达式链式调用）
+ * @brief Get the chainable domain entry of the YomkPluginSystem extension
+ * @return PluginBuilder by value; use inline in a single chained expression only
  */
+// @zh: 获取 YomkPluginSystem 扩展的链式域入口。
+// @zh: return 按值返回的 PluginBuilder，仅用于单表达式内联链式调用。
 inline detail::PluginBuilder plugin()
 {
     return detail::PluginBuilder{};
