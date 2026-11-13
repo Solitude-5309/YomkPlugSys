@@ -18,7 +18,7 @@
 source build_ubuntu.sh    # 交互式：输入 YomkServer 安装路径与扩展安装路径（默认均取 $YOMK_PREFIX_PATH）
 ```
 
-安装后以最小程序跑通（构建示例插件工程 → 内省 → 卸载）：
+安装后以最小程序跑通（构建示例插件系统 → 内省 → 卸载）：
 
 ```cpp
 #include <yomk/plug_sys/YomkPluginApi.h>
@@ -33,7 +33,7 @@ int main()
     // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
-    // 按清单构建插件工程（manifest(path) 绑定清单，build() 终结；清单语法见 docs/PluginManifest.md）
+    // 按清单构建插件系统（manifest(path) 绑定清单，build() 终结；清单语法见 docs/PlugSysManifest.md）
     auto build = yomk::plugin().manifest("/abs/path/to/manifest.yomk").build();
 
     // 内省：插件列表
@@ -62,7 +62,7 @@ int main()
 | 查接口用法（构建/内省/卸载/版本） | [门面服务](docs/YomkPlugSysBuilder.md) |
 | 理解生命周期语义（何时拒绝、何时幂等） | [插件生命周期](docs/PluginLifecycle.md) |
 | 开发一个 so 插件 | [插件开发指南](docs/YomkPluginInterface.md) |
-| 编写 manifest.yomk 清单 | [清单格式](docs/PluginManifest.md) |
+| 编写插件系统清单 | [插件系统清单](docs/PlugSysManifest.md) |
 | 编译安装 / CMake 集成 / 运行测试 | [构建与验证](docs/BuildCmake.md) |
 
 完整分片目录见 [docs/README.md](docs/README.md)。

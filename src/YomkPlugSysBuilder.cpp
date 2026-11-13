@@ -67,21 +67,21 @@ void YomkPlugSysBuilder::deinit()
 }
 
 yomk::payload::Response YomkPlugSysBuilder::parseManifest(
-    const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries)
+    const std::string& manifestPath, std::string& manifestDir, std::vector<ManifestEntry>& entries)
 {
     namespace fs = std::filesystem;
     std::error_code ec;
-    fs::path manifest = fs::weakly_canonical(workflowPath, ec);
+    fs::path manifest = fs::weakly_canonical(manifestPath, ec);
     if (ec || !fs::is_regular_file(manifest))
     {
-        return {yomk::payload::ResStatus::Failed, "manifest not found: " + workflowPath};
+        return {yomk::payload::ResStatus::Failed, "manifest not found: " + manifestPath};
     }
     std::ifstream in(manifest);
     if (!in)
     {
-        return {yomk::payload::ResStatus::Failed, "manifest open failed: " + workflowPath};
+        return {yomk::payload::ResStatus::Failed, "manifest open failed: " + manifestPath};
     }
-    workflowDir = manifest.parent_path().string();
+    manifestDir = manifest.parent_path().string();
 
     // 首行格式标识：.yomk 后缀文件按用处格式各异，以标识区分；插件系统清单必须以此开头
     static const char* kFormatMarker = "#! yomk_plug_sys";
@@ -157,11 +157,11 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         }
 
         std::vector<ManifestEntry> entries;
-        std::string workflowDir;
-        yomk::payload::Response resp = parseManifest(req->d.workflowPath, workflowDir, entries);
+        std::string manifestDir;
+        yomk::payload::Response resp = parseManifest(req->d.manifestPath, manifestDir, entries);
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
-            recordBuild(req->d.workflowPath, resp.msg, 0, 0, {});
+            recordBuild(req->d.manifestPath, resp.msg, 0, 0, {});
             return resp;
         }
 
@@ -174,7 +174,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
             if (!arr)
             {
-                recordBuild(req->d.workflowPath, "build: invalid plugin list response", 0, 0, {});
+                recordBuild(req->d.manifestPath, "build: invalid plugin list response", 0, 0, {});
                 return {yomk::payload::ResStatus::Failed, "build: invalid plugin list response"};
             }
             for (const auto& m : arr->d)
@@ -189,15 +189,15 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         for (const auto& entry : entries)
         {
             const std::string lineTag = "manifest line " + std::to_string(entry.lineNo);
-            const std::string instancePath = workflowDir + "/" + entry.instanceCfg;
-            const std::string soPath = workflowDir + "/" + entry.libRelPath;
+            const std::string instancePath = manifestDir + "/" + entry.instanceCfg;
+            const std::string soPath = manifestDir + "/" + entry.libRelPath;
 
             if (!fs::is_regular_file(instancePath))
             {
                 std::string msg = lineTag;
                 msg += ": instance config not found: ";
                 msg += instancePath;
-                recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             if (!fs::is_regular_file(soPath))
@@ -205,7 +205,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 std::string msg = lineTag;
                 msg += ": plugin lib not found: ";
                 msg += soPath;
-                recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
 
@@ -223,14 +223,14 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
                     std::string msg = lineTag + ": load failed: " + resp.msg;
-                    recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                     return {yomk::payload::ResStatus::Failed, msg};
                 }
                 auto idPkg = yomk::msgs::unpack<yomk::msgs::String>(resp.data);
                 if (!idPkg)
                 {
                     std::string msg = lineTag + ": invalid load response";
-                    recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                     return {yomk::payload::ResStatus::Failed, msg};
                 }
                 pluginName = idPkg->d;
@@ -247,7 +247,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
                 std::string msg = lineTag + ": create failed: " + resp.msg;
-                recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
@@ -256,8 +256,8 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 
         std::string summary =
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
-        recordBuild(req->d.workflowPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
-        yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.workflowPath, " ", summary);
+        recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
+        yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.manifestPath, " ", summary);
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(summary)};
     }
     catch (const std::exception& e)

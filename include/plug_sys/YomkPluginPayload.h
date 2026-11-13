@@ -60,7 +60,7 @@ struct DestroyReq
 // @zh: 清单构建请求。
 struct BuildReq
 {
-    std::string workflowPath;   // manifest.yomk 清单文件路径
+    std::string manifestPath;   // manifest.yomk 清单文件路径
 };
 
 /**

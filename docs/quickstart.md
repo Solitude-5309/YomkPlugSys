@@ -1,6 +1,6 @@
 # 快速开始
 
-5 分钟跑通 YomkPlugSys：安装扩展 → 写最小宿主工程 → 构建示例插件工程 → 内省 → 卸载。全程约 3 段命令 + 2 个小文件（`main.cpp` / `CMakeLists.txt`）。
+5 分钟跑通 YomkPlugSys：安装扩展 → 写最小宿主工程 → 构建示例插件系统 → 内省 → 卸载。全程约 3 段命令 + 2 个小文件（`main.cpp` / `CMakeLists.txt`）。
 
 ## 适用与不适用
 
@@ -41,7 +41,7 @@ int main()
     // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
-    // 按清单构建示例插件工程（清单见 examples/workflow/manifest.yomk）
+    // 按清单构建示例插件系统（清单见 examples/workflow/manifest.yomk）
     auto build = yomk::plugin().manifest(PLUGIN_MANIFEST).build();
     auto summary = yomk::msgs::unpack<yomk::msgs::String>(build.data);   // 汇总在 data 的 String 包内
     std::cout << "build: " << build.msg << " (" << (summary ? summary->d : "") << ")" << std::endl;
@@ -101,6 +101,6 @@ cmake --build build -j
 ## 下一步
 
 - 自己写一个插件：[插件开发指南](YomkPluginInterface.md)
-- 修改装载清单：[清单格式](PluginManifest.md)
+- 修改插件系统清单：[插件系统清单](PlugSysManifest.md)
 - 理解卸载拒绝/幂等边界：[插件生命周期](PluginLifecycle.md)
 - 下游 CMake 工程集成：[构建与验证](BuildCmake.md)

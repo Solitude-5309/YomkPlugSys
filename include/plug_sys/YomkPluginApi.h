@@ -32,29 +32,29 @@ namespace yomk::detail
 // @zh: 中间链节点：绑定清单路径，链以 build() 终结。
 // @zh: 由 PluginBuilder::manifest() 返回；与其它终结方法一样屏蔽裸请求通道。
 // @zh: note 持有清单路径的拷贝；仅用于单表达式链式调用，禁止存储或复用。
-class PluginManifestBuilder
+class PlugSysManifestBuilder
 {
 public:
-    explicit PluginManifestBuilder(std::string_view workflowPath) : m_workflowPath(workflowPath) {}
+    explicit PlugSysManifestBuilder(std::string_view manifestPath) : m_manifestPath(manifestPath) {}
 
     /**
-     * @brief Build a plugin project from the bound manifest: load every listed library and create its instances
+     * @brief Build the plugin system from the bound manifest: load every listed library and create its instances
      * @return Response carrying a String packet with the summary "plugins:N instances:N"
      * @note Blocking; stops at the first failing manifest line, later lines are not processed
      */
-    // @zh: 按绑定的清单构建插件工程：加载条目列出的全部动态库并创建实例。
+    // @zh: 按绑定的清单构建插件系统：加载条目列出的全部动态库并创建实例。
     // @zh: return Response，data 为 String 包，内容为汇总 plugins:N instances:N。
     // @zh: note 阻塞；遇到首个失败条目即停止，后续条目不再处理。
     yomk::payload::Response build() const
     {
         return yomk::server()
             .url(yomk::url::pluginBuild)
-            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{m_workflowPath}))
+            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{m_manifestPath}))
             .request();
     }
 
 private:
-    std::string m_workflowPath;
+    std::string m_manifestPath;
 };
 
 /**
@@ -181,13 +181,13 @@ class PluginBuilder
 public:
     /**
      * @brief Bind a manifest file for building, terminating with build()
-     * @param workflowPath Path of the .yomk manifest file
+     * @param manifestPath Path of the .yomk manifest file
      * @return Intermediate chain node carrying the path; call build() on it
      */
     // @zh: 绑定要构建的清单文件，链以 build() 终结。
-    // @zh: param workflowPath .yomk 清单文件路径。
+    // @zh: param manifestPath .yomk 清单文件路径。
     // @zh: return 携带该路径的中间链节点；在其上调用 build()。
-    PluginManifestBuilder manifest(std::string_view workflowPath) { return PluginManifestBuilder(workflowPath); }
+    PlugSysManifestBuilder manifest(std::string_view manifestPath) { return PlugSysManifestBuilder(manifestPath); }
 
     /**
      * @brief Bind a plugin name, terminating with get_info(), instances(), unload() or try_unload()

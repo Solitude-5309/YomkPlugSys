@@ -1,11 +1,11 @@
 # YomkPlugSysBuilder（门面服务）
 
-YomkPlugSys 的唯一用户门面服务：解析 manifest.yomk 清单驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
+YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yomk）驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
 
 ## 适用与不适用
 
 ✅ 适合：
-- 运行时按清单批量装载 so 插件并创建实例（自动化编排入口）
+- 运行时按插件系统清单批量装载 so 插件并创建实例（自动化编排入口）
 - 查询已加载插件 / 存活实例 / 最近构建信息
 - 卸载插件（强制 / 有存活实例拒绝两种语义）
 
@@ -20,7 +20,7 @@ YomkPlugSys 的唯一用户门面服务：解析 manifest.yomk 清单驱动插�
 
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
-| 清单构建 | `yomk::plugin().manifest(workflowPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
+| 清单构建 | `yomk::plugin().manifest(manifestPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
 | 强制卸载 | `yomk::plugin().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plugin().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plugin().builder()` | → `Response`（data 为 `BuilderInfo`） |
@@ -43,7 +43,7 @@ using namespace yomk;
 yomk::server().init();
 yomk::server().srv<YomkPlugSysBuilder>().create();
 
-// 按清单构建（manifest 绑定清单路径，build 终结；清单格式见 PluginManifest.md；任一步失败 Failed 并指明清单行号）
+// 按清单构建（manifest 绑定清单路径，build 终结；插件系统清单见 PlugSysManifest.md；任一步失败 Failed 并指明清单行号）
 auto build = yomk::plugin().manifest("examples/workflow/manifest.yomk").build();
 
 // 内省：插件列表与实例列表
@@ -85,7 +85,7 @@ if (arr)
 ## 相关跳转
 
 - [插件生命周期](PluginLifecycle.md)：各接口的状态机语义与失败分支
-- [清单格式](PluginManifest.md)：`build` 入参文件的完整语法
+- [插件系统清单](PlugSysManifest.md)：`build` 入参文件的完整语法
 - [插件开发指南](YomkPluginInterface.md)：被装载 so 的开发规范
 
 ## 完整示例

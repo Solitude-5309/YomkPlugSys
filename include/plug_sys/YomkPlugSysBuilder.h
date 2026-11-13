@@ -91,7 +91,7 @@ private:
     // 清单解析:首行须为格式标识 #! yomk_plug_sys;# 注释忽略（整行/行内）,
     // 按 @ 切三段校验,路径段拒绝绝对路径
     yomk::payload::Response parseManifest(
-        const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries);
+        const std::string& manifestPath, std::string& manifestDir, std::vector<ManifestEntry>& entries);
 
     // 记录最近一次构建状态（内省用）
     void recordBuild(

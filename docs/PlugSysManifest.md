@@ -1,11 +1,11 @@
-# 清单格式（manifest.yomk）
+# 插件系统清单（manifest.yomk）
 
-manifest.yomk 是插件工程的装载清单：描述要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的构建入口以清单路径为唯一输入（`yomk::plugin().manifest(path).build()`），按行解析并逐条装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
+manifest.yomk 是插件系统（PlugSys）的装载清单：描述该系统要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的构建入口以清单路径为唯一输入（`yomk::plugin().manifest(path).build()`），按行解析并逐条装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
 
 ## 适用与不适用
 
 ✅ 适合：
-- 编写/维护插件工程清单（批量装载入口）
+- 编写/维护插件系统清单（批量装载入口）
 - 排查 `build` 返回的清单行号报错
 
 ❌ 不适合：
@@ -16,7 +16,7 @@ manifest.yomk 是插件工程的装载清单：描述要装载哪些 so 插件�
 
 ## 最小可运行示例
 
-以下为 `examples/workflow/manifest.yomk` 原文（双插件工程，随示例程序可构建验证）：
+以下为 `examples/workflow/manifest.yomk` 原文（双插件系统，随示例程序可构建验证）：
 
 ```
 #! yomk_plug_sys
@@ -78,4 +78,4 @@ WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService
 
 ## 完整示例
 
-清单 + 两个示例插件模块 + 实例配置的完整工程见 `examples/workflow/`（`manifest.yomk` + `ConnectionService/` + `WorkspaceService/`），经 `examples/ExampleYomkPlugSysBuilder.cpp` 一键构建验证。
+清单 + 两个示例插件模块 + 实例配置的完整示例工程见 `examples/workflow/`（`manifest.yomk` + `ConnectionService/` + `WorkspaceService/`），经 `examples/ExampleYomkPlugSysBuilder.cpp` 一键构建验证。

@@ -11,7 +11,7 @@
 
 ❌ 不适合：
 - 宿主侧调用接口（见[门面服务](YomkPlugSysBuilder.md)）
-- 清单文件的编写（见[清单格式](PluginManifest.md)）
+- 插件系统清单的编写（见[插件系统清单](PlugSysManifest.md)）
 
 > 前置概念：插件即 so 库；实例即插件运行期对象，名字为限定名 `插件名.实例名`（见[插件生命周期](PluginLifecycle.md)）。
 
@@ -108,7 +108,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 - 插件与宿主须同编译器、共用本扩展安装的头文件（ABI 依赖 vtable 布局）；ABI 版本由 `YOMKPLUGIN_ABI_VERSION` 把关，不符即拒绝装载。
 - 导出函数**不得让异常逃逸**：`create_instance` 内部须 catch 全部异常并返回 `nullptr`（宿主按创建失败处理）。
 - 不得在 `yomk_plugin_meta()` 中做耗时/有副作用操作：装载期实时调用；Loader 的 `meta` 接口每次请求都重新调用导出函数，不做缓存。
-- so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginPath` 指定（见[清单格式](PluginManifest.md)）。
+- so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginPath` 指定（见[插件系统清单](PlugSysManifest.md)）。
 
 ## 常见问题 FAQ
 
@@ -120,7 +120,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 ## 相关跳转
 
 - [插件生命周期](PluginLifecycle.md)：导出函数何时被调用、实例何时销毁
-- [清单格式](PluginManifest.md)：so 路径与实例配置如何随清单指定
+- [插件系统清单](PlugSysManifest.md)：so 路径与实例配置如何随清单指定
 - [门面服务](YomkPlugSysBuilder.md)：装载后的内省与卸载
 
 ## 完整示例

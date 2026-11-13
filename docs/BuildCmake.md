@@ -84,7 +84,7 @@ cmake --build test/build -j
 | 测试 | 覆盖 |
 |---|---|
 | TestYomkPluginFacade | 门面链式域入口契约冒烟 |
-| TestYomkPluginManifest | 清单解析（注释/行内注释/绝对路径拒绝/行号报错） |
+| TestYomkPluginManifest | 插件系统清单解析（注释/行内注释/绝对路径拒绝/行号报错） |
 | TestYomkPluginBuildLifecycle | 构建生命周期端到端 |
 | TestYomkPluginBadPlugin | 8 种缺陷插件的失败分支 |
 | TestYomkPluginManagerEdge | Manager 边界与内省细节 |
