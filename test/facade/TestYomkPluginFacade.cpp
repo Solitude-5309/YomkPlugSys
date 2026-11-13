@@ -85,10 +85,10 @@ int main()
             info->d.manifest.empty(),
         "builder() empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
-    resp = yomk::plugin().infoPluginBy("no-inst");
+    resp = yomk::plugin().inst_name("no-inst").get_plg_info();
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
-        "infoPluginBy(instanceName) empty-state rejects unknown instance");
+        "inst_name(name).get_plg_info() empty-state rejects unknown instance");
 
     resp = yomk::plugin().infoInstancesFile("no-inst");
     check(

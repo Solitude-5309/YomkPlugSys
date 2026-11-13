@@ -154,11 +154,11 @@ int main()
     }
 
     // 6. 按实例查所属插件
-    // 接口：yomk::plugin().infoPluginBy(instanceName)
+    // 接口：yomk::plugin().inst_name(instanceName).get_plg_info()
     // 输入：instanceName 为限定名 插件名.实例名，取步骤 4 列出的任一实例名；未知实例返回失败，原因见 resp.msg
     // 输出：PluginMeta（该实例所属插件的元数据）
-    section("6. 按实例查插件 yomk::plugin().infoPluginBy(\"ConnectionService.ConnectionServiceIns\")");
-    resp = yomk::plugin().infoPluginBy("ConnectionService.ConnectionServiceIns");
+    section("6. 按实例查插件 yomk::plugin().inst_name(\"ConnectionService.ConnectionServiceIns\").get_plg_info()");
+    resp = yomk::plugin().inst_name("ConnectionService.ConnectionServiceIns").get_plg_info();
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.msg);

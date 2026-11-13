@@ -28,7 +28,7 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 插件信息 | `yomk::plugin().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
 | 实例列表 | `yomk::plugin().instances()` | → `Response`（data 为 `InstanceInfoArray` 全量实例明细） |
 | 插件实例 | `yomk::plugin().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
-| 实例查插件 | `yomk::plugin().infoPluginBy(instanceName)` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
+| 实例查插件 | `yomk::plugin().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
 | 实例文件 | `yomk::plugin().infoInstancesFile(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
 | 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z (WIP)`） |
 

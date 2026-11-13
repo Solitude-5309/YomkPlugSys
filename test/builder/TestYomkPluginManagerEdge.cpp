@@ -237,19 +237,19 @@ int main()
         "plugin not loaded: NoSuch",
         "M2 plg_name(name).instances() unknown plugin rejects");
 
-    // ---------- M2.6 宏门面：infoPluginBy(instanceName)(限定名实例名) 反查所属插件 ----------
-    resp = yomk::plugin().infoPluginBy("TestPlugin.e-a");
+    // ---------- M2.6 链式门面：inst_name(name).get_plg_info() 反查所属插件 ----------
+    resp = yomk::plugin().inst_name("TestPlugin.e-a").get_plg_info();
     bool byInstOk = false;
     if (isOk(resp))
     {
         auto pm = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
-    check(byInstOk, "M2 infoPluginBy(instanceName) instance lookup returns owner plugin meta");
+    check(byInstOk, "M2 inst_name(name).get_plg_info() instance lookup returns owner plugin meta");
     expectNo(
-        yomk::plugin().infoPluginBy("no-inst"),
+        yomk::plugin().inst_name("no-inst").get_plg_info(),
         "instance not found: no-inst",
-        "M2 infoPluginBy(instanceName) unknown instance rejects");
+        "M2 inst_name(name).get_plg_info() unknown instance rejects");
 
     // ---------- M2.7 宏门面：infoInstancesFile(instanceName)(限定名实例名) 返回实例文件内容 ----------
     {
@@ -384,7 +384,7 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");
 
-    resp = yomk::plugin().infoPluginBy("TestPlugin.shared-i");
+    resp = yomk::plugin().inst_name("TestPlugin.shared-i").get_plg_info();
     bool ownerA = false;
     if (isOk(resp))
     {
@@ -392,7 +392,7 @@ int main()
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
-    resp = yomk::plugin().infoPluginBy("SecondPlugin.shared-i");
+    resp = yomk::plugin().inst_name("SecondPlugin.shared-i").get_plg_info();
     bool ownerB = false;
     if (isOk(resp))
     {
