@@ -19,7 +19,7 @@ manifest.yomk 是插件工程的装载清单：描述要装载哪些 so 插件�
 以下为 `examples/workflow/manifest.yomk` 原文（双插件工程，随示例程序可构建验证）：
 
 ```
-#! yomk_plugin_system
+#! yomk_plug_sys
 
 # 连接器配置
 ConnectionServiceIns@ConnectionService/lib/libConnectionService.so@ConnectionService/instances/ConnectionService.txt
@@ -35,7 +35,7 @@ WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService
 **首行**必须为格式标识（缺失、不在首行或不匹配则整体解析失败）：
 
 ```
-#! yomk_plugin_system
+#! yomk_plug_sys
 ```
 
 **条目行**按 `@` 切分为三段：
@@ -65,17 +65,17 @@ WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService
 
 ## 常见问题 FAQ
 
-- **清单可以用别的文件名吗？** 可以，格式标识只认首行 `#! yomk_plugin_system`；`.yomk` 后缀仅为约定。
+- **清单可以用别的文件名吗？** 可以，格式标识只认首行 `#! yomk_plug_sys`；`.yomk` 后缀仅为约定。
 - **条目失败会怎样？** 中止并返回失败原因与行号；之前条目已装载的不回滚，修正后重新 `build` 即可。
 - **实例配置能省略吗？** 清单里不能：三段均必填，任意一段为空报 `empty segment`；文件不存在报 `instance config not found`。直接请求 `/YomkPluginManager/create_instance` 时 `instance_cfg` 可为空（插件工厂收到空串）。
 - **相对路径以哪里为基准？** 只以清单文件所在目录为基准，与 CWD、安装路径均无关。
 
 ## 相关跳转
 
-- [门面服务](YomkPluginSystemBuilder.md)：`build` 接口的调用方式与 `BuilderInfo` 内省
+- [门面服务](YomkPlugSysBuilder.md)：`build` 接口的调用方式与 `BuilderInfo` 内省
 - [插件生命周期](PluginLifecycle.md)：装载/创建的幂等与失败语义
 - [插件开发指南](YomkPluginInterface.md)：清单指向的 so 需满足的契约
 
 ## 完整示例
 
-清单 + 两个示例插件模块 + 实例配置的完整工程见 `examples/workflow/`（`manifest.yomk` + `ConnectionService/` + `WorkspaceService/`），经 `examples/ExampleYomkPluginSystemBuilder.cpp` 一键构建验证。
+清单 + 两个示例插件模块 + 实例配置的完整工程见 `examples/workflow/`（`manifest.yomk` + `ConnectionService/` + `WorkspaceService/`），经 `examples/ExampleYomkPlugSysBuilder.cpp` 一键构建验证。

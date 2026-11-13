@@ -1,6 +1,6 @@
 # 插件开发指南（YomkPluginInterface）
 
-面向插件开发者：编写一个可被 YomkPluginSystem 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plugin_system/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPluginApi.h`，便于一处引入）。
+面向插件开发者：编写一个可被 YomkPlugSys 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plug_sys/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPluginApi.h`，便于一处引入）。
 
 ## 适用与不适用
 
@@ -10,7 +10,7 @@
 - 排查"插件加载失败 / 创建实例失败"的契约原因
 
 ❌ 不适合：
-- 宿主侧调用接口（见[门面服务](YomkPluginSystemBuilder.md)）
+- 宿主侧调用接口（见[门面服务](YomkPlugSysBuilder.md)）
 - 清单文件的编写（见[清单格式](PluginManifest.md)）
 
 > 前置概念：插件即 so 库；实例即插件运行期对象，名字为限定名 `插件名.实例名`（见[插件生命周期](PluginLifecycle.md)）。
@@ -20,7 +20,7 @@
 完整可编译，复制保存为 `MyPlugin.cpp` 即可：
 
 ```cpp
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <string>
 
 class MyInstance : public YomkPluginInterface
@@ -53,7 +53,7 @@ static void deleteFn(YomkPluginInterface* instance) { delete instance; }
 YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
 ```
 
-编译为 SHARED 库（`YomkServer::YomkServer` 提供 `<yomk/plugin_system/...>` 所在的 include 根与 SDK 编译宏）：
+编译为 SHARED 库（`YomkServer::YomkServer` 提供 `<yomk/plug_sys/...>` 所在的 include 根与 SDK 编译宏）：
 
 ```cmake
 find_package(YomkServer REQUIRED)
@@ -121,7 +121,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 
 - [插件生命周期](PluginLifecycle.md)：导出函数何时被调用、实例何时销毁
 - [清单格式](PluginManifest.md)：so 路径与实例配置如何随清单指定
-- [门面服务](YomkPluginSystemBuilder.md)：装载后的内省与卸载
+- [门面服务](YomkPlugSysBuilder.md)：装载后的内省与卸载
 
 ## 完整示例
 

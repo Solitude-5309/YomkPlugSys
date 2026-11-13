@@ -4,7 +4,7 @@
 // 短时并发 unload vs create durability 收敛。
 // 硬断言仅收敛性与终态；吞吐以 [PERF] 行打印作基线参考，不作断言。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <atomic>
@@ -166,7 +166,7 @@ static int64_t perSec(int64_t count, int64_t ms)
 int main()
 {
     yomk::server().init();
-    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -182,7 +182,7 @@ int main()
     // ---------- S0 大清单基线：200 条目 ----------
     {
         std::ostringstream oss;
-        oss << "#! yomk_plugin_system\n";
+        oss << "#! yomk_plug_sys\n";
         for (int i = 0; i < 200; ++i)
         {
             char name[16];
@@ -224,7 +224,7 @@ int main()
 
     // ---------- S2 2000 对 create/destroy ----------
     // 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留）
-    writeManifest("pre.yomk", "#! yomk_plugin_system\npre-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("pre.yomk", "#! yomk_plug_sys\npre-i1@libTestPlugin.so@inst.txt\n");
     yomk::plugin().manifest(fp("pre.yomk")).build();
     destroyInst("pre-i1");
 

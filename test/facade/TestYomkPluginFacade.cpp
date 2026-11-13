@@ -1,6 +1,6 @@
 // TestYomkPluginFacade：门面链式域入口契约冒烟测试
 // 覆盖门面服务注册、/version 契约与链式版本查询、空态内省默认值与未知实例拒绝、BUILD 不存在清单失败路径。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <iostream>
@@ -51,13 +51,13 @@ int main()
 {
     yomk::server().init();
     // 门面服务：Loader/Manager 由 Builder::init 内部注册，用户仅注册本服务
-    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     // ---------- 版本契约 ----------
-    yomk::payload::Response resp = yomk::server().url("/YomkPluginSystemBuilder/version").msg(nullptr).request();
+    yomk::payload::Response resp = yomk::server().url("/YomkPlugSysBuilder/version").msg(nullptr).request();
     check(isOk(resp), "/version returns Succeeded");
     const std::string ver = respString(resp);
-    check(ver.rfind("YomkPluginSystem v", 0) == 0, "/version prefix 'YomkPluginSystem v'");
+    check(ver.rfind("YomkPlugSys v", 0) == 0, "/version prefix 'YomkPlugSys v'");
     // 链式查询 /version 并解包打印（成功走 info，输出人工核对）
     {
         auto verResp = yomk::plugin().version();
@@ -66,12 +66,12 @@ int main()
             auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
             if (ver)
             {
-                yomk::log().tag("YomkPluginSystem").info(ver->d);
+                yomk::log().tag("YomkPlugSys").info(ver->d);
             }
         }
         else
         {
-            yomk::log().tag("YomkPluginSystem").error("getVersion failed: ", verResp.msg);
+            yomk::log().tag("YomkPlugSys").error("getVersion failed: ", verResp.msg);
         }
     }
 

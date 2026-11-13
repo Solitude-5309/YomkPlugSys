@@ -9,7 +9,7 @@
 
 using namespace yomk;
 
-// YomkPluginSystemBuilder:插件系统编排层（四件套之 Builder,唯一用户可感知服务）.
+// YomkPlugSysBuilder:插件系统编排层（四件套之 Builder,唯一用户可感知服务）.
 // 设计取舍:
 // 1. 只做清单解析与请求编排,不持有插件库也不持有实例:加载/登记/实例生命周期全部归
 //    机制层 Loader 与数据层 Manager,本层可随时重建;
@@ -18,7 +18,7 @@ using namespace yomk;
 //    不得经 yomk::server() 域入口（进程退出期域入口快照会二次释放 server）.
 
 /**
- * @brief Plugin system orchestration service (/YomkPluginSystemBuilder)
+ * @brief Plugin system orchestration service (/YomkPlugSysBuilder)
  * Parses a .yomk manifest (one entry per line: instanceName@libRelPath@instanceCfgRelPath,
  * '#' starts a comment, both paths are relative to the manifest directory) and drives
  * plugin loading plus instance creation purely through requests to the internal services.
@@ -26,12 +26,12 @@ using namespace yomk;
  * @note This is the only service users register; the mechanism layer (loader) and the
  *       data layer (manager) are registered by init() and are not part of the public API.
  */
-// @zh: 插件系统编排服务（/YomkPluginSystemBuilder）。
+// @zh: 插件系统编排服务（/YomkPlugSysBuilder）。
 // @zh: 解析 .yomk 清单（每行一个条目：实例名@动态库相对路径@实例配置相对路径，'#' 起注释，
 // @zh: 两段路径均相对清单所在目录），并经请求驱动内部服务完成插件加载与实例创建；
 // @zh: 本服务不持有插件库与实例。
 // @zh: note 用户只注册本服务；机制层（Loader）与数据层（Manager）由 init() 注册，不属于公开 API。
-class YomkPluginSystemBuilder : public YomkService
+class YomkPlugSysBuilder : public YomkService
 {
 public:
     /**
@@ -40,9 +40,9 @@ public:
      */
     // @zh: 构造编排服务。
     // @zh: param server 框架注入的宿主 server，生命周期须覆盖本服务。
-    YomkPluginSystemBuilder(YomkServer* server);
+    YomkPlugSysBuilder(YomkServer* server);
 
-    ~YomkPluginSystemBuilder() override = default;
+    ~YomkPlugSysBuilder() override = default;
 
     /**
      * @brief Register internal services and the plugin request handlers
@@ -88,7 +88,7 @@ private:
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> 强制卸载
     yomk::payload::Response tryUnload(YomkMsgPtr pkg);         // String pluginName -> 有存活实例则拒绝
 
-    // 清单解析:首行须为格式标识 #! yomk_plugin_system;# 注释忽略（整行/行内）,
+    // 清单解析:首行须为格式标识 #! yomk_plug_sys;# 注释忽略（整行/行内）,
     // 按 @ 切三段校验,路径段拒绝绝对路径
     yomk::payload::Response parseManifest(
         const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries);

@@ -7,7 +7,7 @@
 # 安装后将扩展 lib 注册到系统动态库搜索路径（复用 yomk.conf）并刷新 ldconfig 缓存，新开任意终端即可找到扩展 so
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_NAME="YomkPluginSystem"
+PROJECT_NAME="YomkPlugSys"
 BUILD_DIR="${SCRIPT_DIR}/build"
 TEST_DIR="${SCRIPT_DIR}/test"
 TEST_BUILD_DIR="${TEST_DIR}/build"
@@ -106,7 +106,7 @@ mkdir -p "${EXAMPLES_BUILD_DIR}"
 cd "${EXAMPLES_BUILD_DIR}" || return 1
 
 cmake "${EXAMPLES_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}" -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-    -UYomkPluginSystem_DIR -UYomkServer_DIR
+    -UYomkPlugSys_DIR -UYomkServer_DIR
 if [ $? -ne 0 ]; then
     echo "示例程序 cmake 配置失败"
     cd "${_ORIG_DIR}"
@@ -125,10 +125,10 @@ if [ "${BUILD_TEST}" = "ON" ]; then
     mkdir -p "${TEST_BUILD_DIR}"
     cd "${TEST_BUILD_DIR}" || return 1
 
-    # -U 清除上次运行缓存下来的包定位（YomkPluginSystem_DIR/YomkServer_DIR），
+    # -U 清除上次运行缓存下来的包定位（YomkPlugSys_DIR/YomkServer_DIR），
     # 强制按本次 CMAKE_PREFIX_PATH 重新查找，避免 find_package 钉死在陈旧安装目录
     cmake "${TEST_DIR}" -DCMAKE_PREFIX_PATH="${INSTALL_DIR};${YOMK_SERVER_PATH}" \
-        -UYomkPluginSystem_DIR -UYomkServer_DIR
+        -UYomkPlugSys_DIR -UYomkServer_DIR
     if [ $? -ne 0 ]; then
         echo "测试程序 cmake 配置失败"
         cd "${_ORIG_DIR}"
@@ -163,14 +163,14 @@ else
     echo "    (未找到 lib${PROJECT_NAME}.so，请检查 ldconfig)"
 fi
 echo " 示例程序（安装于 ${INSTALL_DIR}/bin）:"
-echo "   - ExampleYomkPluginSystemBuilder"
-echo " 可直接运行 ExampleYomkPluginSystemBuilder 验证 workflow 构建示例"
+echo "   - ExampleYomkPlugSysBuilder"
+echo " 可直接运行 ExampleYomkPlugSysBuilder 验证 workflow 构建示例"
 if [ "${BUILD_TEST}" = "ON" ]; then
     echo " 测试程序（仅本地构建，未安装）:"
     for _t in "${TEST_BUILD_DIR}"/TestYomkPlugin*; do
         [ -x "${_t}" ] && echo "   - ${_t}"
     done
-    echo " 可直接运行 TestYomkPluginSystem 验证"
+    echo " 可直接运行 TestYomkPlugin* 验证"
 fi
 echo "==========================================="
 unset _LIB_LINE _t

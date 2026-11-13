@@ -1,6 +1,6 @@
-// YomkPluginSystem 入门示例：初始化 -> 构建插件工程 -> 内省 -> 卸载，串起最常用接口。
+// YomkPlugSys 入门示例：初始化 -> 构建插件工程 -> 内省 -> 卸载，串起最常用接口。
 // 每节标注【接口/输入/输出】；清单路径由 CMake 编译期注入（examples/workflow/manifest.yomk）。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
@@ -35,9 +35,9 @@ int main()
 {
     // 0. 初始化
     // 接口：yomk::server().init() + yomk::server().srv<服务类>().create()
-    // 说明：只注册门面服务 YomkPluginSystemBuilder，机制层 Loader 与数据层 Manager 由其 init() 内部自动注册
+    // 说明：只注册门面服务 YomkPlugSysBuilder，机制层 Loader 与数据层 Manager 由其 init() 内部自动注册
     yomk::server().init();
-    yomk::server().srv<YomkPluginSystemBuilder>().create();
+    yomk::server().srv<YomkPlugSysBuilder>().create();
 
     const std::string manifest = WORKFLOW_MANIFEST_PATH;
 
@@ -50,12 +50,12 @@ int main()
     auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
     if (ver)
     {
-        yomk::log().tag("YomkPluginSystem").info(ver->d);
+        yomk::log().tag("YomkPlugSys").info(ver->d);
     }
 
     // 2. 构建插件工程并查看构建信息
     // 接口：yomk::plugin().manifest(workflowPath).build() + yomk::plugin().builder()
-    // 输入：清单文件路径。首行 #! yomk_plugin_system，之后每行一个条目：
+    // 输入：清单文件路径。首行 #! yomk_plug_sys，之后每行一个条目：
     //       实例名@动态库相对路径@实例配置相对路径
     // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
     // 副作用：逐条目加载插件 so 并创建实例，实例名取自清单条目

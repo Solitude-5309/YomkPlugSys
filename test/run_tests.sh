@@ -1,5 +1,5 @@
 #!/bin/bash
-# YomkPluginSystem 全量测试运行器
+# YomkPlugSys 全量测试运行器
 # 用法:
 #   ./run_tests.sh                默认模式（测试可执行目录 <仓库>/test/build）
 #   ./run_tests.sh --bin DIR      指定测试可执行目录（默认 <仓库>/test/build）
@@ -304,7 +304,7 @@ main() {
 
     echo ""
     echo "==========================================="
-    echo " YomkPluginSystem 全量测试通过: ${passed}/${total}"
+    echo " YomkPlugSys 全量测试通过: ${passed}/${total}"
     echo " 总耗时: ${SECONDS}s"
     echo " 日志目录: ${log_root}"
     if [ "${SANITIZER}" != "off" ]; then
@@ -314,7 +314,7 @@ main() {
         echo "   测试树: ${SAN_BUILD_DIR}"
     fi
     echo "==========================================="
-    echo "YomkPluginSystem 全量测试通过: ${passed}/${total}" >> "${summary}"
+    echo "YomkPlugSys 全量测试通过: ${passed}/${total}" >> "${summary}"
     exit 0
 }
 

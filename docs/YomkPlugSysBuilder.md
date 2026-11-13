@@ -1,6 +1,6 @@
-# YomkPluginSystemBuilder（门面服务）
+# YomkPlugSysBuilder（门面服务）
 
-YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
+YomkPlugSys 的唯一用户门面服务：解析 manifest.yomk 清单驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
 
 ## 适用与不适用
 
@@ -30,18 +30,18 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 插件实例 | `yomk::plugin().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
 | 实例查插件 | `yomk::plugin().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
 | 实例配置 | `yomk::plugin().inst_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
-| 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z (WIP)`） |
+| 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
 
 > `instanceName` 一律为限定名 `插件名.实例名`（全局唯一主键）；`pluginName` 为插件 meta 名。
 
 ## 使用示例
 
 ```cpp
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 using namespace yomk;
 
 yomk::server().init();
-yomk::server().srv<YomkPluginSystemBuilder>().create();
+yomk::server().srv<YomkPlugSysBuilder>().create();
 
 // 按清单构建（manifest 绑定清单路径，build 终结；清单格式见 PluginManifest.md；任一步失败 Failed 并指明清单行号）
 auto build = yomk::plugin().manifest("examples/workflow/manifest.yomk").build();
@@ -74,7 +74,7 @@ if (arr)
 - `unload` 与 `try_unload` 是两种语义：前者先清空该插件实例表再卸载（不等待实例自然销毁）；后者不动实例、有存活实例即拒绝。两者的最终卸载都经 Loader 判活，外部仍持有实例引用时都会 `Failed`（`instances still alive`），此时 `unload` 已清空实例表、插件仍加载。边界详见[插件生命周期](PluginLifecycle.md)。
 - `BuilderInfo` 反映**最近一次**构建（清单路径/结果/条目行/插件与实例数），空值 = 尚未构建；多次构建只保留最后一次。
 - 门面服务注册后即可请求；未注册时请求返回 `Failed`。
-- 版本值由 CMake 编译期注入（`project(VERSION)` 单一来源），运行时查询返回形如 `YomkPluginSystem v1.0.7 (WIP)` 的描述（版本号随工程版本变化）。
+- 版本值由 CMake 编译期注入（`project(VERSION)` 单一来源），运行时查询返回形如 `YomkPlugSys v1.0.7 (WIP)` 的描述（版本号随工程版本变化）。
 
 ## 常见问题 FAQ
 
@@ -90,4 +90,4 @@ if (arr)
 
 ## 完整示例
 
-完整可运行演示见 `examples/ExampleYomkPluginSystemBuilder.cpp`（随扩展默认编译安装到 `<安装路径>/bin`）：以 `examples/workflow` 的两个示例插件串起 初始化 → 构建（含构建信息）→ 内省（插件/实例/按插件过滤/按实例查插件/实例配置）→ 卸载 全流程，每一步注释标明【接口 / 输入 / 输出】，运行即可观察实际结果。
+完整可运行演示见 `examples/ExampleYomkPlugSysBuilder.cpp`（随扩展默认编译安装到 `<安装路径>/bin`）：以 `examples/workflow` 的两个示例插件串起 初始化 → 构建（含构建信息）→ 内省（插件/实例/按插件过滤/按实例查插件/实例配置）→ 卸载 全流程，每一步注释标明【接口 / 输入 / 输出】，运行即可观察实际结果。

@@ -3,7 +3,7 @@
 // alive 计数随 destroy 的 purgeDead 时序、try_unload/force_unload 空卸组合、
 // 卸载-重载全循环、多实例强卸。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
@@ -126,7 +126,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
 int main()
 {
     yomk::server().init();
-    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -143,7 +143,7 @@ int main()
     }
 
     // ---------- R1 双层去重：基线双实例 ----------
-    writeManifest("r1.yomk", "#! yomk_plugin_system\nr-a@libTestPlugin.so@inst.txt\nr-b@libTestPlugin.so@inst.txt\n");
+    writeManifest("r1.yomk", "#! yomk_plug_sys\nr-a@libTestPlugin.so@inst.txt\nr-b@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
 
     // 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重
@@ -187,7 +187,7 @@ int main()
         "R3 force unload not-loaded rejects with same message");
 
     // 重新构建触发二次 dlopen：重载后去重仍生效
-    writeManifest("r3.yomk", "#! yomk_plugin_system\nr3-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("r3.yomk", "#! yomk_plug_sys\nr3-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("r3.yomk")).build(), "plugins:1 instances:1", "R3 rebuild after unload ok");
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(samePath).request(),
@@ -204,7 +204,7 @@ int main()
     writeManifest(
         "r4.yomk",
         "#! "
-        "yomk_plugin_system\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
+        "yomk_plug_sys\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
         "inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("r4.yomk")).build(), "plugins:1 instances:3", "R4 build three instances");
     expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "instances still alive", "R4 try_unload rejects while three alive");

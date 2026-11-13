@@ -1,5 +1,5 @@
 #!/bin/bash
-# YomkPluginSystem 静态代码检查运行器（闭环10；日志+控制台双输出对齐 YomkRpc 同名脚本）
+# YomkPlugSys 静态代码检查运行器（闭环10；日志+控制台双输出对齐 YomkRpc 同名脚本）
 # 用法:
 #   ./run_static_checks.sh              默认双跑 cppcheck + clang-tidy
 #   ./run_static_checks.sh --cppcheck   仅跑 cppcheck
@@ -140,7 +140,7 @@ if [ ${RUN_TIDY} -eq 1 ]; then
         TIDY_IDX=$((TIDY_IDX + 1))
         echo "-- [${TIDY_IDX}/${TIDY_TOTAL}] $(basename "${f}")"
         if ! clang-tidy -p "${REPO_DIR}" \
-            --header-filter='.*/YomkPluginSystem/(include|src)/.*' \
+            --header-filter='.*/YomkPlugSys/(include|src)/.*' \
             "${STDLIB_INC_ARGS[@]}" \
             "${f}" >> "${TIDY_OUT}" 2>&1; then
             echo "    [FAIL] $(basename "${f}") 检出告警或编译错误"
@@ -162,11 +162,11 @@ if [ ${FAILED} -ne 0 ]; then
     echo "==========================================="
     echo " 静态代码检查未通过（日志目录: ${LOG_ROOT}）"
     echo "==========================================="
-    echo "YomkPluginSystem 静态代码检查未通过" >> "${SUMMARY}"
+    echo "YomkPlugSys 静态代码检查未通过" >> "${SUMMARY}"
     exit 1
 fi
 echo "==========================================="
 echo " 静态代码检查全部通过（日志目录: ${LOG_ROOT}）"
 echo "==========================================="
-echo "YomkPluginSystem 静态代码检查全部通过" >> "${SUMMARY}"
+echo "YomkPlugSys 静态代码检查全部通过" >> "${SUMMARY}"
 exit 0

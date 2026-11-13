@@ -9,7 +9,7 @@
 #include "YomkPluginInterface.h"
 #include "YomkPluginPayload.h"
 
-// YomkPluginSystem 扩展专属消息包（成员名均为 d,与 SDK 各 Yomk{Module}Msg.h 同一设计）.
+// YomkPlugSys 扩展专属消息包（成员名均为 d,与 SDK 各 Yomk{Module}Msg.h 同一设计）.
 // 设计取舍:
 // 1. 消息包类名与载荷结构体同名:二者分处 yomk::msgs 与 yomk::payload,宏生成的构造形参
 //    写全限定载荷类型,与拷贝构造签名不同,故不冲突;运行时消息名 kName 即业务名;

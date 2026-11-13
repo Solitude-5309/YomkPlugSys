@@ -1,7 +1,7 @@
 #pragma once
 #include <string_view>
 
-// YomkPluginSystem 公开 API 聚合头（四件套之 Api）.
+// YomkPlugSys 公开 API 聚合头（四件套之 Api）.
 // 设计取舍:
 // 1. 域入口 yomk::plugin() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
 //    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;带参数的终结方法
@@ -15,7 +15,7 @@
 
 #include "YomkPluginInterface.h"
 #include "YomkPluginMsg.h"
-#include "YomkPluginSystemBuilder.h"
+#include "YomkPlugSysBuilder.h"
 #include "YomkPluginUrl.h"
 
 /* ------------------------- 模块域入口（yomk::plugin()） ------------------------- */
@@ -161,7 +161,7 @@ private:
 };
 
 /**
- * @brief Chainable domain entry of the YomkPluginSystem extension
+ * @brief Chainable domain entry of the YomkPlugSys extension
  * Every terminator is a thin wrapper over the unified request channel
  * (yomk::server().url(...).msg(...).request()), which hides raw URLs.
  * All terminators block until the service replies and return a payload::Response:
@@ -170,7 +170,7 @@ private:
  *       then wrapping it into the yomk::msgs message class.
  * @warning Holds no state; intended for single-expression chains only, never store or reuse it.
  */
-// @zh: YomkPluginSystem 扩展的链式域入口
+// @zh: YomkPlugSys 扩展的链式域入口
 // @zh: 各终结方法均为统一请求通道（yomk::server().url(...).msg(...).request()）的薄封装，屏蔽裸 URL。
 // @zh: 所有终结方法阻塞至服务应答并返回 payload::Response：先判 status，再按终结方法注明的
 // @zh: 消息类型解包 data。
@@ -251,10 +251,10 @@ public:
 
     /**
      * @brief Query the extension version string
-     * @return Response carrying a String packet "YomkPluginSystem vX.Y.Z (WIP)"
+     * @return Response carrying a String packet "YomkPlugSys vX.Y.Z (WIP)"
      */
     // @zh: 查询扩展版本号。
-    // @zh: return Response，data 为 String 包 "YomkPluginSystem vX.Y.Z (WIP)"。
+    // @zh: return Response，data 为 String 包 "YomkPlugSys vX.Y.Z (WIP)"。
     yomk::payload::Response version() { return yomk::server().url(yomk::url::pluginVersion).request(); }
 };
 }  // namespace yomk::detail
@@ -262,10 +262,10 @@ public:
 namespace yomk
 {
 /**
- * @brief Get the chainable domain entry of the YomkPluginSystem extension
+ * @brief Get the chainable domain entry of the YomkPlugSys extension
  * @return PluginBuilder by value; use inline in a single chained expression only
  */
-// @zh: 获取 YomkPluginSystem 扩展的链式域入口。
+// @zh: 获取 YomkPlugSys 扩展的链式域入口。
 // @zh: return 按值返回的 PluginBuilder，仅用于单表达式内联链式调用。
 inline detail::PluginBuilder plugin()
 {

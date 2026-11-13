@@ -1,4 +1,4 @@
-#include "plugin_system/YomkPluginSystemBuilder.h"
+#include "plug_sys/YomkPlugSysBuilder.h"
 
 #include <filesystem>
 #include <fstream>
@@ -21,39 +21,39 @@ static std::string trim(const std::string& s)
     return s.substr(begin, end - begin + 1);
 }
 
-YomkPluginSystemBuilder::YomkPluginSystemBuilder(YomkServer* server) : YomkService(server), m_server(server)
+YomkPlugSysBuilder::YomkPlugSysBuilder(YomkServer* server) : YomkService(server), m_server(server)
 {
-    name("/YomkPluginSystemBuilder");
+    name("/YomkPlugSysBuilder");
 }
 
-int YomkPluginSystemBuilder::init()
+int YomkPlugSysBuilder::init()
 {
     // 内部服务由本服务接管生命周期：先注册 Loader，再注册 Manager（顺序即依赖次序）
     if (yomk::server().srv<YomkPluginLoader>().create() != 0)
     {
-        yomk::log().tag("YomkPluginSystemBuilder").error("init: register YomkPluginLoader failed");
+        yomk::log().tag("YomkPlugSysBuilder").error("init: register YomkPluginLoader failed");
         return -1;
     }
     if (yomk::server().srv<YomkPluginManager>().create() != 0)
     {
-        yomk::log().tag("YomkPluginSystemBuilder").error("init: register YomkPluginManager failed");
+        yomk::log().tag("YomkPlugSysBuilder").error("init: register YomkPluginManager failed");
         return -1;
     }
 
-    installFunc("/build", &YomkPluginSystemBuilder::build, yomk::msgs::BuildReq::kName);
-    installFunc("/version", &YomkPluginSystemBuilder::version);
-    installFunc("/builder", &YomkPluginSystemBuilder::infoBuilder);
-    installFunc("/plugins", &YomkPluginSystemBuilder::plugins);
-    installFunc("/plugin", &YomkPluginSystemBuilder::plugin, yomk::msgs::String::kName);
-    installFunc("/instances", &YomkPluginSystemBuilder::instances, yomk::msgs::String::kName);
-    installFunc("/plugin_by_instance", &YomkPluginSystemBuilder::pluginByInstance, yomk::msgs::String::kName);
-    installFunc("/instances_cfg", &YomkPluginSystemBuilder::instancesCfg, yomk::msgs::String::kName);
-    installFunc("/unload", &YomkPluginSystemBuilder::unload, yomk::msgs::String::kName);
-    installFunc("/try_unload", &YomkPluginSystemBuilder::tryUnload, yomk::msgs::String::kName);
+    installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::BuildReq::kName);
+    installFunc("/version", &YomkPlugSysBuilder::version);
+    installFunc("/builder", &YomkPlugSysBuilder::infoBuilder);
+    installFunc("/plugins", &YomkPlugSysBuilder::plugins);
+    installFunc("/plugin", &YomkPlugSysBuilder::plugin, yomk::msgs::String::kName);
+    installFunc("/instances", &YomkPlugSysBuilder::instances, yomk::msgs::String::kName);
+    installFunc("/plugin_by_instance", &YomkPlugSysBuilder::pluginByInstance, yomk::msgs::String::kName);
+    installFunc("/instances_cfg", &YomkPlugSysBuilder::instancesCfg, yomk::msgs::String::kName);
+    installFunc("/unload", &YomkPlugSysBuilder::unload, yomk::msgs::String::kName);
+    installFunc("/try_unload", &YomkPlugSysBuilder::tryUnload, yomk::msgs::String::kName);
     return 0;
 }
 
-void YomkPluginSystemBuilder::deinit()
+void YomkPlugSysBuilder::deinit()
 {
     // 逆序注销 init 注册的内部服务。
     // 必须直调注入的 server 指针：进程退出兜底走 shutdown（先清表再锁外逐个 deinit），
@@ -66,7 +66,7 @@ void YomkPluginSystemBuilder::deinit()
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
+yomk::payload::Response YomkPlugSysBuilder::parseManifest(
     const std::string& workflowPath, std::string& workflowDir, std::vector<ManifestEntry>& entries)
 {
     namespace fs = std::filesystem;
@@ -84,7 +84,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
     workflowDir = manifest.parent_path().string();
 
     // 首行格式标识：.yomk 后缀文件按用处格式各异，以标识区分；插件系统清单必须以此开头
-    static const char* kFormatMarker = "#! yomk_plugin_system";
+    static const char* kFormatMarker = "#! yomk_plug_sys";
     std::string firstLine;
     if (!std::getline(in, firstLine) || trim(firstLine) != kFormatMarker)
     {
@@ -144,7 +144,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
     return {yomk::payload::ResStatus::Succeeded, "ok"};
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 {
     try
     {
@@ -257,7 +257,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
         std::string summary =
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
         recordBuild(req->d.workflowPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
-        yomk::log().tag("YomkPluginSystemBuilder").info("build: ", req->d.workflowPath, " ", summary);
+        yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.workflowPath, " ", summary);
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(summary)};
     }
     catch (const std::exception& e)
@@ -272,11 +272,11 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
 
 // 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源 project(VERSION)），
 // 经 yomk::plugin().version() 对外
-yomk::payload::Response YomkPluginSystemBuilder::version(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::version(YomkMsgPtr pkg)
 {
     try
     {
-        std::string version = "YomkPluginSystem v" EXTENSION_VERSION " (WIP)";
+        std::string version = "YomkPlugSys v" EXTENSION_VERSION " (WIP)";
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(version)};
     }
     catch (const std::exception& e)
@@ -289,7 +289,7 @@ yomk::payload::Response YomkPluginSystemBuilder::version(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::infoBuilder(YomkMsgPtr pkg)
 {
     try
     {
@@ -313,7 +313,7 @@ yomk::payload::Response YomkPluginSystemBuilder::infoBuilder(YomkMsgPtr pkg)
 }
 
 // 代理接口：透传入参包给 Manager，参数校验与响应语义归 Manager
-yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::plugins(YomkMsgPtr pkg)
 {
     try
     {
@@ -330,7 +330,7 @@ yomk::payload::Response YomkPluginSystemBuilder::plugins(YomkMsgPtr pkg)
 }
 
 // 代理接口：按插件名查询单个插件（与列表接口分离，响应 data 为单条 PluginMeta）
-yomk::payload::Response YomkPluginSystemBuilder::plugin(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::plugin(YomkMsgPtr pkg)
 {
     try
     {
@@ -346,7 +346,7 @@ yomk::payload::Response YomkPluginSystemBuilder::plugin(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::instances(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::instances(YomkMsgPtr pkg)
 {
     try
     {
@@ -362,7 +362,7 @@ yomk::payload::Response YomkPluginSystemBuilder::instances(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::pluginByInstance(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::pluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
@@ -378,7 +378,7 @@ yomk::payload::Response YomkPluginSystemBuilder::pluginByInstance(YomkMsgPtr pkg
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::instancesCfg(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::instancesCfg(YomkMsgPtr pkg)
 {
     try
     {
@@ -394,7 +394,7 @@ yomk::payload::Response YomkPluginSystemBuilder::instancesCfg(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::unload(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::unload(YomkMsgPtr pkg)
 {
     try
     {
@@ -410,7 +410,7 @@ yomk::payload::Response YomkPluginSystemBuilder::unload(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::tryUnload(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::tryUnload(YomkMsgPtr pkg)
 {
     try
     {
@@ -426,7 +426,7 @@ yomk::payload::Response YomkPluginSystemBuilder::tryUnload(YomkMsgPtr pkg)
     }
 }
 
-void YomkPluginSystemBuilder::recordBuild(
+void YomkPlugSysBuilder::recordBuild(
     const std::string& manifest,
     const std::string& result,
     size_t plugins,

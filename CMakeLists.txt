@@ -5,7 +5,7 @@ include(cmake/AbiInfo.cmake)
 # YomkServer 版本检测模块：find_package(YomkServer) 之后调用 yomk_server_version_check()
 include(cmake/YomkServerVersionCheck.cmake)
 
-project(YomkPluginSystem VERSION 1.1.9 LANGUAGES CXX)
+project(YomkPlugSys VERSION 2.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,7 +23,7 @@ add_custom_target(export_compile_commands ALL
 )
 
 find_package(YomkServer REQUIRED)
-# 版本检测：YomkPluginSystem 依赖 YomkServer 3.6.18 及以上，低版本直接报错终止配置
+# 版本检测：YomkPlugSys 依赖 YomkServer 3.6.18 及以上，低版本直接报错终止配置
 yomk_server_version_check()
 message(STATUS "YomkServer version: ${YomkServer_VERSION}")  
 message(STATUS "YomkServer include dirs: ${YomkServer_INCLUDE_DIRS}")  
@@ -38,14 +38,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(${PROJECT_NAME} SHARED
     src/YomkPluginLoader.cpp
     src/YomkPluginManager.cpp
-    src/YomkPluginSystemBuilder.cpp
+    src/YomkPlugSysBuilder.cpp
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE YomkServer::YomkServer ${CMAKE_DL_LIBS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE EXTENSION_VERSION="${PROJECT_VERSION}")
 
 # 安装规则
 # INCLUDE_INSTALL_DIR 是导出 target 的 INTERFACE include 根（<prefix>/include），与 YomkServer::YomkServer 同根，
-# 对外引用统一 <yomk/plugin_system/...>；头文件物理安装位置由下方 install(DIRECTORY) 单独定为 include/yomk/plugin_system/
+# 对外引用统一 <yomk/plug_sys/...>；头文件物理安装位置由下方 install(DIRECTORY) 单独定为 include/yomk/plug_sys/
 set(INCLUDE_INSTALL_DIR "include")
 set(LIB_INSTALL_DIR "lib")
 

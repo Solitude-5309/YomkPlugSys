@@ -1,6 +1,6 @@
 // BadNullName：meta.name = nullptr。
 // 预期宿主判定："invalid plugin meta"（复合条件子分支 !meta->name）。
-#include <yomk/plugin_system/YomkPluginInterface.h>
+#include <yomk/plug_sys/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
     YOMKPLUGIN_ABI_VERSION, nullptr, "bad", "0.0.1", "Yomk", "null name",

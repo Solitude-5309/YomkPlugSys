@@ -1,5 +1,5 @@
 // ConnectionService：workflow 示例插件，演示宿主按清单加载并创建实例、实例配置透传给插件
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 
 #include <string>
 

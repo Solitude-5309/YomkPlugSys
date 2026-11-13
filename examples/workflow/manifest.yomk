@@ -1,4 +1,4 @@
-#! yomk_plugin_system
+#! yomk_plug_sys
 
 # 连接器配置
 ConnectionServiceIns@ConnectionService/lib/libConnectionService.so@ConnectionService/instances/ConnectionService.txt

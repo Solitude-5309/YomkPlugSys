@@ -1,6 +1,6 @@
 # 快速开始
 
-5 分钟跑通 YomkPluginSystem：安装扩展 → 写最小宿主工程 → 构建示例插件工程 → 内省 → 卸载。全程约 3 段命令 + 2 个小文件（`main.cpp` / `CMakeLists.txt`）。
+5 分钟跑通 YomkPlugSys：安装扩展 → 写最小宿主工程 → 构建示例插件工程 → 内省 → 卸载。全程约 3 段命令 + 2 个小文件（`main.cpp` / `CMakeLists.txt`）。
 
 ## 适用与不适用
 
@@ -8,14 +8,14 @@
 - 首次接触本扩展，想最快看到插件装载与内省效果
 
 ❌ 不适合：
-- 已完成安装、直接查接口用法（见[门面服务](YomkPluginSystemBuilder.md)）
+- 已完成安装、直接查接口用法（见[门面服务](YomkPlugSysBuilder.md)）
 
 > 前置：[YomkServer](../../YomkServer/docs/README.md) 已安装（默认前缀 `/opt/yomk`，环境变量 `YOMK_PREFIX_PATH` 指向它）。
 
 ## 第 1 步：编译安装扩展
 
 ```bash
-cd YomkPluginSystem
+cd YomkPlugSys
 source build_ubuntu.sh
 # 依次输入 YomkServer 安装路径（默认 $YOMK_PREFIX_PATH）与扩展安装路径（默认同前缀）
 ```
@@ -29,7 +29,7 @@ source build_ubuntu.sh
 `main.cpp`：
 
 ```cpp
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <iostream>
 
 using namespace yomk;
@@ -39,7 +39,7 @@ int main()
     yomk::server().init();
 
     // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
-    yomk::server().srv<YomkPluginSystemBuilder>().create();
+    yomk::server().srv<YomkPlugSysBuilder>().create();
 
     // 按清单构建示例插件工程（清单见 examples/workflow/manifest.yomk）
     auto build = yomk::plugin().manifest(PLUGIN_MANIFEST).build();
@@ -70,18 +70,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(YomkServer REQUIRED)
-find_package(YomkPluginSystem REQUIRED)
+find_package(YomkPlugSys REQUIRED)
 
 add_executable(demo main.cpp)
 target_compile_definitions(demo PRIVATE PLUGIN_MANIFEST="${PLUGIN_MANIFEST}")
-target_link_libraries(demo PRIVATE YomkPluginSystem::YomkPluginSystem YomkServer::YomkServer)
+target_link_libraries(demo PRIVATE YomkPlugSys::YomkPlugSys YomkServer::YomkServer)
 ```
 
-构建运行（清单绝对路径经 `PLUGIN_MANIFEST` 缓存变量注入宏；`YomkPluginSystem` 对 YomkServer 是 PRIVATE 链接，故宿主须显式再链 `YomkServer::YomkServer`）：
+构建运行（清单绝对路径经 `PLUGIN_MANIFEST` 缓存变量注入宏；`YomkPlugSys` 对 YomkServer 是 PRIVATE 链接，故宿主须显式再链 `YomkServer::YomkServer`）：
 
 ```bash
 cmake -S . -B build -DCMAKE_PREFIX_PATH="${YOMK_PREFIX_PATH}" \
-    -DPLUGIN_MANIFEST="/path/to/YomkPluginSystem/examples/workflow/manifest.yomk"
+    -DPLUGIN_MANIFEST="/path/to/YomkPlugSys/examples/workflow/manifest.yomk"
 cmake --build build -j
 ./build/demo
 ```
@@ -93,7 +93,7 @@ cmake --build build -j
 运行随扩展安装的入门示例（每一步注释标明【接口 / 输入 / 输出】）：
 
 ```bash
-<安装路径>/bin/ExampleYomkPluginSystemBuilder
+<安装路径>/bin/ExampleYomkPlugSysBuilder
 ```
 
 > 示例程序的清单路径在编译期固化为源码树中的 `examples/workflow/manifest.yomk`，示例插件 so 也留在源码树（不随安装分发），因此需在本仓库原位置运行。

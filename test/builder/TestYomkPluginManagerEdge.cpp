@@ -3,7 +3,7 @@
 // create/destroy 入参边界、list/list_instances filter 三态（未知/命中/已注册零实例）、
 // instanceInfoLine 内省行、Loader meta 深拷贝、插件注册列表、跨插件同名实例、超长输入边界。
 // 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>
@@ -121,7 +121,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 int main()
 {
     yomk::server().init();
-    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -137,7 +137,7 @@ int main()
     }
 
     // 基线：TestPlugin 双实例 + BadCreateNull 注册（0 实例）
-    writeManifest("base.yomk", "#! yomk_plugin_system\ne-a@libTestPlugin.so@inst.txt\ne-b@libTestPlugin.so@inst.txt\n");
+    writeManifest("base.yomk", "#! yomk_plug_sys\ne-a@libTestPlugin.so@inst.txt\ne-b@libTestPlugin.so@inst.txt\n");
     check(isOk(yomk::plugin().manifest(fp("base.yomk")).build()), "build baseline with two instances");
     yomk::payload::PluginPath badPath;
     badPath.path = fp("libBadCreateNull.so");
@@ -220,7 +220,7 @@ int main()
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
 
-    resp = yomk::server().url("/YomkPluginSystemBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    resp = yomk::server().url("/YomkPlugSysBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
     // ---------- M2.5 链式门面：plg_name(name).instances() 与直调 filter 等价 ----------
@@ -361,8 +361,8 @@ int main()
           "wrong-type msg to /YomkPluginLoader/load returns Failed (no crash)");
     check(isNo(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::String::shared("wrong-type-probe")).request()),
           "wrong-type msg to /YomkPluginManager/create_instance returns Failed (no crash)");
-    check(isNo(yomk::server().url("/YomkPluginSystemBuilder/build").msg(yomk::msgs::String::shared("wrong-type-probe")).request()),
-          "wrong-type msg to /YomkPluginSystemBuilder/build returns Failed (no crash)");
+    check(isNo(yomk::server().url("/YomkPlugSysBuilder/build").msg(yomk::msgs::String::shared("wrong-type-probe")).request()),
+          "wrong-type msg to /YomkPlugSysBuilder/build returns Failed (no crash)");
 
     // ---------- M6 跨插件同名实例（限定名 = 插件名.实例名，全局唯一） ----------
     yomk::payload::PluginPath secondPath;

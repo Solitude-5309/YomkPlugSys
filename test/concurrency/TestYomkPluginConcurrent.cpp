@@ -4,7 +4,7 @@
 // 规模为数百次交错（总操作 <1000），正确性看交错多样性而非次数。
 // 装置 TSan-clean：线程内只写原子计数，join 后主线程统一断言。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <atomic>
@@ -159,7 +159,7 @@ static bool c3MsgAllowed(const yomk::payload::Response& r)
 int main()
 {
     yomk::server().init();
-    check(yomk::server().srv<YomkPluginSystemBuilder>().create() == 0, "register YomkPluginSystemBuilder");
+    check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -173,7 +173,7 @@ int main()
     }
 
     // ---------- C0 基线：插件加载态 ----------
-    writeManifest("c0.yomk", "#! yomk_plugin_system\nc0-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("c0.yomk", "#! yomk_plug_sys\nc0-i1@libTestPlugin.so@inst.txt\n");
     expectOkSummary(yomk::plugin().manifest(fp("c0.yomk")).build(), "plugins:1 instances:1", "C0 build baseline ok");
     check(isOk(destroyInst("c0-i1")), "C0 destroy baseline instance (plugin stays loaded)");
 
@@ -241,7 +241,7 @@ int main()
 
     // ---------- C2 并发 build 幂等收敛：4 线程并发同一清单 ----------
     check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "C2 preload unload for build race");
-    writeManifest("c2.yomk", "#! yomk_plugin_system\nc2-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("c2.yomk", "#! yomk_plug_sys\nc2-i1@libTestPlugin.so@inst.txt\n");
     std::atomic<int> c2Ok{0};
     std::atomic<int> c2MsgBad{0};
     {
@@ -335,7 +335,7 @@ int main()
 
     // ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ----------
     // 前置：C3 结束插件已卸载，重建加载态（churn 需要插件在库中）
-    writeManifest("c4pre.yomk", "#! yomk_plugin_system\nc4pre-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("c4pre.yomk", "#! yomk_plug_sys\nc4pre-i1@libTestPlugin.so@inst.txt\n");
     yomk::plugin().manifest(fp("c4pre.yomk")).build();
     destroyInst("c4pre-i1");
 

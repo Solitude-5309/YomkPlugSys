@@ -1,6 +1,6 @@
 # 插件生命周期
 
-插件从 so 装载、实例创建、销毁到卸载的完整状态机语义：哪一步幂等、哪一步拒绝、失败时返回什么。理解本章即可正确编排生命周期接口的调用顺序与错误处理；接口的调用方式（链式域入口）见[门面服务](YomkPluginSystemBuilder.md)。
+插件从 so 装载、实例创建、销毁到卸载的完整状态机语义：哪一步幂等、哪一步拒绝、失败时返回什么。理解本章即可正确编排生命周期接口的调用顺序与错误处理；接口的调用方式（链式域入口）见[门面服务](YomkPlugSysBuilder.md)。
 
 ## 适用与不适用
 
@@ -10,7 +10,7 @@
 - 白盒测试或扩展维护者理解内部两级服务的协作
 
 ❌ 不适合：
-- 查接口怎么调（见[门面服务](YomkPluginSystemBuilder.md)）
+- 查接口怎么调（见[门面服务](YomkPlugSysBuilder.md)）
 - 编写插件本体（见[插件开发指南](YomkPluginInterface.md)）
 
 > 前置概念：限定名 = `插件名.实例名`（全局唯一主键）；插件名即插件 meta 的 `name` 字段，由 so 的 `yomk_plugin_meta()` 导出（见[插件开发指南](YomkPluginInterface.md)）。
@@ -91,7 +91,7 @@
 
 ## 相关跳转
 
-- [门面服务](YomkPluginSystemBuilder.md)：生命周期接口的调用方式与返回解包
+- [门面服务](YomkPlugSysBuilder.md)：生命周期接口的调用方式与返回解包
 - [插件开发指南](YomkPluginInterface.md)：状态机中各导出函数何时被调用
 
 ## 完整示例

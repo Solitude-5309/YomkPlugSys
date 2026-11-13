@@ -2,7 +2,7 @@
 // 演示完整 ABI 契约：meta 常量导出 + 实例工厂 + 实例删除。
 // instance_name 由宿主创建实例时指定（限定名 插件名.实例名，全局唯一），
 // instance_cfg 独立透传，两者互不影响。
-#include <yomk/plugin_system/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPluginApi.h>
 
 #include <string>
 
@@ -23,7 +23,7 @@ private:
 };
 
 static const YomkPluginMeta g_meta = {
-    YOMKPLUGIN_ABI_VERSION, "TestPlugin", "demo", "0.0.1", "Yomk", "Sample plugin for YomkPluginSystem testing"};
+    YOMKPLUGIN_ABI_VERSION, "TestPlugin", "demo", "0.0.1", "Yomk", "Sample plugin for YomkPlugSys testing"};
 
 static const YomkPluginMeta* metaFn()
 {

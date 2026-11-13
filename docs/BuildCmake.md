@@ -1,6 +1,6 @@
 # 构建与验证
 
-YomkPluginSystem 的编译安装、下游工程 CMake 集成、安装布局与测试体系。依赖 YomkServer 3.6.18 及以上（配置期自动检测，低版本直接报错终止）。
+YomkPlugSys 的编译安装、下游工程 CMake 集成、安装布局与测试体系。依赖 YomkServer 3.6.18 及以上（配置期自动检测，低版本直接报错终止）。
 
 ## 适用与不适用
 
@@ -11,7 +11,7 @@ YomkPluginSystem 的编译安装、下游工程 CMake 集成、安装布局与�
 
 ❌ 不适合：
 - YomkServer 本体的编译安装（见 YomkServer 仓库）
-- 运行期接口问题（见[门面服务](YomkPluginSystemBuilder.md)）
+- 运行期接口问题（见[门面服务](YomkPlugSysBuilder.md)）
 
 ## 前置条件
 
@@ -29,7 +29,7 @@ source build_ubuntu.sh
 
 脚本行为：
 
-- 示例程序默认编译并随扩展安装（到 `<安装路径>/bin`），可直接运行 `ExampleYomkPluginSystemBuilder` 验证
+- 示例程序默认编译并随扩展安装（到 `<安装路径>/bin`），可直接运行 `ExampleYomkPlugSysBuilder` 验证
 - 测试程序询问是否编译（直接回车默认编译，输入 n 跳过），仅本地构建不安装（产物在 `test/build/` 下）
 - 安装后将扩展 lib 注册到系统动态库搜索路径（复用 `/etc/ld.so.conf.d/yomk.conf`，幂等追加）并刷新 ldconfig 缓存，新开任意终端即可找到扩展 so
 - 测试/示例 cmake 带 `-U<NAME>_DIR` 清缓存，强制按本次前缀重新 find_package，避免钉死陈旧安装目录
@@ -46,10 +46,10 @@ cmake --install build --prefix "${YOMK_PREFIX_PATH}"   # 前缀不可写时加 s
 
 | 路径 | 内容 |
 |---|---|
-| `<prefix>/include/yomk/plugin_system/` | 对外头文件 6 个（引用形态 `<yomk/plugin_system/...>`，与 SDK 各域共用同一 include 根） |
-| `<prefix>/lib/libYomkPluginSystem.so` | 扩展动态库 |
-| `<prefix>/lib/cmake/YomkPluginSystem/` | find_package 导出配置 |
-| `<prefix>/bin/ExampleYomkPluginSystemBuilder` | 入门示例程序 |
+| `<prefix>/include/yomk/plug_sys/` | 对外头文件 6 个（引用形态 `<yomk/plug_sys/...>`，与 SDK 各域共用同一 include 根） |
+| `<prefix>/lib/libYomkPlugSys.so` | 扩展动态库 |
+| `<prefix>/lib/cmake/YomkPlugSys/` | find_package 导出配置 |
+| `<prefix>/bin/ExampleYomkPlugSysBuilder` | 入门示例程序 |
 
 版本检测：CMake 配置期要求 `YomkServer >= 3.6.18`（`cmake/YomkServerVersionCheck.cmake`），低版本直接 FATAL_ERROR。
 
@@ -58,11 +58,11 @@ cmake --install build --prefix "${YOMK_PREFIX_PATH}"   # 前缀不可写时加 s
 宿主工程与插件工程统一用 find_package：
 
 ```cmake
-find_package(YomkPluginSystem REQUIRED)
-target_link_libraries(demo PRIVATE YomkPluginSystem::YomkPluginSystem)
+find_package(YomkPlugSys REQUIRED)
+target_link_libraries(demo PRIVATE YomkPlugSys::YomkPlugSys)
 ```
 
-- 导入 target 已携带 INTERFACE include（`<prefix>/include`），源码直接 `#include <yomk/plugin_system/YomkPluginApi.h>`，无需手动 include_directories
+- 导入 target 已携带 INTERFACE include（`<prefix>/include`），源码直接 `#include <yomk/plug_sys/YomkPluginApi.h>`，无需手动 include_directories
 - 插件工程同样链接（SHARED 库引用 ABI 头），示例见[插件开发指南](YomkPluginInterface.md)的 CMake 片段
 
 ## 测试体系
@@ -103,7 +103,7 @@ cmake --build test/build -j
 ## 注意事项
 
 - 构建目录可任意（仓库外亦可）；`compile_commands.json` 自动导出到源码根供 clangd 使用。
-- 示例程序与示例插件分离安装：`ExampleYomkPluginSystemBuilder` 装入 `<prefix>/bin`，但清单路径编译期固化为源码树 `examples/workflow/manifest.yomk`，插件 so 也留在源码树 `examples/workflow/*/lib/`（不安装）——源码树被移动或删除后，已安装的示例程序无法运行。
+- 示例程序与示例插件分离安装：`ExampleYomkPlugSysBuilder` 装入 `<prefix>/bin`，但清单路径编译期固化为源码树 `examples/workflow/manifest.yomk`，插件 so 也留在源码树 `examples/workflow/*/lib/`（不安装）——源码树被移动或删除后，已安装的示例程序无法运行。
 - 构建产物目录（`build/`、`test/build/`、`examples/build/`）与 `test_logs/` 均被 .gitignore 忽略。
 - 交叉编译/换编译器时 ABI 环境指纹（`cmake/AbiInfo.cmake`）会生成 `abi_report.txt`，插件与宿主须同环境编译（见[插件开发指南](YomkPluginInterface.md)）。
 
@@ -111,7 +111,7 @@ cmake --build test/build -j
 
 - **cmake 报 YomkServer 版本不足？** 安装 YomkServer >= 3.6.18，确认 `CMAKE_PREFIX_PATH` 指向其安装前缀。
 - **安装到 /opt/yomk 提示无权限？** 脚本自动加 sudo；手动流程给 `cmake --install` 自行加 sudo。
-- **下游链接找不到 libYomkPluginSystem.so？** 确认 ldconfig 已刷新（脚本自动执行）；或运行时设 `LD_LIBRARY_PATH=<prefix>/lib`。
+- **下游链接找不到 libYomkPlugSys.so？** 确认 ldconfig 已刷新（脚本自动执行）；或运行时设 `LD_LIBRARY_PATH=<prefix>/lib`。
 
 ## 相关跳转
 
@@ -120,4 +120,4 @@ cmake --build test/build -j
 
 ## 完整示例
 
-`build_ubuntu.sh` 全流程输出示例与 `test/` 各测试的断言细节见源码；安装后直接运行 `<prefix>/bin/ExampleYomkPluginSystemBuilder` 观察端到端结果。
+`build_ubuntu.sh` 全流程输出示例与 `test/` 各测试的断言细节见源码；安装后直接运行 `<prefix>/bin/ExampleYomkPlugSysBuilder` 观察端到端结果。

@@ -1,6 +1,6 @@
 // BadCreateNull：meta 合法（load 成功注册），create_instance 返回 nullptr。
 // 预期宿主判定："create instance failed: BadCreateNull"（build 包装为 create failed）。
-#include <yomk/plugin_system/YomkPluginInterface.h>
+#include <yomk/plug_sys/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
     YOMKPLUGIN_ABI_VERSION, "BadCreateNull", "bad", "0.0.1", "Yomk", "create returns nullptr",

@@ -1,6 +1,6 @@
 // BadAbi：abi_version 与宿主不匹配（宿主宏 +1）。
 // 预期宿主判定："abi version mismatch: plugin <N+1>, host <N>"。
-#include <yomk/plugin_system/YomkPluginInterface.h>
+#include <yomk/plug_sys/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
     YOMKPLUGIN_ABI_VERSION + 1, "BadAbi", "bad", "0.0.1", "Yomk", "abi version mismatch",
