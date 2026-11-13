@@ -37,9 +37,9 @@
 ### 装载（load / build）
 
 - `load`：dlopen + 符号解析（`yomk_plugin_meta` / `yomk_plugin_create_instance` / `yomk_plugin_delete_instance`）+ ABI 版本比对 + 同名 meta 拒绝；Manager 登记时再拒绝含 `.` 的插件名；返回插件名（= meta.name）
-- **build 复用已加载插件**：清单条目的 so 绝对路径已在插件表内则跳过 load、直接复用插件名（不重复登记）；直接 `load` 同 meta 名的插件则返回 `Failed`（`plugin already loaded`）
+- **build 复用已加载插件**：清单实例块的 so 绝对路径已在插件表内则跳过 load、直接复用插件名（不重复登记）；直接 `load` 同 meta 名的插件则返回 `Failed`（`plugin already loaded`）
 - ABI 版本不符 / 符号缺失 / meta 为空或 `name` 为空 / 插件名含 `.` / 与已加载插件重名 → `Failed`，插件不进入插件表
-- `build` = 清单解析 + 逐条 load + create_instance 的编排；任一条目失败即中止返回 `Failed` 并指明清单行号，**已成功的条目不回滚**
+- `build` = 清单解析 + 逐块 load + create_instance 的编排；任一块失败即中止返回 `Failed` 并指明清单行号，**已成功的块不回滚**
 
 ### 实例创建（create_instance / build）
 
@@ -79,7 +79,7 @@
 
 - 门面提供的生命周期接口均为**同步阻塞**调用，扩展不提供异步封装；确实需要非阻塞时可绕过门面，用底层通用通道 `yomk::server().url(...).msg(...).async(callback).request()` 自行投递，但请求顺序不再保证，且在途消息包持有的实例引用同样计入存活判定（会阻止卸载）。
 - 实例与插件状态仅存于进程内存：进程退出即全部卸载，无持久化。
-- `build` 中途失败的清单**不回滚**已成功条目；重复执行同一清单时已加载插件幂等跳过，仅重名实例会失败——修正清单后重新 `build` 即可收敛。
+- `build` 中途失败的清单**不回滚**已成功实例块；重复执行同一清单时已加载插件幂等跳过，仅重名实例会失败——修正清单后重新 `build` 即可收敛。
 - 宿主持有 `PluginInstance`（shared_ptr，含响应包 `data` 内的一份）期间，对应插件既不能被 `try_unload` 也不能被 `unload`（Loader 判活拒绝）；跨请求传递实例时注意归还时机。
 
 ## 常见问题 FAQ

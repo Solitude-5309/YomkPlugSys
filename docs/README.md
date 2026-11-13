@@ -20,7 +20,7 @@
 | [YomkPlugSysBuilder](YomkPlugSysBuilder.md) | 唯一用户门面服务：清单构建驱动插件装载、聚合内省、两种卸载语义；请求经 `yomk::plug_sys()` 域入口发起 |
 | [插件生命周期](PluginLifecycle.md) | 插件加载→实例创建→销毁→卸载的状态机语义：幂等边界、存活实例拒绝、限定名全局唯一主键 |
 | [插件开发指南](YomkPluginInterface.md) | ABI 契约三件套：`YomkPluginMeta` 元数据、`YomkPluginInterface` 实例接口、`YOMKPLUGIN_EXPORT` 一键导出 |
-| [插件系统清单](PlugSysManifest.md) | 插件系统装载清单 manifest.yomk 的语法：首行格式标识 + `实例名@动态库@实例配置` 条目 + 注释与路径规则 |
+| [插件系统清单](PlugSysManifest.md) | 插件系统装载清单 manifest.yomk 的语法：首行格式标识 + `[实例名]` + `lib` / `config` 键值块 + 注释与路径规则 |
 | [构建与验证](BuildCmake.md) | 交互式编译安装、下游 find_package 集成、安装布局与测试体系 |
 
 ## 规范与配套

@@ -55,10 +55,12 @@ int main()
 
     // 2. 构建插件系统并查看构建信息
     // 接口：yomk::plug_sys().manifest(manifestPath).build() + yomk::plug_sys().builder()
-    // 输入：清单文件路径。首行 #! yomk_plug_sys，之后每行一个条目：
-    //       实例名@动态库相对路径@实例配置相对路径
+    // 输入：清单文件路径。首行 #! yomk_plug_sys，之后按实例块书写：
+    //       [实例名]
+    //       lib = 动态库相对路径
+    //       config = 实例配置相对路径
     // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
-    // 副作用：逐条目加载插件 so 并创建实例，实例名取自清单条目
+    // 副作用：逐实例块加载插件 so 并创建实例，实例名取自块名
     section("2. 构建插件系统 yomk::plug_sys().manifest(manifest).build()");
     std::cout << "清单: " << manifest << std::endl;
     yomk::payload::Response resp = yomk::plug_sys().manifest(manifest).build();

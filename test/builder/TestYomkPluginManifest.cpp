@@ -1,6 +1,6 @@
 // TestYomkPluginManifest：清单解析全面测试（闭环2）
 // 经 YOMKPLUGIN_BUILD 触达 parseManifest 全分支：路径预检、首行格式标识、
-// 注释与空行、@ 切分与空段、绝对路径拒绝、行号计数、合法条目接受，
+// 注释与空行、实例块与键值严格校验、绝对路径拒绝、块头行号计数、合法块接受，
 // 并对账 /builder（recordBuild 侧效：manifest 条目/path/result/计数）。
 // 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，
 // 直接运行也不污染当前目录）；插件 so 符号链接进夹具目录满足相对路径契约。
@@ -104,7 +104,7 @@ static void touchInstanceCfg(const std::string& name)
     std::ofstream f(fp(name));
 }
 
-// 夹具：符号链接插件 so 到夹具目录（清单 lib 段用相对路径引用）
+// 夹具：符号链接插件 so 到夹具目录（清单 lib 键用相对路径引用）
 static void linkPlugin()
 {
     namespace fs = std::filesystem;
@@ -164,64 +164,105 @@ int main()
     expectOkSummary(yomk::plug_sys().manifest(fp("m-pad.yomk")).build(), "plugins:0 instances:0", "B3 leading-space marker accepts");
     writeManifest("m-trail.yomk", "#! yomk_plug_sys trailing\n");
     expectNo(yomk::plug_sys().manifest(fp("m-trail.yomk")).build(), "format marker not found", "B4 marker trailing content rejects");
-    writeManifest("m-notfirst.yomk", "entry\n#! yomk_plug_sys\n");
+    writeManifest("m-notfirst.yomk", "[x]\n#! yomk_plug_sys\n");
     expectNo(yomk::plug_sys().manifest(fp("m-notfirst.yomk")).build(), "line 1: format marker not found", "B5 marker not first line");
     writeManifest("m-crlf.yomk", "#! yomk_plug_sys\r\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("m-crlf.yomk")).build(), "plugins:0 instances:0", "B6 marker line CRLF accepts");
+    writeManifest("m-markcmt.yomk", "#! yomk_plug_sys    # 文件标识\n");
+    expectOkSummary(yomk::plug_sys().manifest(fp("m-markcmt.yomk")).build(), "plugins:0 instances:0", "B7 inline comment after marker accepts");
 
     // ---------- C 注释与空行 ----------
     writeManifest("m-comments.yomk", "#! yomk_plug_sys\n# c1\n# c2\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("m-comments.yomk")).build(), "plugins:0 instances:0", "C1 all-comment manifest ok");
     writeManifest("m-blanks.yomk", "#! yomk_plug_sys\n\n   \n\t\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("m-blanks.yomk")).build(), "plugins:0 instances:0", "C2 blank/whitespace lines skip");
-    writeManifest("m-inline.yomk", "#! yomk_plug_sys\ni-inline@libTestPlugin.so@inst.txt # cfg comment\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-inline.yomk")).build(), "plugins:1 instances:1", "C3 inline comment truncated");
+    writeManifest(
+        "m-inlinekv.yomk",
+        "#! yomk_plug_sys\n[i-inline]\nlib = libTestPlugin.so # lib comment\nconfig = inst.txt # cfg comment\n");
+    expectOkSummary(
+        yomk::plug_sys().manifest(fp("m-inlinekv.yomk")).build(), "plugins:1 instances:1", "C3 inline comment on key lines");
+    writeManifest(
+        "m-inlinehead.yomk", "#! yomk_plug_sys\n[i-head] # instance block\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    expectOkSummary(
+        yomk::plug_sys().manifest(fp("m-inlinehead.yomk")).build(), "plugins:1 instances:1", "C4 inline comment on block header");
 
-    // ---------- D @ 切分与空段 ----------
-    const std::string fmtErr = "expect instanceName@libRelPath@instanceCfgRelPath";
-    const std::string emptyErr = "empty segment";
-    writeManifest("m-d1.yomk", "#! yomk_plug_sys\njustname\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d1.yomk")).build(), fmtErr, "D1 no '@' rejects");
-    writeManifest("m-d2.yomk", "#! yomk_plug_sys\na@b\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d2.yomk")).build(), fmtErr, "D2 one '@' rejects");
-    writeManifest("m-d3.yomk", "#! yomk_plug_sys\na@b@c@d\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d3.yomk")).build(), fmtErr, "D3 three '@' rejects");
-    writeManifest("m-d4.yomk", "#! yomk_plug_sys\n@lib@file\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d4.yomk")).build(), emptyErr, "D4 empty instance name rejects");
-    writeManifest("m-d5.yomk", "#! yomk_plug_sys\na@@file\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d5.yomk")).build(), emptyErr, "D5 empty lib segment rejects");
-    writeManifest("m-d6.yomk", "#! yomk_plug_sys\na@lib@\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d6.yomk")).build(), emptyErr, "D6 empty file segment rejects");
-    writeManifest("m-d7.yomk", "#! yomk_plug_sys\n@@\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d7.yomk")).build(), emptyErr, "D7 all-empty segments reject");
-    writeManifest("m-d8.yomk", "#! yomk_plug_sys\na@ \t @c\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-d8.yomk")).build(), emptyErr, "D8 whitespace-only segment rejects");
+    // ---------- D 实例块与键值结构 ----------
+    writeManifest("m-d1.yomk", "#! yomk_plug_sys\nlib = libTestPlugin.so\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d1.yomk")).build(), "key outside instance block", "D1 key before any block rejects");
+    writeManifest("m-d2.yomk", "#! yomk_plug_sys\n[bad\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d2.yomk")).build(), "malformed instance block header",
+        "D2 header without ']' rejects");
+    writeManifest("m-d3.yomk", "#! yomk_plug_sys\n[]\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-d3.yomk")).build(), "empty instance name", "D3 empty block name rejects");
+    writeManifest("m-d4.yomk", "#! yomk_plug_sys\n[a.b]\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d4.yomk")).build(), "instance name must not contain '.'",
+        "D4 dotted block name rejects");
+    writeManifest("m-d5.yomk", "#! yomk_plug_sys\n[a]]\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d5.yomk")).build(), "instance name must not contain brackets",
+        "D5 bracketed block name rejects");
+    writeManifest("m-d6.yomk", "#! yomk_plug_sys\n[i]\nlib libTestPlugin.so\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-d6.yomk")).build(), "expect key = value", "D6 key line without '=' rejects");
+    writeManifest("m-d7.yomk", "#! yomk_plug_sys\n[i]\nfoo = bar\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-d7.yomk")).build(), "unknown key 'foo'", "D7 unknown key rejects");
+    writeManifest(
+        "m-d8.yomk", "#! yomk_plug_sys\n[i]\nlib = libTestPlugin.so\nlib = libTestPlugin.so\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-d8.yomk")).build(), "duplicate key 'lib'", "D8 duplicate lib key rejects");
+    writeManifest("m-d9.yomk", "#! yomk_plug_sys\n[i]\nconfig = inst.txt\nconfig = inst.txt\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d9.yomk")).build(), "duplicate key 'config'", "D9 duplicate config key rejects");
+    writeManifest("m-d10.yomk", "#! yomk_plug_sys\n[i]\nlib =\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-d10.yomk")).build(), "empty value for 'lib'", "D10 empty lib value rejects");
+    writeManifest("m-d11.yomk", "#! yomk_plug_sys\n[i]\nlib = libTestPlugin.so\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d11.yomk")).build(), "instance block [i] missing config",
+        "D11 block missing config at EOF rejects");
+    writeManifest("m-d12.yomk", "#! yomk_plug_sys\n[i-a]\nconfig = inst.txt\n[i-b]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d12.yomk")).build(), "instance block [i-a] missing lib",
+        "D12 block missing lib at next header rejects");
+    writeManifest("m-d13.yomk", "#! yomk_plug_sys\n[empty]\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-d13.yomk")).build(), "instance block [empty] missing lib and config",
+        "D13 empty block rejects");
 
     // ---------- E 绝对路径拒绝 ----------
-    writeManifest("m-e1.yomk", "#! yomk_plug_sys\na@/abs/lib.so@f\n");
+    writeManifest("m-e1.yomk", "#! yomk_plug_sys\n[a]\nlib = /abs/lib.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("m-e1.yomk")).build(), "lib path must be relative", "E1 absolute lib path rejects");
-    writeManifest("m-e2.yomk", "#! yomk_plug_sys\na@lib@/abs/f\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-e2.yomk")).build(), "instance config path must be relative", "E2 absolute file path rejects");
+    writeManifest("m-e2.yomk", "#! yomk_plug_sys\n[a]\nlib = libTestPlugin.so\nconfig = /abs/inst.txt\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-e2.yomk")).build(), "instance config path must be relative",
+        "E2 absolute config path rejects");
 
     // ---------- F 行号计数（注释/空行跳过后行号正确） ----------
-    writeManifest("m-f2.yomk", "#! yomk_plug_sys\nbad\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-f2.yomk")).build(), "manifest line 2:", "F1 error reported on line 2");
-    writeManifest("m-f3.yomk", "#! yomk_plug_sys\n# comment\nbad\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-f3.yomk")).build(), "manifest line 3:", "F2 error reported on line 3");
-    writeManifest("m-f5.yomk", "#! yomk_plug_sys\n# c\n\n   \nbad\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-f5.yomk")).build(), "manifest line 5:", "F3 error on line 5 after skips");
+    writeManifest("m-f1.yomk", "#! yomk_plug_sys\nlib = libTestPlugin.so\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-f1.yomk")).build(), "manifest line 2:", "F1 error reported on line 2");
+    writeManifest("m-f2.yomk", "#! yomk_plug_sys\n# comment\n[i]\nfoo = bar\n");
+    expectNo(yomk::plug_sys().manifest(fp("m-f2.yomk")).build(), "manifest line 4:", "F2 error reported on line 4");
+    writeManifest("m-f3.yomk", "#! yomk_plug_sys\n# c\n[i]\nlib = libTestPlugin.so\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-f3.yomk")).build(), "manifest line 3: instance block [i] missing config",
+        "F3 missing key reported on block header line 3");
 
-    // ---------- G 合法条目接受（真实加载 TestPlugin） ----------
-    writeManifest("m-g1.yomk", "#! yomk_plug_sys\ni-single@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-g1.yomk")).build(), "plugins:1 instances:1", "G1 single entry builds");
-    writeManifest("m-g2.yomk", "#! yomk_plug_sys\ni-a@libTestPlugin.so@inst.txt\ni-b@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-g2.yomk")).build(), "plugins:1 instances:2", "G2 two entries same lib");
-    writeManifest("m-g3.yomk", "#! yomk_plug_sys\n\t i-pad \t@\t libTestPlugin.so \t@\t inst.txt \t\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-g3.yomk")).build(), "plugins:1 instances:1", "G3 padded segments trim");
-    writeManifest("m-g4.yomk", "#! yomk_plug_sys\ni-crlf@libTestPlugin.so@inst.txt\r\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-g4.yomk")).build(), "plugins:1 instances:1", "G4 entry line CRLF accepts");
-    writeManifest("m-g5.yomk", "#! yomk_plug_sys\nmy inst@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plug_sys().manifest(fp("m-g5.yomk")).build(), "plugins:1 instances:1", "G5 space in instance name accepts");
+    // ---------- G 合法实例块接受（真实加载 TestPlugin） ----------
+    writeManifest("m-g1.yomk", "#! yomk_plug_sys\n[i-single]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    expectOkSummary(yomk::plug_sys().manifest(fp("m-g1.yomk")).build(), "plugins:1 instances:1", "G1 single block builds");
+    writeManifest(
+        "m-g2.yomk",
+        "#! yomk_plug_sys\n[i-a]\nlib = libTestPlugin.so\nconfig = inst.txt\n[i-b]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    expectOkSummary(yomk::plug_sys().manifest(fp("m-g2.yomk")).build(), "plugins:1 instances:2", "G2 two blocks same lib");
+    writeManifest(
+        "m-g3.yomk", "#! yomk_plug_sys\n\t[ i-pad ]\t\nconfig =\t inst.txt \t\nlib =  libTestPlugin.so \t\n");
+    expectOkSummary(
+        yomk::plug_sys().manifest(fp("m-g3.yomk")).build(), "plugins:1 instances:1", "G3 padded values and reversed key order");
+    writeManifest(
+        "m-g4.yomk", "#! yomk_plug_sys\r\n[i-crlf]\r\nlib = libTestPlugin.so\r\nconfig = inst.txt\r\n");
+    expectOkSummary(yomk::plug_sys().manifest(fp("m-g4.yomk")).build(), "plugins:1 instances:1", "G4 block lines CRLF accepts");
+    writeManifest("m-g5.yomk", "#! yomk_plug_sys\n[my inst]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    expectOkSummary(yomk::plug_sys().manifest(fp("m-g5.yomk")).build(), "plugins:1 instances:1", "G5 space in block name accepts");
 
     // ---------- H /builder 对账（recordBuild 侧效） ----------
     const yomk::payload::BuilderInfo dump = builderInfo();
@@ -229,30 +270,34 @@ int main()
         dump.path == fp("m-g5.yomk") && dump.result == "ok" && dump.plugins == 1 && dump.instances == 1,
         "H1 /builder shows manifest path and ok result");
     check(
-        std::find(dump.manifest.begin(), dump.manifest.end(), "my inst@libTestPlugin.so@inst.txt") !=
+        std::find(dump.manifest.begin(), dump.manifest.end(), "[my inst] lib=libTestPlugin.so config=inst.txt") !=
             dump.manifest.end(),
-        "H2 /builder keeps entry lines of latest build");
+        "H2 /builder keeps entry lines in block syntax");
 
-    writeManifest("m-hfail.yomk", "#! yomk_plug_sys\n@lib@file\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-hfail.yomk")).build(), emptyErr, "H3 failure build Failed");
+    writeManifest("m-hfail.yomk", "#! yomk_plug_sys\nlib = libTestPlugin.so\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-hfail.yomk")).build(), "key outside instance block", "H3 failure build Failed");
     const yomk::payload::BuilderInfo hfail = builderInfo();
     check(
-        hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: empty segment" && hfail.plugins == 0 &&
-            hfail.instances == 0 && hfail.manifest.empty(),
+        hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: key outside instance block" &&
+            hfail.plugins == 0 && hfail.instances == 0 && hfail.manifest.empty(),
         "H4 /builder records failure result");
 
     writeManifest(
         "m-part.yomk",
-        "#! yomk_plug_sys\ngood1@libTestPlugin.so@inst.txt\nbad2@libTestPlugin.so@missing_inst.txt\n");
-    expectNo(yomk::plug_sys().manifest(fp("m-part.yomk")).build(), "manifest line 3: instance config not found", "H5 partial build fails");
+        "#! yomk_plug_sys\n[good1]\nlib = libTestPlugin.so\nconfig = inst.txt\n"
+        "[bad2]\nlib = libTestPlugin.so\nconfig = missing_inst.txt\n");
+    expectNo(
+        yomk::plug_sys().manifest(fp("m-part.yomk")).build(), "manifest line 5: instance config not found",
+        "H5 partial build fails on second block");
     const yomk::payload::BuilderInfo partDump = builderInfo();
     check(
         partDump.path == fp("m-part.yomk") &&
-            partDump.result == "manifest line 3: instance config not found: " + fp("missing_inst.txt") &&
+            partDump.result == "manifest line 5: instance config not found: " + fp("missing_inst.txt") &&
             partDump.plugins == 1 && partDump.instances == 1,
         "H6 /builder records partial failure with partial counts");
     check(
-        std::find(partDump.manifest.begin(), partDump.manifest.end(), "good1@libTestPlugin.so@inst.txt") !=
+        std::find(partDump.manifest.begin(), partDump.manifest.end(), "[good1] lib=libTestPlugin.so config=inst.txt") !=
             partDump.manifest.end(),
         "H7 /builder keeps completed entry lines");
 

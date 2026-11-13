@@ -139,33 +139,33 @@ int main()
     }
 
     // ---------- 加载失败分支（build 包装为 load failed） ----------
-    writeManifest("b1.yomk", "#! yomk_plug_sys\nx1@libBadNoSymbol.so@inst.txt\n");
+    writeManifest("b1.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadNoSymbol.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b1.yomk")).build(), "manifest line 2: load failed: missing plugin export symbols",
         "B1 missing export symbols rejects");
 
-    writeManifest("b2.yomk", "#! yomk_plug_sys\nx1@libBadNullMeta.so@inst.txt\n");
+    writeManifest("b2.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadNullMeta.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b2.yomk")).build(), "manifest line 2: load failed: invalid plugin meta",
         "B2 null meta rejects");
 
-    writeManifest("b3.yomk", "#! yomk_plug_sys\nx1@libBadNullName.so@inst.txt\n");
+    writeManifest("b3.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadNullName.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b3.yomk")).build(), "manifest line 2: load failed: invalid plugin meta",
         "B3 null meta name rejects");
 
-    writeManifest("b4.yomk", "#! yomk_plug_sys\nx1@libBadEmptyName.so@inst.txt\n");
+    writeManifest("b4.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadEmptyName.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b4.yomk")).build(), "manifest line 2: load failed: invalid plugin meta",
         "B4 empty meta name rejects");
 
     const std::string abiErr = "manifest line 2: load failed: abi version mismatch: plugin " +
         std::to_string(YOMKPLUGIN_ABI_VERSION + 1) + ", host " + std::to_string(YOMKPLUGIN_ABI_VERSION);
-    writeManifest("b5.yomk", "#! yomk_plug_sys\nx1@libBadAbi.so@inst.txt\n");
+    writeManifest("b5.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadAbi.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b5.yomk")).build(), abiErr, "B5 abi version mismatch rejects");
 
-    writeManifest("b6.yomk", "#! yomk_plug_sys\nx1@garbage.so@inst.txt\n");
+    writeManifest("b6.yomk", "#! yomk_plug_sys\n[x1]\nlib = garbage.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b6.yomk")).build(), "manifest line 2: load failed: dlopen failed:",
         "B6 garbage so dlopen rejects");
 
     // ---------- 创建失败分支（build 包装为 create failed） ----------
-    writeManifest("b7.yomk", "#! yomk_plug_sys\nx1@libBadCreateNull.so@inst.txt\n");
+    writeManifest("b7.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadCreateNull.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b7.yomk")).build(), "manifest line 2: create failed: create instance failed: BadCreateNull",
         "B7 create returns nullptr rejects");
 
@@ -179,22 +179,22 @@ int main()
     }
     check(registered, "B8 bad-create plugin still registered after failed build");
 
-    writeManifest("b8.yomk", "#! yomk_plug_sys\nx1@libBadCreateThrow.so@inst.txt\n");
+    writeManifest("b8.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadCreateThrow.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b8.yomk")).build(), "manifest line 2: create failed: create exception: bad create boom",
         "B10 create exception caught and reported");
 
     // ---------- 部分成功：前序条目保留、失败行号短路 ----------
-    writeManifest("b9.yomk", "#! yomk_plug_sys\ntp1@libTestPlugin.so@inst.txt\nx1@libBadNoSymbol.so@inst.txt\n");
-    expectNo(yomk::plug_sys().manifest(fp("b9.yomk")).build(), "manifest line 3: load failed: missing plugin export symbols",
-        "B11 build stops at failed line 3");
+    writeManifest("b9.yomk", "#! yomk_plug_sys\n[tp1]\nlib = libTestPlugin.so\nconfig = inst.txt\n[x1]\nlib = libBadNoSymbol.so\nconfig = inst.txt\n");
+    expectNo(yomk::plug_sys().manifest(fp("b9.yomk")).build(), "manifest line 5: load failed: missing plugin export symbols",
+        "B11 build stops at failed line 5");
     const yomk::payload::BuilderInfo b12Info = builderInfo();
     const bool b12Kept =
-        std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "tp1@libTestPlugin.so@inst.txt") !=
+        std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "[tp1] lib=libTestPlugin.so config=inst.txt") !=
         b12Info.manifest.end();
     check(b12Kept, "B12 builder info keeps earlier successful entry lines");
 
     // ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ----------
-    writeManifest("b13.yomk", "#! yomk_plug_sys\nbd1@libBadDotName.so@inst.txt\n");
+    writeManifest("b13.yomk", "#! yomk_plug_sys\n[bd1]\nlib = libBadDotName.so\nconfig = inst.txt\n");
     expectNo(
         yomk::plug_sys().manifest(fp("b13.yomk")).build(),
         "load failed: plugin name must not contain '.'",

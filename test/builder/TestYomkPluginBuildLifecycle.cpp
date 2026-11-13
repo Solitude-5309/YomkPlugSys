@@ -140,7 +140,7 @@ int main()
     }
 
     // ---------- S1 合法构建与内省基线 ----------
-    writeManifest("s1.yomk", "#! yomk_plug_sys\ns1-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("s1.yomk", "#! yomk_plug_sys\n[s1-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s1.yomk")).build(), "plugins:1 instances:1", "S1 build single entry ok");
 
     // 按插件名查询（两段链 plg_name 绑定 + get_info 终结，返回单条 PluginMeta）
@@ -183,9 +183,9 @@ int main()
     check(queried, "S1 proxy /plugin returns single plugin meta");
 
     // ---------- S2 so 复用幂等与实例重名 ----------
-    writeManifest("s2.yomk", "#! yomk_plug_sys\ns2-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("s2.yomk", "#! yomk_plug_sys\n[s2-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s2.yomk")).build(), "plugins:1 instances:1", "S2 same lib reused, not reloaded");
-    writeManifest("s2dup.yomk", "#! yomk_plug_sys\ns1-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("s2dup.yomk", "#! yomk_plug_sys\n[s1-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectNo(
         yomk::plug_sys().manifest(fp("s2dup.yomk")).build(),
         "manifest line 2: create failed: duplicate instance name: s1-i1",
@@ -238,25 +238,25 @@ int main()
     expectNo(yomk::plug_sys().plg_name("NoSuchLib").try_unload(), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
     // ---------- S5 unload 强卸含存活实例 ----------
-    writeManifest("s5.yomk", "#! yomk_plug_sys\ns5-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("s5.yomk", "#! yomk_plug_sys\n[s5-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s5.yomk")).build(), "plugins:1 instances:1", "S5 rebuild for force unload");
     check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
     expectNo(yomk::plug_sys().plg_name("NoSuchLib").unload(), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
 
     // ---------- S6 卸载后重载 ----------
-    writeManifest("s6.yomk", "#! yomk_plug_sys\ns6-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("s6.yomk", "#! yomk_plug_sys\n[s6-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s6.yomk")).build(), "plugins:1 instances:1", "S6 reload after unload ok");
     insts = listInstances();
     check(insts.size() == 1 && insts[0].instanceName == "TestPlugin.s6-i1", "S6 instance back after reload");
 
     // ---------- S7 缺文件行号错误 ----------
-    writeManifest("s7a.yomk", "#! yomk_plug_sys\ns7-i1@no_such.so@inst.txt\n");
+    writeManifest("s7a.yomk", "#! yomk_plug_sys\n[s7-i1]\nlib = no_such.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("s7a.yomk")).build(), "manifest line 2: plugin lib not found", "S7 missing lib path error");
-    writeManifest("s7b.yomk", "#! yomk_plug_sys\ns7-i2@libTestPlugin.so@missing_inst.txt\n");
+    writeManifest("s7b.yomk", "#! yomk_plug_sys\n[s7-i2]\nlib = libTestPlugin.so\nconfig = missing_inst.txt\n");
     expectNo(
         yomk::plug_sys().manifest(fp("s7b.yomk")).build(), "manifest line 2: instance config not found", "S7 missing instance config error");
-    writeManifest("s7c.yomk", "#! yomk_plug_sys\ns7-i3@no_such.so@missing_inst.txt\n");
+    writeManifest("s7c.yomk", "#! yomk_plug_sys\n[s7-i3]\nlib = no_such.so\nconfig = missing_inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("s7c.yomk")).build(), "instance config not found", "S7 instance config checked before lib");
 
     // ---------- 清理现场 ----------

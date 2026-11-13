@@ -1,7 +1,11 @@
-#! yomk_plug_sys
+#! yomk_plug_sys                                                # 文件标识
 
 # 连接器配置
-ConnectionServiceIns@ConnectionService/lib/libConnectionService.so@ConnectionService/instances/ConnectionService.txt
+[ConnectionServiceIns]                                          # 实例块：实例名称
+lib = ConnectionService/lib/libConnectionService.so             # 动态库插件
+config = ConnectionService/instances/ConnectionService.txt      # 实例配置
 
 # 工作空间配置
-WorkspaceServiceIns@WorkspaceService/lib/libWorkspaceService.so@WorkspaceService/instances/WorkspaceService.txt
+[WorkspaceServiceIns]                                           # 实例块：实例名称
+lib = WorkspaceService/lib/libWorkspaceService.so               # 动态库插件   
+config = WorkspaceService/instances/WorkspaceService.txt        # 实例配置

@@ -137,7 +137,7 @@ int main()
     }
 
     // 基线：TestPlugin 双实例 + BadCreateNull 注册（0 实例）
-    writeManifest("base.yomk", "#! yomk_plug_sys\ne-a@libTestPlugin.so@inst.txt\ne-b@libTestPlugin.so@inst.txt\n");
+    writeManifest("base.yomk", "#! yomk_plug_sys\n[e-a]\nlib = libTestPlugin.so\nconfig = inst.txt\n[e-b]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     check(isOk(yomk::plug_sys().manifest(fp("base.yomk")).build()), "build baseline with two instances");
     yomk::payload::PluginPath badPath;
     badPath.path = fp("libBadCreateNull.so");

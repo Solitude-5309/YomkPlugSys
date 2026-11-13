@@ -187,7 +187,7 @@ int main()
         {
             char name[16];
             std::snprintf(name, sizeof(name), "s-%03d", i);
-            oss << name << "@libTestPlugin.so@inst.txt\n";
+            oss << "[" << name << "]\nlib = libTestPlugin.so\nconfig = inst.txt\n";
         }
         writeManifest("s200.yomk", oss.str());
     }
@@ -224,7 +224,7 @@ int main()
 
     // ---------- S2 2000 对 create/destroy ----------
     // 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留）
-    writeManifest("pre.yomk", "#! yomk_plug_sys\npre-i1@libTestPlugin.so@inst.txt\n");
+    writeManifest("pre.yomk", "#! yomk_plug_sys\n[pre-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     yomk::plug_sys().manifest(fp("pre.yomk")).build();
     destroyInst("pre-i1");
 

@@ -80,7 +80,7 @@ struct InstanceInfo
 // @zh: Builder 记录的最新一次构建状态。
 struct BuilderInfo
 {
-    std::vector<std::string> manifest;   // 最近构建的清单条目行（实例名@动态库相对路径@实例配置相对路径）
+    std::vector<std::string> manifest;   // 最近构建的实例块行（[实例名] lib=... config=...）
     std::string path;                    // 最近构建的清单路径（空 = 尚未构建）
     std::string result;                  // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
     int plugins = 0;                     // 最近构建加载的插件数

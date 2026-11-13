@@ -21,6 +21,102 @@ static std::string trim(const std::string& s)
     return s.substr(begin, end - begin + 1);
 }
 
+// 清单解析辅助：统一错误响应，带清单行号前缀
+static yomk::payload::Response manifestError(int lineNo, const std::string& what)
+{
+    return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": " + what};
+}
+
+// 清单解析辅助：截断行内注释（# 起到行尾）
+static std::string stripComment(const std::string& line)
+{
+    size_t hashPos = line.find('#');
+    return hashPos == std::string::npos ? line : line.substr(0, hashPos);
+}
+
+// 清单解析辅助：首行格式标识校验，标识之后只允许空白或行内注释
+static bool isFormatMarkerLine(const std::string& line)
+{
+    static const std::string marker = "#! yomk_plug_sys";
+    std::string trimmed = trim(line);
+    if (trimmed.compare(0, marker.size(), marker) != 0)
+    {
+        return false;
+    }
+    std::string rest = trim(trimmed.substr(marker.size()));
+    return rest.empty() || rest[0] == '#';
+}
+
+// 清单解析辅助：单个实例块的累积状态
+struct ManifestBlock
+{
+    int lineNo = 0;
+    std::string name;
+    std::string lib;
+    std::string cfg;
+    bool hasLib = false;
+    bool hasCfg = false;
+
+    [[nodiscard]] bool complete() const { return hasLib && hasCfg; }
+    [[nodiscard]] std::string missing() const { return hasLib ? "config" : (hasCfg ? "lib" : "lib and config"); }
+};
+
+// 清单解析辅助：块头 [实例名]，裸名不得为空、含 '.' 或方括号
+static yomk::payload::Response parseBlockHeader(const std::string& line, int lineNo, std::string& name)
+{
+    if (line.size() < 2 || line.back() != ']')
+    {
+        return manifestError(lineNo, "malformed instance block header, expect [instanceName]");
+    }
+    name = trim(line.substr(1, line.size() - 2));
+    if (name.empty())
+    {
+        return manifestError(lineNo, "empty instance name");
+    }
+    if (name.find('.') != std::string::npos)
+    {
+        return manifestError(lineNo, "instance name must not contain '.'");
+    }
+    if (name.find('[') != std::string::npos || name.find(']') != std::string::npos)
+    {
+        return manifestError(lineNo, "instance name must not contain brackets");
+    }
+    return {yomk::payload::ResStatus::Succeeded, "ok"};
+}
+
+// 清单解析辅助：块内键值行，键仅 lib / config 各一次，值拒绝绝对路径
+static yomk::payload::Response parseBlockKey(const std::string& line, const int lineNo, ManifestBlock& block)
+{
+    size_t eqPos = line.find('=');
+    if (eqPos == std::string::npos)
+    {
+        return manifestError(lineNo, "expect key = value inside instance block");
+    }
+    std::string key = trim(line.substr(0, eqPos));
+    std::string value = trim(line.substr(eqPos + 1));
+    if (key != "lib" && key != "config")
+    {
+        return manifestError(lineNo, "unknown key '" + key + "' (expect lib or config)");
+    }
+    if (value.empty())
+    {
+        return manifestError(lineNo, "empty value for '" + key + "'");
+    }
+    // 格式契约为相对路径：值拒绝绝对路径
+    if (value[0] == '/')
+    {
+        return manifestError(lineNo, key == "lib" ? "lib path must be relative" : "instance config path must be relative");
+    }
+    bool& seen = (key == "lib") ? block.hasLib : block.hasCfg;
+    if (seen)
+    {
+        return manifestError(lineNo, "duplicate key '" + key + "'");
+    }
+    seen = true;
+    (key == "lib" ? block.lib : block.cfg) = value;
+    return {yomk::payload::ResStatus::Succeeded, "ok"};
+}
+
 YomkPlugSysBuilder::YomkPlugSysBuilder(YomkServer* server) : YomkService(server), m_server(server)
 {
     name("/YomkPlugSysBuilder");
@@ -84,62 +180,85 @@ yomk::payload::Response YomkPlugSysBuilder::parseManifest(
     manifestDir = manifest.parent_path().string();
 
     // 首行格式标识：.yomk 后缀文件按用处格式各异，以标识区分；插件系统清单必须以此开头
-    static const char* kFormatMarker = "#! yomk_plug_sys";
     std::string firstLine;
-    if (!std::getline(in, firstLine) || trim(firstLine) != kFormatMarker)
+    if (!std::getline(in, firstLine) || !isFormatMarkerLine(firstLine))
     {
-        return {
-            yomk::payload::ResStatus::Failed,
-            "manifest line 1: format marker not found (expect '" + std::string(kFormatMarker) + "')"};
+        return {yomk::payload::ResStatus::Failed,
+                "manifest line 1: format marker not found (expect '#! yomk_plug_sys')"};
     }
 
-    // 首行已消费为格式标识，条目行号从 2 起
+    // 首行已消费为格式标识，后续行号从 2 起。清单按实例块组织：
+    // [实例名] 起块，块内 key = value 提供 lib / config，块内键严格校验
+    ManifestBlock block;
+    bool inBlock = false;
+
+    // 块结束（遇下一块头或文件尾）时校验完整性并落入条目表；报错行号取块头行号
+    auto flushBlock = [&entries](const ManifestBlock& b) -> yomk::payload::Response
+    {
+        if (!b.complete())
+        {
+            return manifestError(b.lineNo, "instance block [" + b.name + "] missing " + b.missing());
+        }
+        ManifestEntry entry;
+        entry.lineNo = b.lineNo;
+        entry.instanceName = b.name;
+        entry.libRelPath = b.lib;
+        entry.instanceCfg = b.cfg;
+        entries.push_back(entry);
+        return {yomk::payload::ResStatus::Succeeded, "ok"};
+    };
+
     int lineNo = 1;
     std::string line;
     while (std::getline(in, line))
     {
         ++lineNo;
-        // 整行注释与行内注释统一按首个 # 截断
-        size_t hashPos = line.find('#');
-        if (hashPos != std::string::npos)
-        {
-            line.erase(hashPos);
-        }
-        line = trim(line);
+        line = trim(stripComment(line));
         if (line.empty())
         {
             continue;
         }
-        // 按 @ 切分，必须恰好三段：实例名@动态库相对路径@实例配置相对路径
-        size_t p1 = line.find('@');
-        size_t p2 = (p1 == std::string::npos) ? std::string::npos : line.find('@', p1 + 1);
-        size_t p3 = (p2 == std::string::npos) ? std::string::npos : line.find('@', p2 + 1);
-        if (p1 == std::string::npos || p2 == std::string::npos || p3 != std::string::npos)
+        // 块内键值行：key = value
+        if (line.front() != '[')
         {
-            return {
-                yomk::payload::ResStatus::Failed,
-                "manifest line " + std::to_string(lineNo) + ": expect instanceName@libRelPath@instanceCfgRelPath"};
+            if (!inBlock)
+            {
+                return manifestError(lineNo, "key outside instance block");
+            }
+            yomk::payload::Response parsed = parseBlockKey(line, lineNo, block);
+            if (parsed.status != yomk::payload::ResStatus::Succeeded)
+            {
+                return parsed;
+            }
+            continue;
         }
-        ManifestEntry entry;
-        entry.lineNo = lineNo;
-        entry.instanceName = trim(line.substr(0, p1));
-        entry.libRelPath = trim(line.substr(p1 + 1, p2 - p1 - 1));
-        entry.instanceCfg = trim(line.substr(p2 + 1));
-        if (entry.instanceName.empty() || entry.libRelPath.empty() || entry.instanceCfg.empty())
+        // 实例块头：[实例名]；开新块前先校验上一个块的完整性
+        if (inBlock)
         {
-            return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": empty segment"};
+            yomk::payload::Response flushed = flushBlock(block);
+            if (flushed.status != yomk::payload::ResStatus::Succeeded)
+            {
+                return flushed;
+            }
         }
-        // 格式契约为相对路径：路径段拒绝绝对路径
-        if (entry.libRelPath[0] == '/')
+        block = ManifestBlock{};
+        yomk::payload::Response header = parseBlockHeader(line, lineNo, block.name);
+        if (header.status != yomk::payload::ResStatus::Succeeded)
         {
-            return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": lib path must be relative"};
+            return header;
         }
-        if (entry.instanceCfg[0] == '/')
+        block.lineNo = lineNo;
+        inBlock = true;
+    }
+
+    // 文件尾收尾：最后一个实例块同样要校验完整性
+    if (inBlock)
+    {
+        yomk::payload::Response flushed = flushBlock(block);
+        if (flushed.status != yomk::payload::ResStatus::Succeeded)
         {
-            return {
-                yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": instance config path must be relative"};
+            return flushed;
         }
-        entries.push_back(entry);
     }
     return {yomk::payload::ResStatus::Succeeded, "ok"};
 }
@@ -251,7 +370,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
-            entryLines.push_back(entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceCfg);
+            entryLines.push_back("[" + entry.instanceName + "] lib=" + entry.libRelPath + " config=" + entry.instanceCfg);
         }
 
         std::string summary =
