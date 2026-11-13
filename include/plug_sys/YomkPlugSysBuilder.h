@@ -13,7 +13,7 @@ using namespace yomk;
 // 设计取舍:
 // 1. 只做清单解析与请求编排,不持有插件库也不持有实例:加载/登记/实例生命周期全部归
 //    机制层 Loader 与数据层 Manager,本层可随时重建;
-// 2. 最近一次构建的清单条目/路径/结果/计数在本层缓存,只服务内省,不参与后续请求决策;
+// 2. 最近一次构建的实例条目/路径/结果/计数在本层缓存,只服务内省,不参与后续请求决策;
 // 3. init 注册内部服务、deinit 逆序注销:注销必须直调注入的 YomkServer*,
 //    不得经 yomk::server() 域入口（进程退出期域入口快照会二次释放 server）.
 
@@ -100,12 +100,12 @@ private:
         const std::string& result,
         size_t plugins,
         size_t instances,
-        const std::vector<std::string>& entryLines);
+        const std::vector<yomk::payload::InstanceInfo>& entries);
 
     std::mutex m_mutex;
     std::string m_lastManifest;               // 最近一次构建的清单路径
     std::string m_lastResult;                 // 最近一次构建结果："ok" / 失败原因
     int m_lastPlugins = 0;                    // 最近一次构建加载的插件数
     int m_lastInstances = 0;                  // 最近一次构建创建的实例数
-    std::vector<std::string> m_lastEntries;   // 成功条目的清单行（[实例名] lib=... config=...）
+    std::vector<yomk::payload::InstanceInfo> m_lastEntries;   // 成功创建的实例条目
 };

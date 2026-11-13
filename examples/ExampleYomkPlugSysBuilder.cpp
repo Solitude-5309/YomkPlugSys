@@ -30,21 +30,12 @@ void fail(const std::string& what, const std::string& reason)
     std::exit(1);
 }
 
-// 打印单个清单条目：内省条目为单行 "[名字] lib=... config=..."，输出时按字段拆行
-void printManifestEntry(const std::string& entry)
+// 打印单个构建条目：实例限定名 + 插件库文件 + 实例配置文件
+void printManifestEntry(const yomk::payload::InstanceInfo& entry)
 {
-    const size_t nameEnd = entry.find(']');
-    const size_t libPos = entry.find("lib=");
-    const size_t cfgPos = entry.find(" config=");
-    if (nameEnd == std::string::npos || libPos == std::string::npos || cfgPos == std::string::npos ||
-        nameEnd > libPos || libPos > cfgPos)
-    {
-        std::cout << "    " << entry << std::endl;
-        return;
-    }
-    std::cout << "    " << entry.substr(0, nameEnd + 1) << std::endl;
-    std::cout << "      " << entry.substr(libPos, cfgPos - libPos) << std::endl;
-    std::cout << "      " << entry.substr(cfgPos + 1) << std::endl;
+    std::cout << "    [" << entry.instanceName << "]" << std::endl;
+    std::cout << "      lib=" << entry.libFile << std::endl;
+    std::cout << "      config=" << entry.configFile << std::endl;
 }
 }  // namespace
 

@@ -189,9 +189,14 @@ int main()
         "B11 build stops at failed line 5");
     const yomk::payload::BuilderInfo b12Info = builderInfo();
     const bool b12Kept =
-        std::find(b12Info.manifest.begin(), b12Info.manifest.end(), "[tp1] lib=libTestPlugin.so config=inst.txt") !=
-        b12Info.manifest.end();
-    check(b12Kept, "B12 builder info keeps earlier successful entry lines");
+        std::any_of(
+            b12Info.manifest.begin(),
+            b12Info.manifest.end(),
+            [](const yomk::payload::InstanceInfo& e) {
+                return e.instanceName == "TestPlugin.tp1" && e.libFile == fp("libTestPlugin.so") &&
+                       e.configFile == fp("inst.txt");
+            });
+    check(b12Kept, "B12 builder info keeps earlier successful entries");
 
     // ---------- B13 插件名含 '.'：限定名拼接唯一性防护 ----------
     writeManifest("b13.yomk", "#! yomk_plug_sys\n[bd1]\nlib = libBadDotName.so\nconfig = inst.txt\n");

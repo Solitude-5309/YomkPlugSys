@@ -64,14 +64,16 @@ struct BuildReq
 };
 
 /**
- * @brief Instance summary used by introspection
+ * @brief Instance summary used by introspection and by build snapshots
  */
-// @zh: 内省用实例摘要。
+// @zh: 内省与构建快照使用的实例摘要。
 struct InstanceInfo
 {
     std::string pluginName;     // 所属插件名
     std::string instanceName;   // 限定名实例名（插件名.实例名）
     std::string instanceType;   // 实例类型
+    std::string libFile;        // 实例所属插件库文件路径
+    std::string configFile;     // 实例配置文件路径（创建时透传，可为空）
 };
 
 /**
@@ -80,10 +82,10 @@ struct InstanceInfo
 // @zh: Builder 记录的最新一次构建状态。
 struct BuilderInfo
 {
-    std::vector<std::string> manifest;   // 最近构建的实例块行（[实例名] lib=... config=...）
-    std::string path;                    // 最近构建的清单路径（空 = 尚未构建）
-    std::string result;                  // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
-    int plugins = 0;                     // 最近构建加载的插件数
-    int instances = 0;                   // 最近构建创建的实例数
+    std::vector<InstanceInfo> manifest;   // 最近构建成功创建的实例条目（插件名/限定名/库文件/配置文件）
+    std::string path;                     // 最近构建的清单路径（空 = 尚未构建）
+    std::string result;                   // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
+    int plugins = 0;                      // 最近构建加载的插件数
+    int instances = 0;                    // 最近构建创建的实例数
 };
 }  // namespace yomk::payload

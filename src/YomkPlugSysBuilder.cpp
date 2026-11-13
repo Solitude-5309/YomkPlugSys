@@ -303,7 +303,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         }
 
         std::set<std::string> loadedPlugins;
-        std::vector<std::string> entryLines;
+        std::vector<yomk::payload::InstanceInfo> builtEntries;
         size_t createdInstances = 0;
         for (const auto& entry : entries)
         {
@@ -316,7 +316,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 std::string msg = lineTag;
                 msg += ": instance config not found: ";
                 msg += instancePath;
-                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, builtEntries);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             if (!fs::is_regular_file(soPath))
@@ -324,7 +324,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 std::string msg = lineTag;
                 msg += ": plugin lib not found: ";
                 msg += soPath;
-                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, builtEntries);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
 
@@ -342,14 +342,14 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
                     std::string msg = lineTag + ": load failed: " + resp.msg;
-                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, builtEntries);
                     return {yomk::payload::ResStatus::Failed, msg};
                 }
                 auto idPkg = yomk::msgs::unpack<yomk::msgs::String>(resp.data);
                 if (!idPkg)
                 {
                     std::string msg = lineTag + ": invalid load response";
-                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                    recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, builtEntries);
                     return {yomk::payload::ResStatus::Failed, msg};
                 }
                 pluginName = idPkg->d;
@@ -366,19 +366,24 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
                 std::string msg = lineTag + ": create failed: " + resp.msg;
-                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, entryLines);
+                recordBuild(req->d.manifestPath, msg, loadedPlugins.size(), createdInstances, builtEntries);
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
-            entryLines.push_back("[" + entry.instanceName + "] lib=" + entry.libRelPath + " config=" + entry.instanceCfg);
+            yomk::payload::InstanceInfo built;
+            built.pluginName = pluginName;
+            built.instanceName = pluginName + "." + entry.instanceName;
+            built.libFile = soPath;
+            built.configFile = instancePath;
+            builtEntries.push_back(built);
         }
 
         std::string summary =
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
-        recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
+        recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, builtEntries);
         yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.manifestPath, " ", summary);
         yomk::payload::BuilderInfo info;
-        info.manifest = entryLines;
+        info.manifest = builtEntries;
         info.path = req->d.manifestPath;
         info.result = "ok";
         info.plugins = static_cast<int>(loadedPlugins.size());
@@ -556,12 +561,12 @@ void YomkPlugSysBuilder::recordBuild(
     const std::string& result,
     size_t plugins,
     size_t instances,
-    const std::vector<std::string>& entryLines)
+    const std::vector<yomk::payload::InstanceInfo>& builtEntries)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_lastManifest = manifest;
     m_lastResult = result;
     m_lastPlugins = static_cast<int>(plugins);
     m_lastInstances = static_cast<int>(instances);
-    m_lastEntries = entryLines;
+    m_lastEntries = builtEntries;
 }

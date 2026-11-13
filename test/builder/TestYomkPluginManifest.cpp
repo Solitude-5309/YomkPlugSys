@@ -260,9 +260,14 @@ int main()
         dump.path == fp("m-g5.yomk") && dump.result == "ok" && dump.plugins == 1 && dump.instances == 1,
         "H1 /builder shows manifest path and ok result");
     check(
-        std::find(dump.manifest.begin(), dump.manifest.end(), "[my inst] lib=libTestPlugin.so config=inst.txt") !=
+        std::any_of(
+            dump.manifest.begin(),
             dump.manifest.end(),
-        "H2 /builder keeps entry lines in block syntax");
+            [](const yomk::payload::InstanceInfo& e) {
+                return e.pluginName == "TestPlugin" && e.instanceName == "TestPlugin.my inst" &&
+                       e.libFile == fp("libTestPlugin.so") && e.configFile == fp("inst.txt");
+            }),
+        "H2 /builder keeps built instance entries");
 
     writeManifest("m-hfail.yomk", "#! yomk_plug_sys\nlib = libTestPlugin.so\n");
     expectNo(
@@ -287,9 +292,14 @@ int main()
             partDump.plugins == 1 && partDump.instances == 1,
         "H6 /builder records partial failure with partial counts");
     check(
-        std::find(partDump.manifest.begin(), partDump.manifest.end(), "[good1] lib=libTestPlugin.so config=inst.txt") !=
+        std::any_of(
+            partDump.manifest.begin(),
             partDump.manifest.end(),
-        "H7 /builder keeps completed entry lines");
+            [](const yomk::payload::InstanceInfo& e) {
+                return e.instanceName == "TestPlugin.good1" && e.libFile == fp("libTestPlugin.so") &&
+                       e.configFile == fp("inst.txt");
+            }),
+        "H7 /builder keeps completed instance entries");
 
     // ---------- 清理现场 ----------
     check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
