@@ -7,7 +7,7 @@
 #include "yomk/server/YomkServerPayload.h"
 
 #include "YomkPluginInterface.h"
-#include "YomkPluginPayload.h"
+#include "YomkPlugSysPayload.h"
 
 // YomkPlugSys 扩展专属消息包（成员名均为 d,与 SDK 各 Yomk{Module}Msg.h 同一设计）.
 // 设计取舍:
