@@ -301,7 +301,7 @@ yomk::payload::Response YomkPluginManager::destroyInstance(YomkMsgPtr pkg)
     }
 }
 
-// 全量列表：只做列举，不承担按名查询（按名查询见 plugin()）
+// 全量列表：只做列举，不承担按名查询（按名查询见 yomk::plug_sys().plg_name(name).get_info()）
 yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 {
     try

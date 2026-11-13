@@ -97,7 +97,7 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
@@ -109,7 +109,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().instances();
+    yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
@@ -138,7 +138,7 @@ int main()
 
     // 基线：TestPlugin 双实例 + BadCreateNull 注册（0 实例）
     writeManifest("base.yomk", "#! yomk_plug_sys\ne-a@libTestPlugin.so@inst.txt\ne-b@libTestPlugin.so@inst.txt\n");
-    check(isOk(yomk::plugin().manifest(fp("base.yomk")).build()), "build baseline with two instances");
+    check(isOk(yomk::plug_sys().manifest(fp("base.yomk")).build()), "build baseline with two instances");
     yomk::payload::PluginPath badPath;
     badPath.path = fp("libBadCreateNull.so");
     check(
@@ -224,7 +224,7 @@ int main()
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
     // ---------- M2.5 链式门面：plg_name(name).instances() 与直调 filter 等价 ----------
-    resp = yomk::plugin().plg_name("TestPlugin").instances();
+    resp = yomk::plug_sys().plg_name("TestPlugin").instances();
     bool macroHitTwo = false;
     if (isOk(resp))
     {
@@ -233,12 +233,12 @@ int main()
     }
     check(macroHitTwo, "M2 plg_name(name).instances() filter hit returns 2 instances");
     expectNo(
-        yomk::plugin().plg_name("NoSuch").instances(),
+        yomk::plug_sys().plg_name("NoSuch").instances(),
         "plugin not loaded: NoSuch",
         "M2 plg_name(name).instances() unknown plugin rejects");
 
     // ---------- M2.6 链式门面：inst_name(name).get_plg_info() 反查所属插件 ----------
-    resp = yomk::plugin().inst_name("TestPlugin.e-a").get_plg_info();
+    resp = yomk::plug_sys().inst_name("TestPlugin.e-a").get_plg_info();
     bool byInstOk = false;
     if (isOk(resp))
     {
@@ -247,7 +247,7 @@ int main()
     }
     check(byInstOk, "M2 inst_name(name).get_plg_info() instance lookup returns owner plugin meta");
     expectNo(
-        yomk::plugin().inst_name("no-inst").get_plg_info(),
+        yomk::plug_sys().inst_name("no-inst").get_plg_info(),
         "instance not found: no-inst",
         "M2 inst_name(name).get_plg_info() unknown instance rejects");
 
@@ -263,7 +263,7 @@ int main()
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(mfileReq)).request()),
         "M2 create e-mfile for config introspection");
-    resp = yomk::plugin().inst_cfg("TestPlugin.e-mfile");
+    resp = yomk::plug_sys().inst_cfg("TestPlugin.e-mfile");
     check(isOk(resp) && respString(resp) == "line-one\nline-two", "M2 inst_cfg(instanceName) returns config content");
     yomk::payload::CreateReq nofileReq;
     nofileReq.pluginName = "TestPlugin";
@@ -272,11 +272,11 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(nofileReq)).request()),
         "M2 create e-nofile with empty instanceCfg");
     expectNo(
-        yomk::plugin().inst_cfg("TestPlugin.e-nofile"),
+        yomk::plug_sys().inst_cfg("TestPlugin.e-nofile"),
         "instance config not recorded: TestPlugin.e-nofile",
         "M2 inst_cfg(instanceName) empty instanceCfg rejects");
     expectNo(
-        yomk::plugin().inst_cfg("no-inst"),
+        yomk::plug_sys().inst_cfg("no-inst"),
         "instance not found: no-inst",
         "M2 inst_cfg(instanceName) unknown instance rejects");
     yomk::payload::DestroyReq dr;
@@ -384,7 +384,7 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");
 
-    resp = yomk::plugin().inst_name("TestPlugin.shared-i").get_plg_info();
+    resp = yomk::plug_sys().inst_name("TestPlugin.shared-i").get_plg_info();
     bool ownerA = false;
     if (isOk(resp))
     {
@@ -392,7 +392,7 @@ int main()
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
-    resp = yomk::plugin().inst_name("SecondPlugin.shared-i").get_plg_info();
+    resp = yomk::plug_sys().inst_name("SecondPlugin.shared-i").get_plg_info();
     bool ownerB = false;
     if (isOk(resp))
     {
@@ -423,11 +423,11 @@ int main()
     check(
         isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dcrossB)).request()),
         "M6 destroy SecondPlugin/shared-i");
-    check(isOk(yomk::plugin().plg_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
+    check(isOk(yomk::plug_sys().plg_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
 
     // ---------- M7 清理现场 ----------
-    check(isOk(yomk::plugin().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
-    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plug_sys().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
+    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

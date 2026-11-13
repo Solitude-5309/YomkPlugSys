@@ -42,19 +42,19 @@ int main()
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
     // 按清单构建示例插件系统（清单见 examples/workflow/manifest.yomk）
-    auto build = yomk::plugin().manifest(PLUGIN_MANIFEST).build();
+    auto build = yomk::plug_sys().manifest(PLUGIN_MANIFEST).build();
     auto summary = yomk::msgs::unpack<yomk::msgs::String>(build.data);   // 汇总在 data 的 String 包内
     std::cout << "build: " << build.msg << " (" << (summary ? summary->d : "") << ")" << std::endl;
 
     // 内省：插件列表
-    auto plugins = yomk::plugin().plugins();
+    auto plugins = yomk::plug_sys().plugins();
     auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(plugins.data);
     if (arr)
         for (const auto& m : arr->d)
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
 
     // 卸载（有存活实例拒绝；强制卸载用 unload）
-    auto r = yomk::plugin().plg_name("ConnectionService").try_unload();
+    auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
     std::cout << "try_unload: " << r.msg << std::endl;
     return 0;
 }

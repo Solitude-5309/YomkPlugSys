@@ -10,7 +10,7 @@
 | `/YomkPluginLoader` | 机制层（内部服务） | dlopen/dlsym/dlclose、meta 读取、实例创建机制；不登记插件、不拥有实例 |
 | `/YomkPluginManager` | 数据层（内部服务） | 插件表 + 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期管理 |
 
-三服务纯请求通信。用户仅注册/请求门面服务，接口一律经 `yomk::plugin()` 链式域入口发起（通用 `url/msg/request` 链归 `yomk::server()`）；内部服务 URL 仅供扩展内部与白盒测试直调。
+三服务纯请求通信。用户仅注册/请求门面服务，接口一律经 `yomk::plug_sys()` 链式域入口发起（通用 `url/msg/request` 链归 `yomk::server()`）；内部服务 URL 仅供扩展内部与白盒测试直调。
 
 ## 快速开始
 
@@ -34,17 +34,17 @@ int main()
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
     // 按清单构建插件系统（manifest(path) 绑定清单，build() 终结；清单语法见 docs/PlugSysManifest.md）
-    auto build = yomk::plugin().manifest("/abs/path/to/manifest.yomk").build();
+    auto build = yomk::plug_sys().manifest("/abs/path/to/manifest.yomk").build();
 
     // 内省：插件列表
-    auto plugins = yomk::plugin().plugins();
+    auto plugins = yomk::plug_sys().plugins();
     auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(plugins.data);
     if (arr)
         for (const auto& m : arr->d)
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
 
     // 尝试卸载（有存活实例拒绝；强制卸载用 unload）
-    auto r = yomk::plugin().plg_name("ConnectionService").try_unload();
+    auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
     std::cout << "try_unload: " << r.msg << std::endl;
     return 0;
 }
@@ -78,7 +78,7 @@ YomkPlugSys/
 │       ├── YomkPlugSysPayload.h      # 模块专属载荷（yomk::payload 数据结构体）
 │       ├── YomkPlugSysMsg.h          # 模块专属消息包（YOMK_DEFINE_MSG 注册）
 │       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
-│       └── YomkPlugSysApi.h          # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
+│       └── YomkPlugSysApi.h          # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plug_sys() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明

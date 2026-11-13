@@ -1,6 +1,6 @@
 # YomkPlugSysBuilder（门面服务）
 
-YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yomk）驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plugin()` 发起，阻塞至服务应答。
+YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yomk）驱动插件装载与实例创建、聚合内省、提供两种卸载语义。注册该服务即自动托管内部服务（机制层 Loader / 数据层 Manager）的注册与注销。全部请求经链式域入口 `yomk::plug_sys()` 发起，阻塞至服务应答。
 
 ## 适用与不适用
 
@@ -20,17 +20,17 @@ YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yo
 
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
-| 清单构建 | `yomk::plugin().manifest(manifestPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
-| 强制卸载 | `yomk::plugin().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
-| 尝试卸载 | `yomk::plugin().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
-| 最近构建 | `yomk::plugin().builder()` | → `Response`（data 为 `BuilderInfo`） |
-| 插件列表 | `yomk::plugin().plugins()` | → `Response`（data 为 `PluginMetaArray`） |
-| 插件信息 | `yomk::plugin().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
-| 实例列表 | `yomk::plugin().instances()` | → `Response`（data 为 `InstanceInfoArray` 全量实例明细） |
-| 插件实例 | `yomk::plugin().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
-| 实例查插件 | `yomk::plugin().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
-| 实例配置 | `yomk::plugin().inst_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
-| 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
+| 清单构建 | `yomk::plug_sys().manifest(manifestPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
+| 强制卸载 | `yomk::plug_sys().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
+| 尝试卸载 | `yomk::plug_sys().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
+| 最近构建 | `yomk::plug_sys().builder()` | → `Response`（data 为 `BuilderInfo`） |
+| 插件列表 | `yomk::plug_sys().plugins()` | → `Response`（data 为 `PluginMetaArray`） |
+| 插件信息 | `yomk::plug_sys().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
+| 实例列表 | `yomk::plug_sys().instances()` | → `Response`（data 为 `InstanceInfoArray` 全量实例明细） |
+| 插件实例 | `yomk::plug_sys().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
+| 实例查插件 | `yomk::plug_sys().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
+| 实例配置 | `yomk::plug_sys().inst_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
+| 版本查询 | `yomk::plug_sys().version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
 
 > `instanceName` 一律为限定名 `插件名.实例名`（全局唯一主键）；`pluginName` 为插件 meta 名。
 
@@ -44,15 +44,15 @@ yomk::server().init();
 yomk::server().srv<YomkPlugSysBuilder>().create();
 
 // 按清单构建（manifest 绑定清单路径，build 终结；插件系统清单见 PlugSysManifest.md；任一步失败 Failed 并指明清单行号）
-auto build = yomk::plugin().manifest("examples/workflow/manifest.yomk").build();
+auto build = yomk::plug_sys().manifest("examples/workflow/manifest.yomk").build();
 
 // 内省：插件列表与实例列表
-auto plugins = yomk::plugin().plugins();
-auto instances = yomk::plugin().instances();                        // 全量实例明细
-auto one = yomk::plugin().plg_name("ConnectionService").instances(); // 仅该插件下的实例
+auto plugins = yomk::plug_sys().plugins();
+auto instances = yomk::plug_sys().instances();                        // 全量实例明细
+auto one = yomk::plug_sys().plg_name("ConnectionService").instances(); // 仅该插件下的实例
 
 // 卸载（有存活实例时 try_unload 拒绝；unload 先清空实例表再卸载，外部引用未释放同样拒绝）
-auto r = yomk::plugin().plg_name("ConnectionService").try_unload();
+auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
 ```
 
 结果一律在 `Response.data` 中，按返回类型解包：

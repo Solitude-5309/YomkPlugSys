@@ -3,7 +3,7 @@
 
 // YomkPlugSys 公开 API 聚合头（四件套之 Api）.
 // 设计取舍:
-// 1. 域入口 yomk::plugin() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
+// 1. 域入口 yomk::plug_sys() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
 //    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;带参数的终结方法
 //    统一走两段链 manifest(path)/plg_name(name)/inst_name(name) 绑定 -> 零参终结;
 // 2. 分层单向:Interface(ABI 叶子) -> Url(常量叶子) -> Payload -> Msg -> Builder,
@@ -18,19 +18,19 @@
 #include "YomkPlugSysBuilder.h"
 #include "YomkPlugSysUrl.h"
 
-/* ------------------------- 模块域入口（yomk::plugin()） ------------------------- */
+/* ------------------------- 模块域入口（yomk::plug_sys()） ------------------------- */
 
 namespace yomk::detail
 {
 /**
  * @brief Intermediate chain node binding a manifest path, terminated by build()
- * Returned by PluginBuilder::manifest(); like every terminator it hides the raw request
+ * Returned by PlugSysBuilder::manifest(); like every terminator it hides the raw request
  * channel (yomk::server().url(...).msg(...).request()).
  * @note Holds a copy of the manifest path; use inline in a single chained expression only,
  *       never store or reuse it.
  */
 // @zh: 中间链节点：绑定清单路径，链以 build() 终结。
-// @zh: 由 PluginBuilder::manifest() 返回；与其它终结方法一样屏蔽裸请求通道。
+// @zh: 由 PlugSysBuilder::manifest() 返回；与其它终结方法一样屏蔽裸请求通道。
 // @zh: note 持有清单路径的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class PlugSysManifestBuilder
 {
@@ -59,13 +59,13 @@ private:
 
 /**
  * @brief Intermediate chain node binding a plugin name, terminated by get_info(), instances(), unload() or try_unload()
- * Returned by PluginBuilder::plg_name(); every terminator shares the bound name and differs only
+ * Returned by PlugSysBuilder::plg_name(); every terminator shares the bound name and differs only
  * in the action taken on it.
  * @note Holds a copy of the plugin name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
 // @zh: 中间链节点：绑定插件名，链以 get_info()、instances()、unload() 或 try_unload() 终结。
-// @zh: 由 PluginBuilder::plg_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
+// @zh: 由 PlugSysBuilder::plg_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
 // @zh: note 持有插件名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class PluginNameBuilder
 {
@@ -129,13 +129,13 @@ private:
 
 /**
  * @brief Intermediate chain node binding an instance name, terminated by get_plg_info()
- * Returned by PluginBuilder::inst_name(); the bound name is a fully qualified instance name
+ * Returned by PlugSysBuilder::inst_name(); the bound name is a fully qualified instance name
  * (pluginName.instanceName).
  * @note Holds a copy of the instance name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
 // @zh: 中间链节点：绑定实例名，链以 get_plg_info() 终结。
-// @zh: 由 PluginBuilder::inst_name() 返回；绑定的名字为限定名实例名（插件名.实例名）。
+// @zh: 由 PlugSysBuilder::inst_name() 返回；绑定的名字为限定名实例名（插件名.实例名）。
 // @zh: note 持有实例名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class InstNameBuilder
 {
@@ -176,7 +176,7 @@ private:
 // @zh: 消息类型解包 data。
 // @zh: note 请求包先聚合初始化 payload 结构体，再包入 yomk::msgs 消息类。
 // @zh: warning 无状态值类型，仅用于单表达式链式调用，禁止缓存或复用。
-class PluginBuilder
+class PlugSysBuilder
 {
 public:
     /**
@@ -263,12 +263,12 @@ namespace yomk
 {
 /**
  * @brief Get the chainable domain entry of the YomkPlugSys extension
- * @return PluginBuilder by value; use inline in a single chained expression only
+ * @return PlugSysBuilder by value; use inline in a single chained expression only
  */
 // @zh: 获取 YomkPlugSys 扩展的链式域入口。
-// @zh: return 按值返回的 PluginBuilder，仅用于单表达式内联链式调用。
-inline detail::PluginBuilder plugin()
+// @zh: return 按值返回的 PlugSysBuilder，仅用于单表达式内联链式调用。
+inline detail::PlugSysBuilder plug_sys()
 {
-    return detail::PluginBuilder{};
+    return detail::PlugSysBuilder{};
 }
 }  // namespace yomk

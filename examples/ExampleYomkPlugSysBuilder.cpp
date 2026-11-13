@@ -42,11 +42,11 @@ int main()
     const std::string manifest = WORKFLOW_MANIFEST_PATH;
 
     // 1. 查询扩展版本
-    // 接口：yomk::plugin().version()
+    // 接口：yomk::plug_sys().version()
     // 输入：无
     // 输出：payload::Response，解包 String 后打印版本描述
-    section("1. 查询扩展版本 yomk::plugin().version()");
-    yomk::payload::Response verResp = yomk::plugin().version();
+    section("1. 查询扩展版本 yomk::plug_sys().version()");
+    yomk::payload::Response verResp = yomk::plug_sys().version();
     auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
     if (ver)
     {
@@ -54,19 +54,19 @@ int main()
     }
 
     // 2. 构建插件系统并查看构建信息
-    // 接口：yomk::plugin().manifest(manifestPath).build() + yomk::plugin().builder()
+    // 接口：yomk::plug_sys().manifest(manifestPath).build() + yomk::plug_sys().builder()
     // 输入：清单文件路径。首行 #! yomk_plug_sys，之后每行一个条目：
     //       实例名@动态库相对路径@实例配置相对路径
     // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
     // 副作用：逐条目加载插件 so 并创建实例，实例名取自清单条目
-    section("2. 构建插件系统 yomk::plugin().manifest(manifest).build()");
+    section("2. 构建插件系统 yomk::plug_sys().manifest(manifest).build()");
     std::cout << "清单: " << manifest << std::endl;
-    yomk::payload::Response resp = yomk::plugin().manifest(manifest).build();
+    yomk::payload::Response resp = yomk::plug_sys().manifest(manifest).build();
     if (!isOk(resp))
     {
         fail("构建", resp.msg);
     }
-    resp = yomk::plugin().builder();
+    resp = yomk::plug_sys().builder();
     if (!isOk(resp))
     {
         fail("查询构建信息", resp.msg);
@@ -88,11 +88,11 @@ int main()
     std::cout << "  instances:" << builder->d.instances << std::endl;
 
     // 3. 查询插件列表
-    // 接口：yomk::plugin().plugins()
+    // 接口：yomk::plug_sys().plugins()
     // 输入：无
     // 输出：PluginMetaArray，元数据来自插件导出的 yomk_plugin_meta
-    section("3. 插件列表 yomk::plugin().plugins()");
-    resp = yomk::plugin().plugins();
+    section("3. 插件列表 yomk::plug_sys().plugins()");
+    resp = yomk::plug_sys().plugins();
     if (!isOk(resp))
     {
         fail("查询插件", resp.msg);
@@ -114,11 +114,11 @@ int main()
     }
 
     // 4. 查询实例列表
-    // 接口：yomk::plugin().instances()
+    // 接口：yomk::plug_sys().instances()
     // 输入：无
     // 输出：InstanceInfoArray（全量实例明细）
-    section("4. 实例列表 yomk::plugin().instances()");
-    resp = yomk::plugin().instances();
+    section("4. 实例列表 yomk::plug_sys().instances()");
+    resp = yomk::plug_sys().instances();
     if (!isOk(resp))
     {
         fail("查询实例", resp.msg);
@@ -134,11 +134,11 @@ int main()
     }
 
     // 5. 按插件过滤实例
-    // 接口：yomk::plugin().plg_name(pluginName).instances()
+    // 接口：yomk::plug_sys().plg_name(pluginName).instances()
     // 输入：pluginName（未知插件返回失败，原因见 resp.msg）
     // 输出：InstanceInfoArray（仅该插件下的实例）
-    section("5. 按插件过滤实例 yomk::plugin().plg_name(\"ConnectionService\").instances()");
-    resp = yomk::plugin().plg_name("ConnectionService").instances();
+    section("5. 按插件过滤实例 yomk::plug_sys().plg_name(\"ConnectionService\").instances()");
+    resp = yomk::plug_sys().plg_name("ConnectionService").instances();
     if (!isOk(resp))
     {
         fail("过滤实例", resp.msg);
@@ -154,11 +154,11 @@ int main()
     }
 
     // 6. 按实例查所属插件
-    // 接口：yomk::plugin().inst_name(instanceName).get_plg_info()
+    // 接口：yomk::plug_sys().inst_name(instanceName).get_plg_info()
     // 输入：instanceName 为限定名 插件名.实例名，取步骤 4 列出的任一实例名；未知实例返回失败，原因见 resp.msg
     // 输出：PluginMeta（该实例所属插件的元数据）
-    section("6. 按实例查插件 yomk::plugin().inst_name(\"ConnectionService.ConnectionServiceIns\").get_plg_info()");
-    resp = yomk::plugin().inst_name("ConnectionService.ConnectionServiceIns").get_plg_info();
+    section("6. 按实例查插件 yomk::plug_sys().inst_name(\"ConnectionService.ConnectionServiceIns\").get_plg_info()");
+    resp = yomk::plug_sys().inst_name("ConnectionService.ConnectionServiceIns").get_plg_info();
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.msg);
@@ -177,11 +177,11 @@ int main()
     std::cout << "  description: " << instMeta->d.description << std::endl;
 
     // 7. 查看实例配置内容
-    // 接口：yomk::plugin().inst_cfg(instanceName)
+    // 接口：yomk::plug_sys().inst_cfg(instanceName)
     // 输入：instanceName 为限定名 插件名.实例名；未知实例返回失败，原因见 resp.msg
     // 输出：String（该实例创建时透传的实例配置内容）
-    section("7. 查看实例配置 yomk::plugin().inst_cfg(\"ConnectionService.ConnectionServiceIns\")");
-    resp = yomk::plugin().inst_cfg("ConnectionService.ConnectionServiceIns");
+    section("7. 查看实例配置 yomk::plug_sys().inst_cfg(\"ConnectionService.ConnectionServiceIns\")");
+    resp = yomk::plug_sys().inst_cfg("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
         fail("查看实例配置", resp.msg);
@@ -194,19 +194,19 @@ int main()
     std::cout << fileContent->d << std::endl;
 
     // 8. 卸载插件
-    // 接口：yomk::plugin().plg_name(pluginName).try_unload() 尝试卸载：有存活实例则拒绝
-    //       yomk::plugin().plg_name(pluginName).unload()    强制卸载：先清空实例表再卸载（外部仍有实例引用时同样拒绝）
+    // 接口：yomk::plug_sys().plg_name(pluginName).try_unload() 尝试卸载：有存活实例则拒绝
+    //       yomk::plug_sys().plg_name(pluginName).unload()    强制卸载：先清空实例表再卸载（外部仍有实例引用时同样拒绝）
     // 输入：pluginName；输出：String(ok/msg)
     section("8. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
-    resp = yomk::plugin().plg_name("ConnectionService").try_unload();
+    resp = yomk::plug_sys().plg_name("ConnectionService").try_unload();
     std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.msg) << std::endl;
-    resp = yomk::plugin().plg_name("ConnectionService").unload();
+    resp = yomk::plug_sys().plg_name("ConnectionService").unload();
     if (!isOk(resp))
     {
         fail("卸载 ConnectionService", resp.msg);
     }
     std::cout << "UNLOAD ConnectionService: ok" << std::endl;
-    resp = yomk::plugin().plg_name("WorkspaceService").unload();
+    resp = yomk::plug_sys().plg_name("WorkspaceService").unload();
     if (!isOk(resp))
     {
         fail("卸载 WorkspaceService", resp.msg);

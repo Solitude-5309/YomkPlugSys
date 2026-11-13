@@ -102,7 +102,7 @@ static void writeManifest(const std::string& name, const std::string& content)
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().instances();
+    yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
@@ -115,7 +115,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
@@ -174,7 +174,7 @@ int main()
 
     // ---------- C0 基线：插件加载态 ----------
     writeManifest("c0.yomk", "#! yomk_plug_sys\nc0-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().manifest(fp("c0.yomk")).build(), "plugins:1 instances:1", "C0 build baseline ok");
+    expectOkSummary(yomk::plug_sys().manifest(fp("c0.yomk")).build(), "plugins:1 instances:1", "C0 build baseline ok");
     check(isOk(destroyInst("c0-i1")), "C0 destroy baseline instance (plugin stays loaded)");
 
     // ---------- C1 并发 create/destroy 计数守恒：8 线程 x 50 ----------
@@ -240,7 +240,7 @@ int main()
     check(listInstances().empty(), "C1 instances conserved back to zero");
 
     // ---------- C2 并发 build 幂等收敛：4 线程并发同一清单 ----------
-    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "C2 preload unload for build race");
+    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "C2 preload unload for build race");
     writeManifest("c2.yomk", "#! yomk_plug_sys\nc2-i1@libTestPlugin.so@inst.txt\n");
     std::atomic<int> c2Ok{0};
     std::atomic<int> c2MsgBad{0};
@@ -251,7 +251,7 @@ int main()
             pool.emplace_back(
                 [&]()
                 {
-                    yomk::payload::Response r = yomk::plugin().manifest(fp("c2.yomk")).build();
+                    yomk::payload::Response r = yomk::plug_sys().manifest(fp("c2.yomk")).build();
                     if (isOk(r))
                     {
                         ++c2Ok;
@@ -315,7 +315,7 @@ int main()
                 // 此后 create 全被拒，终态必空
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(yomk::plugin().plg_name("TestPlugin").unload()))
+                    if (isOk(yomk::plug_sys().plg_name("TestPlugin").unload()))
                     {
                         break;
                     }
@@ -331,12 +331,12 @@ int main()
     check(c3MsgBad.load() == 0, "C3 create results all in allowed message set");
     check(listInstances().empty(), "C3 terminal instances empty after unload race");
     check(listPlugins().empty(), "C3 terminal plugins empty after unload race");
-    expectNo(yomk::plugin().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "C3 double unload rejects");
+    expectNo(yomk::plug_sys().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "C3 double unload rejects");
 
     // ---------- C4 并发内省 churn 自洽：4 churn + 2 内省 ----------
     // 前置：C3 结束插件已卸载，重建加载态（churn 需要插件在库中）
     writeManifest("c4pre.yomk", "#! yomk_plug_sys\nc4pre-i1@libTestPlugin.so@inst.txt\n");
-    yomk::plugin().manifest(fp("c4pre.yomk")).build();
+    yomk::plug_sys().manifest(fp("c4pre.yomk")).build();
     destroyInst("c4pre-i1");
 
     std::atomic<bool> c4Done{false};
@@ -377,8 +377,8 @@ int main()
                     while (!c4Done.load())
                     {
                         // 门面内省三连：churn 期间恒 Succeeded
-                        if (!isOk(yomk::plugin().plugins()) || !isOk(yomk::plugin().instances()) ||
-                            !isOk(yomk::plugin().builder()))
+                        if (!isOk(yomk::plug_sys().plugins()) || !isOk(yomk::plug_sys().instances()) ||
+                            !isOk(yomk::plug_sys().builder()))
                         {
                             ++c4FacadeBad;
                         }
@@ -404,7 +404,7 @@ int main()
     check(listInstances().empty(), "C4 terminal instances empty after churn");
 
     // ---------- 收尾终态清零 ----------
-    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

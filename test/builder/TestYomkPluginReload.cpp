@@ -101,7 +101,7 @@ static void writeManifest(const std::string& name, const std::string& content)
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().instances();
+    yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
@@ -114,7 +114,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
@@ -144,7 +144,7 @@ int main()
 
     // ---------- R1 双层去重：基线双实例 ----------
     writeManifest("r1.yomk", "#! yomk_plug_sys\nr-a@libTestPlugin.so@inst.txt\nr-b@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
+    expectOkSummary(yomk::plug_sys().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
 
     // 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重
     YomkMsgPtr samePath = yomk::msgs::PluginPath::shared(yomk::payload::PluginPath{fp("libTestPlugin.so")});
@@ -172,23 +172,23 @@ int main()
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
     check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-b ok");
-    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "instances still alive", "R2 try_unload rejects after destroy r-b");
+    expectNo(yomk::plug_sys().plg_name("TestPlugin").try_unload(), "instances still alive", "R2 try_unload rejects after destroy r-b");
     dreq.instanceName = "r-a";
     check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-a ok");
     check(listInstances().empty(), "R2 instances empty after all destroys");
 
     // ---------- R3 空卸与重载循环 ----------
-    check(isOk(yomk::plugin().plg_name("TestPlugin").try_unload()), "R3 try_unload ok while alive:0");
+    check(isOk(yomk::plug_sys().plg_name("TestPlugin").try_unload()), "R3 try_unload ok while alive:0");
     check(listPlugins().empty(), "R3 plugins empty after try_unload");
-    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "plugin not loaded: TestPlugin", "R3 try_unload again rejects");
+    expectNo(yomk::plug_sys().plg_name("TestPlugin").try_unload(), "plugin not loaded: TestPlugin", "R3 try_unload again rejects");
     expectNo(
-        yomk::plugin().plg_name("TestPlugin").unload(),
+        yomk::plug_sys().plg_name("TestPlugin").unload(),
         "plugin not loaded: TestPlugin",
         "R3 force unload not-loaded rejects with same message");
 
     // 重新构建触发二次 dlopen：重载后去重仍生效
     writeManifest("r3.yomk", "#! yomk_plug_sys\nr3-i1@libTestPlugin.so@inst.txt\n");
-    expectOkSummary(yomk::plugin().manifest(fp("r3.yomk")).build(), "plugins:1 instances:1", "R3 rebuild after unload ok");
+    expectOkSummary(yomk::plug_sys().manifest(fp("r3.yomk")).build(), "plugins:1 instances:1", "R3 rebuild after unload ok");
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(samePath).request(),
         "plugin already loaded: TestPlugin",
@@ -206,9 +206,9 @@ int main()
         "#! "
         "yomk_plug_sys\nr4-a@libTestPlugin.so@inst.txt\nr4-b@libTestPlugin.so@inst.txt\nr4-c@libTestPlugin.so@"
         "inst.txt\n");
-    expectOkSummary(yomk::plugin().manifest(fp("r4.yomk")).build(), "plugins:1 instances:3", "R4 build three instances");
-    expectNo(yomk::plugin().plg_name("TestPlugin").try_unload(), "instances still alive", "R4 try_unload rejects while three alive");
-    check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "R4 force unload with three alive instances ok");
+    expectOkSummary(yomk::plug_sys().manifest(fp("r4.yomk")).build(), "plugins:1 instances:3", "R4 build three instances");
+    expectNo(yomk::plug_sys().plg_name("TestPlugin").try_unload(), "instances still alive", "R4 try_unload rejects while three alive");
+    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "R4 force unload with three alive instances ok");
     check(listInstances().empty(), "R4 instances destroyed by force unload");
     check(listPlugins().empty(), "R4 plugins empty after force unload");
 

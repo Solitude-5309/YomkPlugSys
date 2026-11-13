@@ -60,7 +60,7 @@ int main()
     check(ver.rfind("YomkPlugSys v", 0) == 0, "/version prefix 'YomkPlugSys v'");
     // 链式查询 /version 并解包打印（成功走 info，输出人工核对）
     {
-        auto verResp = yomk::plugin().version();
+        auto verResp = yomk::plug_sys().version();
         if (verResp.status == yomk::payload::ResStatus::Succeeded)
         {
             auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
@@ -76,7 +76,7 @@ int main()
     }
 
     // ---------- 空态内省契约 ----------
-    resp = yomk::plugin().builder();
+    resp = yomk::plug_sys().builder();
     check(isOk(resp), "builder() returns Succeeded");
     auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
     check(info != nullptr, "builder() unpacks BuilderInfo");
@@ -85,17 +85,17 @@ int main()
             info->d.manifest.empty(),
         "builder() empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
-    resp = yomk::plugin().inst_name("no-inst").get_plg_info();
+    resp = yomk::plug_sys().inst_name("no-inst").get_plg_info();
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "inst_name(name).get_plg_info() empty-state rejects unknown instance");
 
-    resp = yomk::plugin().inst_cfg("no-inst");
+    resp = yomk::plug_sys().inst_cfg("no-inst");
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "inst_cfg(instanceName) empty-state rejects unknown instance");
 
-    resp = yomk::plugin().plugins();
+    resp = yomk::plug_sys().plugins();
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
@@ -104,12 +104,12 @@ int main()
     }
     check(pluginsEmpty, "plugins() Succeeded + empty array");
 
-    resp = yomk::plugin().plg_name("no-plugin").get_info();
+    resp = yomk::plug_sys().plg_name("no-plugin").get_info();
     check(
         isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
         "plg_name(name).get_info() empty-state rejects unknown plugin");
 
-    resp = yomk::plugin().instances();
+    resp = yomk::plug_sys().instances();
     bool instEmpty = false;
     if (isOk(resp))
     {
@@ -118,13 +118,13 @@ int main()
     }
     check(instEmpty, "instances() Succeeded + empty array");
 
-    resp = yomk::plugin().plg_name("no-plugin").instances();
+    resp = yomk::plug_sys().plg_name("no-plugin").instances();
     check(
         isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
         "plg_name(name).instances() empty-state rejects unknown plugin");
 
     // ---------- BUILD 失败路径 ----------
-    resp = yomk::plugin().manifest("/nonexistent/no_such.yomk").build();
+    resp = yomk::plug_sys().manifest("/nonexistent/no_such.yomk").build();
     check(isNo(resp), "BUILD nonexistent manifest returns Failed");
     check(resp.msg.find("manifest not found") != std::string::npos, "BUILD error msg 'manifest not found'");
 

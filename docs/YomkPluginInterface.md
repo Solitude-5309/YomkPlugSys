@@ -62,7 +62,7 @@ add_library(MyPlugin SHARED MyPlugin.cpp)
 target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
 ```
 
-预期行为：`yomk::plugin().manifest(...).build()` 装载后，`plugins()` 可见 `MyPlugin v0.0.1`；创建的实例名为宿主指定的限定名。
+预期行为：`yomk::plug_sys().manifest(...).build()` 装载后，`plugins()` 可见 `MyPlugin v0.0.1`；创建的实例名为宿主指定的限定名。
 
 ## 契约三件套
 
@@ -115,7 +115,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 - **加载失败的可能原因？** 符号缺失（未导出三件套）/ ABI 版本不符 / meta 为空或 `name` 为空 / 插件名含 `.` / 与已加载插件同名 / so 路径不存在——均返回 `Failed` 并带原因。
 - **一个 so 能出多个实例吗？** 能：工厂函数按调用反复创建；实例间共享插件级静态数据，须自行保证线程安全。
 - **instance_cfg 必须存在吗？** 只有清单构建会校验文件存在；直接 `create_instance` 请求不校验。内容一律不解析，读取行为由插件决定。
-- **插件能自己调插件系统的接口吗？** 能：插件作为进程内代码可直接用 `yomk::plugin()` 域入口（注意避免在构造/destruct 中递归创建同插件实例导致死锁）。
+- **插件能自己调插件系统的接口吗？** 能：插件作为进程内代码可直接用 `yomk::plug_sys()` 域入口（注意避免在构造/destruct 中递归创建同插件实例导致死锁）。
 
 ## 相关跳转
 

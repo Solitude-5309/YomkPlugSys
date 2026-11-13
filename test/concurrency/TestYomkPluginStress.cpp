@@ -97,7 +97,7 @@ static void writeManifest(const std::string& name, const std::string& content)
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().instances();
+    yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
@@ -110,7 +110,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
 static std::vector<yomk::payload::PluginMeta> listPlugins()
 {
     std::vector<yomk::payload::PluginMeta> out;
-    yomk::payload::Response resp = yomk::plugin().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
@@ -191,8 +191,8 @@ int main()
         }
         writeManifest("s200.yomk", oss.str());
     }
-    check(isOk(yomk::plugin().manifest(fp("s200.yomk")).build()), "S0 build 200-entry manifest ok");
-    yomk::payload::Response s0Info = yomk::plugin().builder();
+    check(isOk(yomk::plug_sys().manifest(fp("s200.yomk")).build()), "S0 build 200-entry manifest ok");
+    yomk::payload::Response s0Info = yomk::plug_sys().builder();
     auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
@@ -202,8 +202,8 @@ int main()
     int spotBad = 0;
     for (int round = 1; round <= 250; ++round)
     {
-        const bool unloadOk = isOk(yomk::plugin().plg_name("TestPlugin").unload());
-        const bool buildOk = isOk(yomk::plugin().manifest(fp("s200.yomk")).build());
+        const bool unloadOk = isOk(yomk::plug_sys().plg_name("TestPlugin").unload());
+        const bool buildOk = isOk(yomk::plug_sys().manifest(fp("s200.yomk")).build());
         if (unloadOk && buildOk)
         {
             ++churnOk;
@@ -219,13 +219,13 @@ int main()
     check(churnOk == 250, "S1 250 churn rounds all ok (unload+build)");
     check(spotBad == 0, "S1 spot checks instances==200 all pass");
     check(
-        isOk(yomk::plugin().plg_name("TestPlugin").unload()) && listInstances().empty() && listPlugins().empty(),
+        isOk(yomk::plug_sys().plg_name("TestPlugin").unload()) && listInstances().empty() && listPlugins().empty(),
         "S1 final unload leaves zero residue");
 
     // ---------- S2 2000 对 create/destroy ----------
     // 前置：S1 结束插件已卸载，重建加载态（pre-i1 建后即销，插件保留）
     writeManifest("pre.yomk", "#! yomk_plug_sys\npre-i1@libTestPlugin.so@inst.txt\n");
-    yomk::plugin().manifest(fp("pre.yomk")).build();
+    yomk::plug_sys().manifest(fp("pre.yomk")).build();
     destroyInst("pre-i1");
 
     const auto s2Start = std::chrono::steady_clock::now();
@@ -319,7 +319,7 @@ int main()
                 // 此后 create 全被拒，终态必空
                 for (int retry = 0; retry < 200; ++retry)
                 {
-                    if (isOk(yomk::plugin().plg_name("TestPlugin").unload()))
+                    if (isOk(yomk::plug_sys().plg_name("TestPlugin").unload()))
                     {
                         break;
                     }
@@ -336,7 +336,7 @@ int main()
     check(
         listInstances().empty() && listPlugins().empty(),
         "S4 terminal instances and plugins empty after retry convergence");
-    expectNo(yomk::plugin().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "S4 double unload rejects");
+    expectNo(yomk::plug_sys().plg_name("TestPlugin").unload(), "plugin not loaded: TestPlugin", "S4 double unload rejects");
 
     // ---------- 收尾终态零残留 ----------
     check(listPlugins().empty() && listInstances().empty(), "cleanup: plugins and instances empty at end");

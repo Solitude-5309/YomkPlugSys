@@ -271,7 +271,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 }
 
 // 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源 project(VERSION)），
-// 经 yomk::plugin().version() 对外
+// 经 yomk::plug_sys().version() 对外
 yomk::payload::Response YomkPlugSysBuilder::version(YomkMsgPtr pkg)
 {
     try
