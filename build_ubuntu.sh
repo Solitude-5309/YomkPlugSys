@@ -164,13 +164,13 @@ else
 fi
 echo " 示例程序（安装于 ${INSTALL_DIR}/bin）:"
 echo "   - ExampleYomkPlugSysBuilder"
-echo " 可直接运行 ExampleYomkPlugSysBuilder 验证 workflow 构建示例"
+echo " 可直接运行 ${INSTALL_DIR}/bin/ExampleYomkPlugSysBuilder 验证 workflow 构建示例"
 if [ "${BUILD_TEST}" = "ON" ]; then
     echo " 测试程序（仅本地构建，未安装）:"
     for _t in "${TEST_BUILD_DIR}"/TestYomkPlugin*; do
         [ -x "${_t}" ] && echo "   - ${_t}"
     done
-    echo " 可直接运行 TestYomkPlugin* 验证"
+    echo " 可执行 ${TEST_DIR}/run_tests.sh 运行全量测试（可执行文件位于 ${TEST_BUILD_DIR}，未安装）"
 fi
 echo "==========================================="
 unset _LIB_LINE _t

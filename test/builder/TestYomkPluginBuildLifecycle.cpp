@@ -3,7 +3,7 @@
 // so 复用幂等与实例重名、destroy 重建（白盒 URL）、try_unload 拒绝与放行、
 // unload 强卸含存活实例、卸载后重载、缺文件行号错误。
 // 夹具模式同 TestYomkPluginManifest：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>

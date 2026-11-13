@@ -3,7 +3,7 @@
 // create/destroy 入参边界、list/list_instances filter 三态（未知/命中/已注册零实例）、
 // instanceInfoLine 内省行、Loader meta 深拷贝、插件注册列表、跨插件同名实例、超长输入边界。
 // 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>

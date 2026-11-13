@@ -3,7 +3,7 @@
 // abi 不匹配、插件名含 '.'、垃圾 so（dlopen 失败）、create 返回 nullptr、create 抛异常；
 // 以及坏 create 后插件仍注册的内省侧效、部分成功后前序条目保留。
 // 夹具模式同前：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <algorithm>

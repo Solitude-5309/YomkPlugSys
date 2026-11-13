@@ -1,6 +1,6 @@
 // TestYomkPluginFacade：门面链式域入口契约冒烟测试
 // 覆盖门面服务注册、/version 契约与链式版本查询、空态内省默认值与未知实例拒绝、BUILD 不存在清单失败路径。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <iostream>

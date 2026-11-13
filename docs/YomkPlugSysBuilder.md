@@ -37,7 +37,7 @@ YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yo
 ## 使用示例
 
 ```cpp
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 using namespace yomk;
 
 yomk::server().init();

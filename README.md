@@ -21,7 +21,7 @@ source build_ubuntu.sh    # 交互式：输入 YomkServer 安装路径与扩展�
 安装后以最小程序跑通（构建示例插件系统 → 内省 → 卸载）：
 
 ```cpp
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <iostream>
 
 using namespace yomk;
@@ -78,7 +78,7 @@ YomkPlugSys/
 │       ├── YomkPlugSysPayload.h      # 模块专属载荷（yomk::payload 数据结构体）
 │       ├── YomkPlugSysMsg.h          # 模块专属消息包（YOMK_DEFINE_MSG 注册）
 │       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
-│       └── YomkPluginApi.h           # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
+│       └── YomkPlugSysApi.h          # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明

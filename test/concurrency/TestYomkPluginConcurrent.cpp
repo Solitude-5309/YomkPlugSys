@@ -4,7 +4,7 @@
 // 规模为数百次交错（总操作 <1000），正确性看交错多样性而非次数。
 // 装置 TSan-clean：线程内只写原子计数，join 后主线程统一断言。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <atomic>

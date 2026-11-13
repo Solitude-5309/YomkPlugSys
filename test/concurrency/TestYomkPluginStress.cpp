@@ -4,7 +4,7 @@
 // 短时并发 unload vs create durability 收敛。
 // 硬断言仅收敛性与终态；吞吐以 [PERF] 行打印作基线参考，不作断言。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <atomic>

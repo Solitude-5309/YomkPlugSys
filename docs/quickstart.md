@@ -29,7 +29,7 @@ source build_ubuntu.sh
 `main.cpp`：
 
 ```cpp
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <iostream>
 
 using namespace yomk;

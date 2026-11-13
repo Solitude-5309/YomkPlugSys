@@ -62,7 +62,7 @@ find_package(YomkPlugSys REQUIRED)
 target_link_libraries(demo PRIVATE YomkPlugSys::YomkPlugSys)
 ```
 
-- 导入 target 已携带 INTERFACE include（`<prefix>/include`），源码直接 `#include <yomk/plug_sys/YomkPluginApi.h>`，无需手动 include_directories
+- 导入 target 已携带 INTERFACE include（`<prefix>/include`），源码直接 `#include <yomk/plug_sys/YomkPlugSysApi.h>`，无需手动 include_directories
 - 插件工程同样链接（SHARED 库引用 ABI 头），示例见[插件开发指南](YomkPluginInterface.md)的 CMake 片段
 
 ## 测试体系

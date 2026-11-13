@@ -83,7 +83,7 @@ if [ ${RUN_CPPCHECK} -eq 1 ]; then
     cppcheck --enable=warning,performance,portability --std=c++17 --language=c++ \
         --verbose -j"$(nproc)" \
         --inline-suppr --suppress=missingIncludeSystem --suppress=toomanyconfigs \
-        --suppress='passedByValue:*YomkPluginApi.h' \
+        --suppress='passedByValue:*YomkPlugSysApi.h' \
         -I "${REPO_DIR}/include" -I /opt/yomk/include \
         -i"${REPO_DIR}/examples/build" \
         --error-exitcode=1 \

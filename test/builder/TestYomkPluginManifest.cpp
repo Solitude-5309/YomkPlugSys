@@ -4,7 +4,7 @@
 // 并对账 /builder（recordBuild 侧效：manifest 条目/path/result/计数）。
 // 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，
 // 直接运行也不污染当前目录）；插件 so 符号链接进夹具目录满足相对路径契约。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <algorithm>

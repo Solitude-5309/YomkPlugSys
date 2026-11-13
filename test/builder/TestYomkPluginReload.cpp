@@ -3,7 +3,7 @@
 // alive 计数随 destroy 的 purgeDead 时序、try_unload/force_unload 空卸组合、
 // 卸载-重载全循环、多实例强卸。
 // 夹具模式同 TestYomkPluginBuildLifecycle：<测试可执行目录>/manifest，与工作目录无关。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>

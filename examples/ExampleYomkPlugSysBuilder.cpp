@@ -1,6 +1,6 @@
 // YomkPlugSys 入门示例：初始化 -> 构建插件系统 -> 内省 -> 卸载，串起最常用接口。
 // 每节标注【接口/输入/输出】；清单路径由 CMake 编译期注入（examples/workflow/manifest.yomk）。
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
 #include <cstdlib>

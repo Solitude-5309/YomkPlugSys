@@ -1,6 +1,6 @@
 # 插件开发指南（YomkPluginInterface）
 
-面向插件开发者：编写一个可被 YomkPlugSys 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plug_sys/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPluginApi.h`，便于一处引入）。
+面向插件开发者：编写一个可被 YomkPlugSys 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plug_sys/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPlugSysApi.h`，便于一处引入）。
 
 ## 适用与不适用
 
@@ -20,7 +20,7 @@
 完整可编译，复制保存为 `MyPlugin.cpp` 即可：
 
 ```cpp
-#include <yomk/plug_sys/YomkPluginApi.h>
+#include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <string>
 
 class MyInstance : public YomkPluginInterface
