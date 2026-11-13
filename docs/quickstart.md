@@ -43,8 +43,9 @@ int main()
 
     // 按清单构建示例插件系统（清单见 examples/workflow/manifest.yomk）
     auto build = yomk::plug_sys().manifest(PLUGIN_MANIFEST).build();
-    auto summary = yomk::msgs::unpack<yomk::msgs::String>(build.data);   // 汇总在 data 的 String 包内
-    std::cout << "build: " << build.msg << " (" << (summary ? summary->d : "") << ")" << std::endl;
+    auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(build.data);   // 构建快照在 data 的 BuilderInfo 包内
+    std::cout << "build: " << build.msg << " (plugins:" << (info ? info->d.plugins : 0) << " instances:"
+              << (info ? info->d.instances : 0) << ")" << std::endl;
 
     // 内省：插件列表
     auto plugins = yomk::plug_sys().plugins();

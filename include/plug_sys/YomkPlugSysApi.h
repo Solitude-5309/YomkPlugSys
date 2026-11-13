@@ -39,11 +39,13 @@ public:
 
     /**
      * @brief Build the plugin system from the bound manifest: load every listed library and create its instances
-     * @return Response carrying a String packet with the summary "plugins:N instances:N"
+     * @return Response carrying a BuilderInfo packet: manifest entries, path, result and plugin/instance counts;
+     *         on failure data is empty and the reason (with manifest line number) is in msg
      * @note Blocking; stops at the first failing manifest line, later lines are not processed
      */
     // @zh: 按绑定的清单构建插件系统：加载条目列出的全部动态库并创建实例。
-    // @zh: return Response，data 为 String 包，内容为汇总 plugins:N instances:N。
+    // @zh: return Response，data 为 BuilderInfo 包：清单条目、路径、结果、插件数与实例数；
+    // @zh:        失败时 data 为空，原因（含清单行号）见 msg。
     // @zh: note 阻塞；遇到首个失败条目即停止，后续条目不再处理。
     yomk::payload::Response build() const
     {

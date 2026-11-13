@@ -76,7 +76,7 @@ int main()
     //       [实例名]
     //       lib = 动态库相对路径
     //       config = 实例配置相对路径
-    // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
+    // 输出：BuilderInfo（build 直接返回：清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
     // 副作用：逐实例块加载插件 so 并创建实例，实例名取自块名
     section("2. 构建插件系统 yomk::plug_sys().manifest(manifest).build()");
     std::cout << "清单: " << manifest << std::endl;
@@ -85,15 +85,10 @@ int main()
     {
         fail("构建", resp.msg);
     }
-    resp = yomk::plug_sys().builder();
-    if (!isOk(resp))
-    {
-        fail("查询构建信息", resp.msg);
-    }
     auto builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
     if (!builder)
     {
-        fail("查询构建信息", "响应数据缺失");
+        fail("构建", "响应数据缺失");
     }
     std::cout << "builder" << std::endl;
     std::cout << "  manifest:" << std::endl;
@@ -105,6 +100,14 @@ int main()
     std::cout << "  result:" << builder->d.result << std::endl;
     std::cout << "  plugins:" << builder->d.plugins << std::endl;
     std::cout << "  instances:" << builder->d.instances << std::endl;
+
+    // 内省接口 builder()：返回同一份最近构建快照（无需重复请求即可从 build 响应取得）
+    resp = yomk::plug_sys().builder();
+    if (!isOk(resp))
+    {
+        fail("查询构建信息", resp.msg);
+    }
+    std::cout << "  builder(): 与 build 返回同源快照" << std::endl;
 
     // 3. 查询插件列表
     // 接口：yomk::plug_sys().plugins()

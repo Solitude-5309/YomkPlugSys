@@ -72,3 +72,4 @@ test_logs/
 
 # other
 .trae/
+tmp/

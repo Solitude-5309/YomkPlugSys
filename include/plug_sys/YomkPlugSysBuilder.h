@@ -77,7 +77,7 @@ private:
     };
 
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
-    yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> String 构建汇总
+    yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> BuilderInfo 构建快照
     yomk::payload::Response version(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
     yomk::payload::Response infoBuilder(YomkMsgPtr pkg);       // 无 -> BuilderInfo 最近构建信息
     yomk::payload::Response plugins(YomkMsgPtr pkg);           // 无 -> PluginMetaArray（全量列表）

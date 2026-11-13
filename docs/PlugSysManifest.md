@@ -32,7 +32,7 @@ lib = WorkspaceService/lib/libWorkspaceService.so
 config = WorkspaceService/instances/WorkspaceService.txt
 ```
 
-预期行为：`yomk::plug_sys().manifest("<路径>/manifest.yomk").build()` 返回 `plugins:2 instances:2`；两实例登记为 `ConnectionService.ConnectionServiceIns`、`WorkspaceService.WorkspaceServiceIns`。
+预期行为：`yomk::plug_sys().manifest("<路径>/manifest.yomk").build()` 返回 `BuilderInfo`（`plugins=2`、`instances=2`，`manifest` 为两条实例块行）；两实例登记为 `ConnectionService.ConnectionServiceIns`、`WorkspaceService.WorkspaceServiceIns`。
 
 ## 语法规则
 

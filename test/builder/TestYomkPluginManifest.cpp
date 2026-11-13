@@ -42,29 +42,19 @@ static bool isNo(const yomk::payload::Response& r)
     return r.status == yomk::payload::ResStatus::Failed;
 }
 
-static std::string respString(const yomk::payload::Response& r)
-{
-    if (r.data && r.data->name() == "String")
-    {
-        auto p = std::dynamic_pointer_cast<yomk::msgs::String>(r.data);
-        if (p)
-        {
-            return p->d;
-        }
-    }
-    return "";
-}
-
 // 组合断言：Failed 且错误文案含子串
 static void expectNo(const yomk::payload::Response& r, const std::string& substr, const std::string& desc)
 {
     check(isNo(r) && r.msg.find(substr) != std::string::npos, desc);
 }
 
-// 组合断言：Succeeded 且汇总串精确匹配
+// 组合断言：Succeeded 且 BuilderInfo 快照的汇总与期望一致
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
-    check(isOk(r) && respString(r) == summary, desc + " (" + summary + ")");
+    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::BuilderInfo>(r.data) : nullptr;
+    const std::string actual =
+        info ? "plugins:" + std::to_string(info->d.plugins) + " instances:" + std::to_string(info->d.instances) : "";
+    check(isOk(r) && actual == summary, desc + " (" + summary + ")");
 }
 
 // 夹具：插件 so 路径 = env YOMK_TEST_PLUGIN 优先，回退编译期固化路径

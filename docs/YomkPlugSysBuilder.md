@@ -20,7 +20,7 @@ YomkPlugSys 的唯一用户门面服务：解析插件系统清单（manifest.yo
 
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
-| 清单构建 | `yomk::plug_sys().manifest(manifestPath).build()` | → `Response`（data 为 `String`：`plugins:N instances:M` 汇总） |
+| 清单构建 | `yomk::plug_sys().manifest(manifestPath).build()` | → `Response`（data 为 `BuilderInfo`：清单条目/路径/结果/插件数/实例数） |
 | 强制卸载 | `yomk::plug_sys().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plug_sys().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plug_sys().builder()` | → `Response`（data 为 `BuilderInfo`） |
@@ -64,6 +64,10 @@ if (arr)
     for (const auto& m : arr->d)
         std::cout << m.name << " v" << m.version << std::endl;
 }
+
+auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(build.data);
+if (info)
+    std::cout << "built plugins:" << info->d.plugins << " instances:" << info->d.instances << std::endl;
 ```
 
 > `unpack` 类型不匹配或 data 为空返回 `nullptr`（不抛异常），使用前须判空。

@@ -377,7 +377,13 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
         recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, entryLines);
         yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.manifestPath, " ", summary);
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(summary)};
+        yomk::payload::BuilderInfo info;
+        info.manifest = entryLines;
+        info.path = req->d.manifestPath;
+        info.result = "ok";
+        info.plugins = static_cast<int>(loadedPlugins.size());
+        info.instances = static_cast<int>(createdInstances);
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::BuilderInfo::shared(info)};
     }
     catch (const std::exception& e)
     {
