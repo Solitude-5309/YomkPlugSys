@@ -58,13 +58,13 @@ private:
 };
 
 /**
- * @brief Intermediate chain node binding a plugin name, terminated by get_info(), unload() or try_unload()
+ * @brief Intermediate chain node binding a plugin name, terminated by get_info(), instances(), unload() or try_unload()
  * Returned by PluginBuilder::plg_name(); every terminator shares the bound name and differs only
  * in the action taken on it.
  * @note Holds a copy of the plugin name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
-// @zh: 中间链节点：绑定插件名，链以 get_info()、unload() 或 try_unload() 终结。
+// @zh: 中间链节点：绑定插件名，链以 get_info()、instances()、unload() 或 try_unload() 终结。
 // @zh: 由 PluginBuilder::plg_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
 // @zh: note 持有插件名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class PluginNameBuilder
@@ -81,6 +81,20 @@ public:
     yomk::payload::Response get_info() const
     {
         return yomk::server().url(yomk::url::pluginByName).msg(yomk::msgs::String::shared(m_pluginName)).request();
+    }
+
+    /**
+     * @brief List the instances of the bound plugin
+     * @return Response carrying an InstanceInfoArray packet; an unknown name yields a failed response
+     */
+    // @zh: 列举绑定插件下的实例（与 instances() 全量列表职责分离）。
+    // @zh: return Response，data 为 InstanceInfoArray 包；未知插件返回失败。
+    yomk::payload::Response instances() const
+    {
+        return yomk::server()
+            .url(yomk::url::pluginListInstances)
+            .msg(yomk::msgs::String::shared(m_pluginName))
+            .request();
     }
 
     /**
@@ -143,13 +157,13 @@ public:
     PluginManifestBuilder manifest(std::string_view workflowPath) { return PluginManifestBuilder(workflowPath); }
 
     /**
-     * @brief Bind a plugin name for unloading, terminating with unload() or try_unload()
+     * @brief Bind a plugin name, terminating with get_info(), instances(), unload() or try_unload()
      * @param pluginName Plugin name (meta name, must not contain '.')
-     * @return Intermediate chain node carrying the name; call unload() or try_unload() on it
+     * @return Intermediate chain node carrying the name; call a terminator on it
      */
-    // @zh: 绑定要卸载的插件名，链以 unload() 或 try_unload() 终结。
+    // @zh: 绑定插件名，链以 get_info()、instances()、unload() 或 try_unload() 终结。
     // @zh: param pluginName 插件名（meta 名，不得含 '.'）。
-    // @zh: return 携带该名字的中间链节点；在其上调用 unload() 或 try_unload()。
+    // @zh: return 携带该名字的中间链节点；在其上调用终结方法。
     PluginNameBuilder plg_name(std::string_view pluginName) { return PluginNameBuilder(pluginName); }
 
     /**
@@ -172,25 +186,9 @@ public:
      * @brief Introspect all created instances
      * @return Response carrying an InstanceInfoArray packet
      */
-    // @zh: 内省全部已创建实例。
+    // @zh: 内省全部已创建实例（与 plg_name(name).instances() 单插件实例职责分离）。
     // @zh: return Response，data 为 InstanceInfoArray 包。
-    yomk::payload::Response infoInstances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
-
-    /**
-     * @brief Introspect instances filtered by plugin name
-     * @param pluginName Plugin name; an unknown name yields a failed response
-     * @return Response carrying an InstanceInfoArray packet
-     */
-    // @zh: 内省指定插件下的实例（按插件名过滤）。
-    // @zh: param pluginName 插件名；未知插件返回失败。
-    // @zh: return Response，data 为 InstanceInfoArray 包。
-    yomk::payload::Response infoInstances(std::string_view pluginName)
-    {
-        return yomk::server()
-            .url(yomk::url::pluginListInstances)
-            .msg(yomk::msgs::String::shared(std::string(pluginName)))
-            .request();
-    }
+    yomk::payload::Response instances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
 
     /**
      * @brief Introspect the metadata of the plugin owning an instance

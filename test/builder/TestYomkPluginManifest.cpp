@@ -258,7 +258,7 @@ int main()
 
     // ---------- 清理现场 ----------
     check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
-    yomk::payload::Response inst = yomk::plugin().infoInstances();
+    yomk::payload::Response inst = yomk::plugin().instances();
     bool instEmpty = false;
     if (isOk(inst))
     {

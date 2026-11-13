@@ -114,11 +114,11 @@ int main()
     }
 
     // 4. 查询实例列表
-    // 接口：yomk::plugin().infoInstances()
+    // 接口：yomk::plugin().instances()
     // 输入：无
     // 输出：InstanceInfoArray（全量实例明细）
-    section("4. 实例列表 yomk::plugin().infoInstances()");
-    resp = yomk::plugin().infoInstances();
+    section("4. 实例列表 yomk::plugin().instances()");
+    resp = yomk::plugin().instances();
     if (!isOk(resp))
     {
         fail("查询实例", resp.msg);
@@ -134,11 +134,11 @@ int main()
     }
 
     // 5. 按插件过滤实例
-    // 接口：yomk::plugin().infoInstances(pluginName)
+    // 接口：yomk::plugin().plg_name(pluginName).instances()
     // 输入：pluginName（未知插件返回失败，原因见 resp.msg）
     // 输出：InstanceInfoArray（仅该插件下的实例）
-    section("5. 按插件过滤实例 yomk::plugin().infoInstances(\"ConnectionService\")");
-    resp = yomk::plugin().infoInstances("ConnectionService");
+    section("5. 按插件过滤实例 yomk::plugin().plg_name(\"ConnectionService\").instances()");
+    resp = yomk::plugin().plg_name("ConnectionService").instances();
     if (!isOk(resp))
     {
         fail("过滤实例", resp.msg);

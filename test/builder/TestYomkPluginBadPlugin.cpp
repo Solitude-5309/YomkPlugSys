@@ -205,7 +205,7 @@ int main()
     check(isOk(yomk::plugin().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
     check(isOk(yomk::plugin().plg_name("BadCreateThrow").unload()), "cleanup: force_unload BadCreateThrow");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
-    yomk::payload::Response inst = yomk::plugin().infoInstances();
+    yomk::payload::Response inst = yomk::plugin().instances();
     bool instEmpty = false;
     if (isOk(inst))
     {

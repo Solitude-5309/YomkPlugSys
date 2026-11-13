@@ -109,14 +109,19 @@ int main()
         isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
         "plg_name(name).get_info() empty-state rejects unknown plugin");
 
-    resp = yomk::plugin().infoInstances();
+    resp = yomk::plugin().instances();
     bool instEmpty = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
         instEmpty = arr->d.empty();
     }
-    check(instEmpty, "infoInstances() Succeeded + empty array");
+    check(instEmpty, "instances() Succeeded + empty array");
+
+    resp = yomk::plugin().plg_name("no-plugin").instances();
+    check(
+        isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
+        "plg_name(name).instances() empty-state rejects unknown plugin");
 
     // ---------- BUILD 失败路径 ----------
     resp = yomk::plugin().manifest("/nonexistent/no_such.yomk").build();

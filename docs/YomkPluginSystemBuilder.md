@@ -26,7 +26,8 @@ YomkPluginSystem 的唯一用户门面服务：解析 manifest.yomk 清单驱动
 | 最近构建 | `yomk::plugin().builder()` | → `Response`（data 为 `BuilderInfo`） |
 | 插件列表 | `yomk::plugin().plugins()` | → `Response`（data 为 `PluginMetaArray`） |
 | 插件信息 | `yomk::plugin().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
-| 实例明细 | `yomk::plugin().infoInstances()` / `.infoInstances(pluginName)` | → `Response`（data 为 `InstanceInfoArray`；按插件过滤时未知插件 `Failed`） |
+| 实例列表 | `yomk::plugin().instances()` | → `Response`（data 为 `InstanceInfoArray` 全量实例明细） |
+| 插件实例 | `yomk::plugin().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
 | 实例查插件 | `yomk::plugin().infoPluginBy(instanceName)` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
 | 实例文件 | `yomk::plugin().infoInstancesFile(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
 | 版本查询 | `yomk::plugin().version()` | → `Response`（data 为 `String`：`YomkPluginSystem vX.Y.Z (WIP)`） |
@@ -45,9 +46,10 @@ yomk::server().srv<YomkPluginSystemBuilder>().create();
 // 按清单构建（manifest 绑定清单路径，build 终结；清单格式见 PluginManifest.md；任一步失败 Failed 并指明清单行号）
 auto build = yomk::plugin().manifest("examples/workflow/manifest.yomk").build();
 
-// 内省：插件列表与实例明细
+// 内省：插件列表与实例列表
 auto plugins = yomk::plugin().plugins();
-auto instances = yomk::plugin().infoInstances("ConnectionService");   // 按插件过滤
+auto instances = yomk::plugin().instances();                        // 全量实例明细
+auto one = yomk::plugin().plg_name("ConnectionService").instances(); // 仅该插件下的实例
 
 // 卸载（有存活实例时 try_unload 拒绝；unload 先清空实例表再卸载，外部引用未释放同样拒绝）
 auto r = yomk::plugin().plg_name("ConnectionService").try_unload();

@@ -109,7 +109,7 @@ static std::vector<yomk::payload::PluginMeta> listPlugins()
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().infoInstances();
+    yomk::payload::Response resp = yomk::plugin().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
@@ -223,19 +223,19 @@ int main()
     resp = yomk::server().url("/YomkPluginSystemBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
-    // ---------- M2.5 宏门面：infoInstances(pluginName)(pluginName) 与直调 filter 等价 ----------
-    resp = yomk::plugin().infoInstances("TestPlugin");
+    // ---------- M2.5 链式门面：plg_name(name).instances() 与直调 filter 等价 ----------
+    resp = yomk::plugin().plg_name("TestPlugin").instances();
     bool macroHitTwo = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
         macroHitTwo = arr->d.size() == 2;
     }
-    check(macroHitTwo, "M2 infoInstances(pluginName) filter hit returns 2 instances");
+    check(macroHitTwo, "M2 plg_name(name).instances() filter hit returns 2 instances");
     expectNo(
-        yomk::plugin().infoInstances("NoSuch"),
+        yomk::plugin().plg_name("NoSuch").instances(),
         "plugin not loaded: NoSuch",
-        "M2 infoInstances(pluginName) unknown plugin rejects");
+        "M2 plg_name(name).instances() unknown plugin rejects");
 
     // ---------- M2.6 宏门面：infoPluginBy(instanceName)(限定名实例名) 反查所属插件 ----------
     resp = yomk::plugin().infoPluginBy("TestPlugin.e-a");

@@ -97,11 +97,11 @@ static void writeManifest(const std::string& name, const std::string& content)
     f << content;
 }
 
-// infoInstances() 解包；失败返回空表
+// instances() 解包；失败返回空表
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plugin().infoInstances();
+    yomk::payload::Response resp = yomk::plugin().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
