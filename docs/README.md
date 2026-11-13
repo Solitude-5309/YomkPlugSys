@@ -25,6 +25,6 @@
 
 ## 规范与配套
 
-- 术语约定：插件系统（PlugSys）= 一次清单构建所装载的插件与其实例的集合；插件（Plugin）= 单个 so 库；插件系统清单（PlugSysManifest）= 描述该系统装载内容与实例创建的 manifest.yomk；门面服务（YomkPlugSysBuilder）、机制层（Loader）/ 数据层（Manager）为内部服务；限定名 = `插件名.实例名`（全局唯一主键）；实例配置 = `instance_cfg`（透传参数）
+- 术语约定：插件系统（PlugSys）= 一次清单构建所装载的插件与其实例的集合；插件（Plugin）= 单个 so 库；插件系统清单（PlugSysManifest）= 描述该系统装载内容与实例创建的 manifest.yomk；门面服务（YomkPlugSysBuilder）、解析层（ManifestParser）/ 机制层（Loader）/ 数据层（Manager）为内部服务；限定名 = `插件名.实例名`（全局唯一主键）；实例配置 = `instance_cfg`（透传参数）
 - API 精确契约：头文件 Doxygen 注释（仓库内 `include/plug_sys/`，安装后 `<prefix>/include/yomk/plug_sys/`），逐参数与返回码以之为准
 - 完整示例：`examples/ExampleYomkPlugSysBuilder.cpp`（入门全流程）、`examples/workflow/`（双插件系统清单示例）、`test/`（8 个测试闭环）

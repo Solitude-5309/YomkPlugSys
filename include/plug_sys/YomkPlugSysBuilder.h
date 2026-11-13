@@ -11,26 +11,26 @@ using namespace yomk;
 
 // YomkPlugSysBuilder:插件系统编排层（四件套之 Builder,唯一用户可感知服务）.
 // 设计取舍:
-// 1. 只做清单解析与请求编排,不持有插件库也不持有实例:加载/登记/实例生命周期全部归
-//    机制层 Loader 与数据层 Manager,本层可随时重建;
+// 1. 只做请求编排与构建状态记录,不解析清单也不持有插件库或实例:清单解析归
+//    ManifestParser,加载/登记/实例生命周期归机制层 Loader 与数据层 Manager,本层可随时重建;
 // 2. 最近一次构建的实例条目/路径/结果/计数在本层缓存,只服务内省,不参与后续请求决策;
 // 3. init 注册内部服务、deinit 逆序注销:注销必须直调注入的 YomkServer*,
 //    不得经 yomk::server() 域入口（进程退出期域入口快照会二次释放 server）.
 
 /**
  * @brief Plugin system orchestration service (/YomkPlugSysBuilder)
- * Parses a .yomk manifest (instance blocks: [instanceName] followed by lib/config key-value
- * lines, '#' starts a comment, both paths are relative to the manifest directory) and drives
- * plugin loading plus instance creation purely through requests to the internal services.
+ * Delegates manifest parsing to /YomkManifestParser, then drives plugin loading plus
+ * instance creation purely through requests to the internal services.
  * The service itself never owns plugin libraries or instances.
- * @note This is the only service users register; the mechanism layer (loader) and the
- *       data layer (manager) are registered by init() and are not part of the public API.
+ * @note This is the only service users register; the manifest parser, mechanism layer
+ *       (loader) and data layer (manager) are registered by init() and are not part of
+ *       the public API.
  */
 // @zh: 插件系统编排服务（/YomkPlugSysBuilder）。
-// @zh: 解析 .yomk 清单（实例块 [实例名] + 块内 lib/config 键值行，'#' 起到行尾为注释，
-// @zh: 两段路径均相对清单所在目录），并经请求驱动内部服务完成插件加载与实例创建；
-// @zh: 本服务不持有插件库与实例。
-// @zh: note 用户只注册本服务；机制层（Loader）与数据层（Manager）由 init() 注册，不属于公开 API。
+// @zh: 清单解析委派给 /YomkManifestParser，得到实例块表后经请求驱动内部服务完成
+// @zh: 插件加载与实例创建；本服务不持有插件库与实例。
+// @zh: note 用户只注册本服务；清单解析器、机制层（Loader）与数据层（Manager）
+// @zh:       由 init() 注册，不属于公开 API。
 class YomkPlugSysBuilder : public YomkService
 {
 public:
@@ -67,15 +67,6 @@ private:
     // 宿主 server 裸指针（构造期由框架传入，生命周期覆盖服务），deinit 注销内部服务用
     YomkServer* m_server = nullptr;
 
-    // 清单条目：一个 [实例名] 块（块内键 lib / config 各一次）
-    struct ManifestEntry
-    {
-        int lineNo = 0;            // 块头行号（报错定位用）
-        std::string instanceName;  // 实例裸名（同一插件内唯一）
-        std::string libRelPath;    // 动态库相对清单目录的路径（含平台相关全名）
-        std::string instanceCfg;   // 实例配置相对清单目录的路径
-    };
-
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
     yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> BuilderInfo 构建快照
     yomk::payload::Response version(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
@@ -87,12 +78,6 @@ private:
     yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> 强制卸载
     yomk::payload::Response tryUnload(YomkMsgPtr pkg);         // String pluginName -> 有存活实例则拒绝
-
-    // 清单解析:首行须为格式标识 #! yomk_plug_sys;# 起到行尾为注释（整行/行内）,
-    // 其余按实例块 [实例名] + key = value（lib / config，各一次）严格校验,
-    // 块内未知键/重复键/缺键/块外键值行均拒绝,路径值拒绝绝对路径
-    yomk::payload::Response parseManifest(
-        const std::string& manifestPath, std::string& manifestDir, std::vector<ManifestEntry>& entries);
 
     // 记录最近一次构建状态（内省用）
     void recordBuild(

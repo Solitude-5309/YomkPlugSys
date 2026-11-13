@@ -39,7 +39,7 @@
 - `load`：dlopen + 符号解析（`yomk_plugin_meta` / `yomk_plugin_create_instance` / `yomk_plugin_delete_instance`）+ ABI 版本比对 + 同名 meta 拒绝；Manager 登记时再拒绝含 `.` 的插件名；返回插件名（= meta.name）
 - **build 复用已加载插件**：清单实例块的 so 绝对路径已在插件表内则跳过 load、直接复用插件名（不重复登记）；直接 `load` 同 meta 名的插件则返回 `Failed`（`plugin already loaded`）
 - ABI 版本不符 / 符号缺失 / meta 为空或 `name` 为空 / 插件名含 `.` / 与已加载插件重名 → `Failed`，插件不进入插件表
-- `build` = 清单解析 + 逐块 load + create_instance 的编排；任一块失败即中止返回 `Failed` 并指明清单行号，**已成功的块不回滚**
+- `build` = 清单解析（委派 `/YomkManifestParser`）+ 逐块 load + create_instance 的编排；任一块失败即中止返回 `Failed` 并指明清单行号，**已成功的块不回滚**
 
 ### 实例创建（create_instance / build）
 
@@ -68,12 +68,13 @@
 
 | 服务 | 层 | 职责 |
 |---|---|---|
+| `/YomkManifestParser` | 解析层 | manifest.yomk 词法/语法与严格校验（格式标识、实例块、键唯一性、相对路径）；输出清单目录 + 实例块表，不接触插件与实例 |
 | `/YomkPluginLoader` | 机制层 | dlopen/dlsym/dlclose、meta 读取、实例创建机制；只持句柄表与 weak_ptr 存活表，**不登记插件、不拥有实例** |
 | `/YomkPluginManager` | 数据层 | 插件表（meta 深拷贝）+ 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期编排 |
 
 - 门面 `build/unload/...` 全部经请求代理到 Manager 完成，自身不持有插件/实例
 - 判活只有一处：Loader 的 weak 存活表。`try_unload` 直接委托它；`unload` 先清 Manager 实例表、再委托同一判活，因此外部仍有引用时两者都会被拒绝
-- 门面服务 init 时注册二者、deinit 逆序注销；未注册门面则内部服务也不存在
+- 门面服务 init 时注册三者、deinit 逆序注销；未注册门面则内部服务也不存在
 
 ## 注意事项
 

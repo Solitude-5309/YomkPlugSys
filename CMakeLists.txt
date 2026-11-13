@@ -5,7 +5,7 @@ include(cmake/AbiInfo.cmake)
 # YomkServer 版本检测模块：find_package(YomkServer) 之后调用 yomk_server_version_check()
 include(cmake/YomkServerVersionCheck.cmake)
 
-project(YomkPlugSys VERSION 2.1.4 LANGUAGES CXX)
+project(YomkPlugSys VERSION 2.1.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,6 +36,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # 编译为动态库
 add_library(${PROJECT_NAME} SHARED
+    src/YomkManifestParser.cpp
     src/YomkPluginLoader.cpp
     src/YomkPluginManager.cpp
     src/YomkPlugSysBuilder.cpp

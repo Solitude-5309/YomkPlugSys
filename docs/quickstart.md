@@ -38,7 +38,7 @@ int main()
 {
     yomk::server().init();
 
-    // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
+    // 注册唯一门面服务（内部自动托管 Parser/Loader/Manager 生命周期）
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
     // 按清单构建示例插件系统（清单见 examples/workflow/manifest.yomk）

@@ -1,5 +1,5 @@
 // TestYomkPluginManifest：清单解析全面测试（闭环2）
-// 经 YOMKPLUGIN_BUILD 触达 parseManifest 全分支：路径预检、首行格式标识、
+// 经 YOMKPLUGIN_BUILD 触达 /YomkManifestParser 解析全分支：路径预检、首行格式标识、
 // 注释与空行、实例块与键值严格校验、绝对路径拒绝、块头行号计数、合法块接受，
 // 并对账 /builder（recordBuild 侧效：manifest 条目/path/result/计数）。
 // 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，
@@ -300,6 +300,27 @@ int main()
                        e.configFile == fp("inst.txt");
             }),
         "H7 /builder keeps completed instance entries");
+
+    // ---------- I 解析服务直请（/YomkManifestParser/parse 白盒契约） ----------
+    writeManifest("m-i1.yomk", "#! yomk_plug_sys\n[p1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
+    auto parseResp = yomk::server()
+                         .url("/YomkManifestParser/parse")
+                         .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{fp("m-i1.yomk")}))
+                         .request();
+    auto parseDump = isOk(parseResp) ? yomk::msgs::unpack<yomk::msgs::ManifestParseResult>(parseResp.data) : nullptr;
+    check(
+        parseDump && parseDump->d.dir == fixtureDir().string() && parseDump->d.entries.size() == 1 &&
+            parseDump->d.entries[0].lineNo == 2 && parseDump->d.entries[0].instanceName == "p1" &&
+            parseDump->d.entries[0].libRelPath == "libTestPlugin.so" &&
+            parseDump->d.entries[0].instanceCfg == "inst.txt",
+        "I1 parse service returns manifest dir and instance entries");
+
+    writeManifest("m-i2.yomk", "#! yomk_plug_sys\n# c\n[p2]\nfoo = bar\n");
+    auto badParseResp = yomk::server()
+                            .url("/YomkManifestParser/parse")
+                            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{fp("m-i2.yomk")}))
+                            .request();
+    expectNo(badParseResp, "manifest line 4: unknown key 'foo'", "I2 parse service reports line number");
 
     // ---------- 清理现场 ----------
     check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");

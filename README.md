@@ -6,11 +6,12 @@
 
 | 服务 | 定位 | 职责 |
 |------|------|------|
-| `/YomkPlugSysBuilder` | 编排层（唯一用户门面） | 解析 manifest.yomk 清单驱动构建、聚合内省、卸载代理；托管内部服务生命周期 |
+| `/YomkPlugSysBuilder` | 编排层（唯一用户门面） | 按清单驱动构建、聚合内省、卸载代理；托管内部服务生命周期 |
+| `/YomkManifestParser` | 解析层（内部服务） | manifest.yomk 语法与严格校验，输出清单目录 + 实例块表；语法扩展只改此处 |
 | `/YomkPluginLoader` | 机制层（内部服务） | dlopen/dlsym/dlclose、meta 读取、实例创建机制；不登记插件、不拥有实例 |
 | `/YomkPluginManager` | 数据层（内部服务） | 插件表 + 实例表（shared_ptr 唯一所有者）、限定名管理、生命周期管理 |
 
-三服务纯请求通信。用户仅注册/请求门面服务，接口一律经 `yomk::plug_sys()` 链式域入口发起（通用 `url/msg/request` 链归 `yomk::server()`）；内部服务 URL 仅供扩展内部与白盒测试直调。
+四服务纯请求通信。用户仅注册/请求门面服务，接口一律经 `yomk::plug_sys()` 链式域入口发起（通用 `url/msg/request` 链归 `yomk::server()`）；内部服务 URL 仅供扩展内部与白盒测试直调。
 
 ## 快速开始
 
@@ -30,7 +31,7 @@ int main()
 {
     yomk::server().init();
 
-    // 注册唯一门面服务（内部自动托管 Loader/Manager 生命周期）
+    // 注册唯一门面服务（内部自动托管 Parser/Loader/Manager 生命周期）
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
     // 按清单构建插件系统（manifest(path) 绑定清单，build() 终结；清单语法见 docs/PlugSysManifest.md）
@@ -80,8 +81,10 @@ YomkPlugSys/
 │       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
 │       └── YomkPlugSysApi.h          # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plug_sys() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
+│   ├── YomkManifestParser.h      # 清单解析服务声明（语法/校验集中于此，便于扩展）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明
+│   ├── YomkManifestParser.cpp    # 清单解析服务
 │   ├── YomkPluginLoader.cpp      # 机制层服务
 │   ├── YomkPluginManager.cpp     # 数据层服务
 │   └── YomkPlugSysBuilder.cpp    # 编排层服务

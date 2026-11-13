@@ -64,6 +64,28 @@ struct BuildReq
 };
 
 /**
+ * @brief Parsed manifest instance block (one [instanceName] block with lib/config)
+ */
+// @zh: 解析后的清单实例块（一个 [实例名] 块及其 lib/config）。
+struct ManifestEntry
+{
+    int lineNo = 0;            // 块头行号（报错定位用）
+    std::string instanceName;  // 实例裸名（同一插件内唯一）
+    std::string libRelPath;    // 动态库相对清单目录的路径
+    std::string instanceCfg;   // 实例配置相对清单目录的路径
+};
+
+/**
+ * @brief Manifest parse result: manifest directory plus parsed instance blocks
+ */
+// @zh: 清单解析结果：清单所在目录 + 解析出的实例块。
+struct ManifestParseResult
+{
+    std::string dir;                     // 清单所在目录（绝对路径；条目内的相对路径以此为基准）
+    std::vector<ManifestEntry> entries;  // 按块在清单中出现的顺序
+};
+
+/**
  * @brief Instance summary used by introspection and by build snapshots
  */
 // @zh: 内省与构建快照使用的实例摘要。

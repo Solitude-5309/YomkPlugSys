@@ -1,6 +1,6 @@
 # 插件系统清单（manifest.yomk）
 
-manifest.yomk 是插件系统（PlugSys）的装载清单：描述该系统要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的构建入口以清单路径为唯一输入（`yomk::plug_sys().manifest(path).build()`），按实例块解析并逐块装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
+manifest.yomk 是插件系统（PlugSys）的装载清单：描述该系统要装载哪些 so 插件、为每个插件创建哪些实例。Builder 的构建入口以清单路径为唯一输入（`yomk::plug_sys().manifest(path).build()`），由内部服务 `/YomkManifestParser` 按实例块解析后逐块装载。文件名不限定（`.yomk` 后缀文件因用处不同格式各异，**以首行格式标识区分**）。
 
 ## 适用与不适用
 
@@ -62,7 +62,7 @@ config = ConnectionService/instances/ConnectionService.txt
 
 ## build 流程
 
-解析清单 → 校验实例配置/动态库存在 → 逐块装载（同一 so 路径已加载则复用，不重复 load）→ 按块名创建实例。任一步失败返回 `Failed` 并**指明清单行号**；已成功块不回滚（详见[插件生命周期](PluginLifecycle.md)）。
+解析清单（`/YomkManifestParser`，首行标识/块与键校验失败即中止）→ 校验实例配置/动态库存在 → 逐块装载（同一 so 路径已加载则复用，不重复 load）→ 按块名创建实例。任一步失败返回 `Failed` 并**指明清单行号**；已成功块不回滚（详见[插件生命周期](PluginLifecycle.md)）。
 
 ## 注意事项
 

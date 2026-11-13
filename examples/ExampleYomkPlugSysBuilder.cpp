@@ -43,7 +43,7 @@ int main()
 {
     // 0. 初始化
     // 接口：yomk::server().init() + yomk::server().srv<服务类>().create()
-    // 说明：只注册门面服务 YomkPlugSysBuilder，机制层 Loader 与数据层 Manager 由其 init() 内部自动注册
+    // 说明：只注册门面服务 YomkPlugSysBuilder，解析层 ManifestParser、机制层 Loader 与数据层 Manager 由其 init() 内部自动注册
     yomk::server().init();
     yomk::server().srv<YomkPlugSysBuilder>().create();
 
