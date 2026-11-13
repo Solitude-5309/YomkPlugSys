@@ -14,7 +14,7 @@
 #include <yomk/server/YomkServerApi.h>
 
 #include "YomkPluginInterface.h"
-#include "YomkPluginMsg.h"
+#include "YomkPlugSysMsg.h"
 #include "YomkPlugSysBuilder.h"
 #include "YomkPlugSysUrl.h"
 

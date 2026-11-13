@@ -3,7 +3,7 @@
 #include <vector>
 
 // YomkPlugSys 扩展专属载荷（namespace yomk::payload）.
-// 设计取舍: 数据与消息分离——结构体只承载业务字段,同名的消息包类（见 YomkPluginMsg.h）
+// 设计取舍: 数据与消息分离——结构体只承载业务字段,同名的消息包类（见 YomkPlugSysMsg.h）
 // 负责跨请求传递;服务端与调用方共用同一结构体定义,字段语义即请求契约.
 
 namespace yomk::payload

@@ -5,7 +5,7 @@
 
 #include <yomk/server/YomkServerApi.h>
 
-#include "YomkPluginMsg.h"
+#include "YomkPlugSysMsg.h"
 
 using namespace yomk;
 

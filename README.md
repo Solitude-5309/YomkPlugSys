@@ -76,7 +76,7 @@ YomkPlugSys/
 │       ├── YomkPluginInterface.h     # ABI：插件侧契约（元数据 + 实例接口 + 导出宏）
 │       ├── YomkPlugSysUrl.h          # 模块 URL 常量（yomk::url，plugin 前缀）
 │       ├── YomkPlugSysPayload.h      # 模块专属载荷（yomk::payload 数据结构体）
-│       ├── YomkPluginMsg.h           # 模块专属消息包（YOMK_DEFINE_MSG 注册）
+│       ├── YomkPlugSysMsg.h          # 模块专属消息包（YOMK_DEFINE_MSG 注册）
 │       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
 │       └── YomkPluginApi.h           # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
