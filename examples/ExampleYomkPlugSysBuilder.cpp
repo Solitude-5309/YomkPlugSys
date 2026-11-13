@@ -29,6 +29,23 @@ void fail(const std::string& what, const std::string& reason)
     std::cout << "[" << what << "] 失败: " << reason << std::endl;
     std::exit(1);
 }
+
+// 打印单个清单条目：内省条目为单行 "[名字] lib=... config=..."，输出时按字段拆行
+void printManifestEntry(const std::string& entry)
+{
+    const size_t nameEnd = entry.find(']');
+    const size_t libPos = entry.find("lib=");
+    const size_t cfgPos = entry.find(" config=");
+    if (nameEnd == std::string::npos || libPos == std::string::npos || cfgPos == std::string::npos ||
+        nameEnd > libPos || libPos > cfgPos)
+    {
+        std::cout << "    " << entry << std::endl;
+        return;
+    }
+    std::cout << "    " << entry.substr(0, nameEnd + 1) << std::endl;
+    std::cout << "      " << entry.substr(libPos, cfgPos - libPos) << std::endl;
+    std::cout << "      " << entry.substr(cfgPos + 1) << std::endl;
+}
 }  // namespace
 
 int main()
@@ -82,7 +99,7 @@ int main()
     std::cout << "  manifest:" << std::endl;
     for (const auto& line : builder->d.manifest)
     {
-        std::cout << "    " << line << std::endl;
+        printManifestEntry(line);
     }
     std::cout << "  path: " << builder->d.path << std::endl;
     std::cout << "  result:" << builder->d.result << std::endl;
@@ -132,7 +149,7 @@ int main()
     }
     for (const auto& i : instances->d)
     {
-        std::cout << i.instanceName << " --> " << i.pluginName << std::endl;
+        std::cout << i.instanceName << std::endl;
     }
 
     // 5. 按插件过滤实例
@@ -152,7 +169,7 @@ int main()
     }
     for (const auto& i : filtered->d)
     {
-        std::cout << i.instanceName << " --> " << i.pluginName << std::endl;
+        std::cout << i.instanceName << std::endl;
     }
 
     // 6. 按实例查所属插件
