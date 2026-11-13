@@ -74,17 +74,17 @@ YomkPlugSys/
 ├── include/
 │   └── plug_sys/         # 扩展目录名（安装后对外引用统一 <yomk/plug_sys/...>，随 install 分发）
 │       ├── YomkPluginInterface.h     # ABI：插件侧契约（元数据 + 实例接口 + 导出宏）
-│       ├── YomkPluginUrl.h           # 模块 URL 常量（yomk::url，plugin 前缀）
+│       ├── YomkPlugSysUrl.h          # 模块 URL 常量（yomk::url，plugin 前缀）
 │       ├── YomkPluginPayload.h       # 模块专属载荷（yomk::payload 数据结构体）
 │       ├── YomkPluginMsg.h           # 模块专属消息包（YOMK_DEFINE_MSG 注册）
-│       ├── YomkPlugSysBuilder.h # 编排层服务声明（唯一用户服务）
+│       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
 │       └── YomkPluginApi.h           # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plugin() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
 │   ├── YomkPluginLoader.h        # 机制层服务声明（含宿主 dlsym 契约）
 │   ├── YomkPluginManager.h       # 数据层服务声明
 │   ├── YomkPluginLoader.cpp      # 机制层服务
 │   ├── YomkPluginManager.cpp     # 数据层服务
-│   └── YomkPlugSysBuilder.cpp # 编排层服务
+│   └── YomkPlugSysBuilder.cpp    # 编排层服务
 ├── docs/                         # 文档（分片自包含，入口见 docs/README.md）
 ├── examples/                     # 演示示例
 │   ├── ExampleYomkPlugSysBuilder.cpp  # 入门示例（随扩展默认编译安装）

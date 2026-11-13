@@ -16,7 +16,7 @@
 #include "YomkPluginInterface.h"
 #include "YomkPluginMsg.h"
 #include "YomkPlugSysBuilder.h"
-#include "YomkPluginUrl.h"
+#include "YomkPlugSysUrl.h"
 
 /* ------------------------- 模块域入口（yomk::plugin()） ------------------------- */
 
