@@ -41,7 +41,7 @@ struct CreateReq
     std::string pluginName;   // 插件名
     // 调用方指定的实例裸名（同一插件内唯一）；Manager 拼接限定名 插件名.实例名 后传给插件
     std::string instanceName;
-    std::string instanceFile;   // 不透明透传参数：允许为空，插件系统不读取不解析
+    std::string instanceCfg;   // 不透明透传参数（实例配置绝对路径）：允许为空，插件系统不读取不解析
 };
 
 /**
@@ -80,7 +80,7 @@ struct InstanceInfo
 // @zh: Builder 记录的最新一次构建状态。
 struct BuilderInfo
 {
-    std::vector<std::string> manifest;   // 最近构建的清单条目行（实例名@动态库相对路径@实例文件相对路径）
+    std::vector<std::string> manifest;   // 最近构建的清单条目行（实例名@动态库相对路径@实例配置相对路径）
     std::string path;                    // 最近构建的清单路径（空 = 尚未构建）
     std::string result;                  // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
     int plugins = 0;                     // 最近构建加载的插件数

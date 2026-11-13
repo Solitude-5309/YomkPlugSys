@@ -85,7 +85,7 @@ static std::filesystem::path fixtureDir()
     return fs::canonical("/proc/self/exe").parent_path() / "manifest";
 }
 
-// 夹具：夹具目录内文件完整路径（清单/实例文件/符号链接统一走此路径）
+// 夹具：夹具目录内文件完整路径（清单/实例配置/符号链接统一走此路径）
 static std::string fp(const std::string& name)
 {
     return (fixtureDir() / name).string();
@@ -98,8 +98,8 @@ static void writeManifest(const std::string& name, const std::string& content)
     f << content;
 }
 
-// 夹具：空实例文件（内容透传不读）
-static void touchInstanceFile(const std::string& name)
+// 夹具：空实例配置（内容透传不读）
+static void touchInstanceCfg(const std::string& name)
 {
     std::ofstream f(fp(name));
 }
@@ -146,7 +146,7 @@ int main()
     check(fs::is_directory(fixtureDir()), "fixture dir prepared under test executable");
 
     linkPlugin();
-    touchInstanceFile("inst.txt");
+    touchInstanceCfg("inst.txt");
 
     // ---------- A 路径预检：不存在/空串/目录/空白串 ----------
     expectNo(yomk::plugin().manifest("/nonexistent/no_such.yomk").build(), "manifest not found", "A1 nonexistent path rejects");
@@ -178,7 +178,7 @@ int main()
     expectOkSummary(yomk::plugin().manifest(fp("m-inline.yomk")).build(), "plugins:1 instances:1", "C3 inline comment truncated");
 
     // ---------- D @ 切分与空段 ----------
-    const std::string fmtErr = "expect instanceName@libRelPath@instanceFileRelPath";
+    const std::string fmtErr = "expect instanceName@libRelPath@instanceCfgRelPath";
     const std::string emptyErr = "empty segment";
     writeManifest("m-d1.yomk", "#! yomk_plugin_system\njustname\n");
     expectNo(yomk::plugin().manifest(fp("m-d1.yomk")).build(), fmtErr, "D1 no '@' rejects");
@@ -201,7 +201,7 @@ int main()
     writeManifest("m-e1.yomk", "#! yomk_plugin_system\na@/abs/lib.so@f\n");
     expectNo(yomk::plugin().manifest(fp("m-e1.yomk")).build(), "lib path must be relative", "E1 absolute lib path rejects");
     writeManifest("m-e2.yomk", "#! yomk_plugin_system\na@lib@/abs/f\n");
-    expectNo(yomk::plugin().manifest(fp("m-e2.yomk")).build(), "instance file path must be relative", "E2 absolute file path rejects");
+    expectNo(yomk::plugin().manifest(fp("m-e2.yomk")).build(), "instance config path must be relative", "E2 absolute file path rejects");
 
     // ---------- F 行号计数（注释/空行跳过后行号正确） ----------
     writeManifest("m-f2.yomk", "#! yomk_plugin_system\nbad\n");
@@ -244,11 +244,11 @@ int main()
     writeManifest(
         "m-part.yomk",
         "#! yomk_plugin_system\ngood1@libTestPlugin.so@inst.txt\nbad2@libTestPlugin.so@missing_inst.txt\n");
-    expectNo(yomk::plugin().manifest(fp("m-part.yomk")).build(), "manifest line 3: instance file not found", "H5 partial build fails");
+    expectNo(yomk::plugin().manifest(fp("m-part.yomk")).build(), "manifest line 3: instance config not found", "H5 partial build fails");
     const yomk::payload::BuilderInfo partDump = builderInfo();
     check(
         partDump.path == fp("m-part.yomk") &&
-            partDump.result == "manifest line 3: instance file not found: " + fp("missing_inst.txt") &&
+            partDump.result == "manifest line 3: instance config not found: " + fp("missing_inst.txt") &&
             partDump.plugins == 1 && partDump.instances == 1,
         "H6 /builder records partial failure with partial counts");
     check(

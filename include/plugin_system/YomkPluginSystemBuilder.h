@@ -19,7 +19,7 @@ using namespace yomk;
 
 /**
  * @brief Plugin system orchestration service (/YomkPluginSystemBuilder)
- * Parses a .yomk manifest (one entry per line: instanceName@libRelPath@instanceFileRelPath,
+ * Parses a .yomk manifest (one entry per line: instanceName@libRelPath@instanceCfgRelPath,
  * '#' starts a comment, both paths are relative to the manifest directory) and drives
  * plugin loading plus instance creation purely through requests to the internal services.
  * The service itself never owns plugin libraries or instances.
@@ -27,7 +27,7 @@ using namespace yomk;
  *       data layer (manager) are registered by init() and are not part of the public API.
  */
 // @zh: 插件系统编排服务（/YomkPluginSystemBuilder）。
-// @zh: 解析 .yomk 清单（每行一个条目：实例名@动态库相对路径@实例文件相对路径，'#' 起注释，
+// @zh: 解析 .yomk 清单（每行一个条目：实例名@动态库相对路径@实例配置相对路径，'#' 起注释，
 // @zh: 两段路径均相对清单所在目录），并经请求驱动内部服务完成插件加载与实例创建；
 // @zh: 本服务不持有插件库与实例。
 // @zh: note 用户只注册本服务；机制层（Loader）与数据层（Manager）由 init() 注册，不属于公开 API。
@@ -67,13 +67,13 @@ private:
     // 宿主 server 裸指针（构造期由框架传入，生命周期覆盖服务），deinit 注销内部服务用
     YomkServer* m_server = nullptr;
 
-    // 清单条目:实例名@动态库相对路径@实例配置文件相对路径
+    // 清单条目:实例名@动态库相对路径@实例配置相对路径
     struct ManifestEntry
     {
         int lineNo = 0;            // 清单行号（报错定位用）
         std::string instanceName;  // 实例裸名（同一插件内唯一）
         std::string libRelPath;    // 动态库相对清单目录的路径（含平台相关全名）
-        std::string instanceFile;  // 实例文件相对清单目录的路径
+        std::string instanceCfg;   // 实例配置相对清单目录的路径
     };
 
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
@@ -84,7 +84,7 @@ private:
     yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
     yomk::payload::Response instances(YomkMsgPtr pkg);         // [String pluginName] -> InstanceInfoArray
     yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
-    yomk::payload::Response instancesFile(YomkMsgPtr pkg);     // String 限定名实例名 -> String 实例文件内容
+    yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> 强制卸载
     yomk::payload::Response tryUnload(YomkMsgPtr pkg);         // String pluginName -> 有存活实例则拒绝
 
@@ -106,5 +106,5 @@ private:
     std::string m_lastResult;                 // 最近一次构建结果："ok" / 失败原因
     int m_lastPlugins = 0;                    // 最近一次构建加载的插件数
     int m_lastInstances = 0;                  // 最近一次构建创建的实例数
-    std::vector<std::string> m_lastEntries;   // 成功条目的清单行（实例名@动态库相对路径@实例文件相对路径）
+    std::vector<std::string> m_lastEntries;   // 成功条目的清单行（实例名@动态库相对路径@实例配置相对路径）
 };

@@ -202,7 +202,7 @@ yomk::payload::Response YomkPluginLoader::createInstance(YomkMsgPtr pkg)
             }
             // 工厂必须持锁调用：与 unload 锁内 dlclose 互斥，否则可能落到已 unmap 的代码上。
             // 契约：createFn 为纯函数、不得回调宿主服务，锁内调用无死锁
-            YomkPluginInterface* raw = it->second.createFn(req->d.instanceName.c_str(), req->d.instanceFile.c_str());
+            YomkPluginInterface* raw = it->second.createFn(req->d.instanceName.c_str(), req->d.instanceCfg.c_str());
             if (!raw)
             {
                 return {yomk::payload::ResStatus::Failed, "create instance failed: " + req->d.pluginName};

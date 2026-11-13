@@ -56,7 +56,7 @@ int main()
     // 2. 构建插件工程并查看构建信息
     // 接口：yomk::plugin().manifest(workflowPath).build() + yomk::plugin().builder()
     // 输入：清单文件路径。首行 #! yomk_plugin_system，之后每行一个条目：
-    //       实例名@动态库相对路径@实例文件相对路径
+    //       实例名@动态库相对路径@实例配置相对路径
     // 输出：BuilderInfo（最近构建的清单条目 manifest / 路径 path / 结果 result / 插件数 plugins / 实例数 instances）
     // 副作用：逐条目加载插件 so 并创建实例，实例名取自清单条目
     section("2. 构建插件工程 yomk::plugin().manifest(manifest).build()");
@@ -176,20 +176,20 @@ int main()
     std::cout << "  path: " << instMeta->d.path << std::endl;
     std::cout << "  description: " << instMeta->d.description << std::endl;
 
-    // 7. 查看实例文件内容
-    // 接口：yomk::plugin().infoInstancesFile(instanceName)
+    // 7. 查看实例配置内容
+    // 接口：yomk::plugin().inst_cfg(instanceName)
     // 输入：instanceName 为限定名 插件名.实例名；未知实例返回失败，原因见 resp.msg
-    // 输出：String（该实例创建时透传的实例文件内容）
-    section("7. 查看实例文件 yomk::plugin().infoInstancesFile(\"ConnectionService.ConnectionServiceIns\")");
-    resp = yomk::plugin().infoInstancesFile("ConnectionService.ConnectionServiceIns");
+    // 输出：String（该实例创建时透传的实例配置内容）
+    section("7. 查看实例配置 yomk::plugin().inst_cfg(\"ConnectionService.ConnectionServiceIns\")");
+    resp = yomk::plugin().inst_cfg("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
-        fail("查看实例文件", resp.msg);
+        fail("查看实例配置", resp.msg);
     }
     auto fileContent = yomk::msgs::unpack<yomk::msgs::String>(resp.data);
     if (!fileContent)
     {
-        fail("查看实例文件", "响应数据缺失");
+        fail("查看实例配置", "响应数据缺失");
     }
     std::cout << fileContent->d << std::endl;
 

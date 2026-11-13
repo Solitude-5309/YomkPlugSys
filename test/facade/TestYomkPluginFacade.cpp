@@ -90,10 +90,10 @@ int main()
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "inst_name(name).get_plg_info() empty-state rejects unknown instance");
 
-    resp = yomk::plugin().infoInstancesFile("no-inst");
+    resp = yomk::plugin().inst_cfg("no-inst");
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
-        "infoInstancesFile(instanceName) empty-state rejects unknown instance");
+        "inst_cfg(instanceName) empty-state rejects unknown instance");
 
     resp = yomk::plugin().plugins();
     bool pluginsEmpty = false;

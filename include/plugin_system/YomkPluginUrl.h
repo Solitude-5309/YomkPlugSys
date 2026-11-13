@@ -15,7 +15,7 @@ inline constexpr std::string_view pluginListPlugins = "/YomkPluginSystemBuilder/
 inline constexpr std::string_view pluginByName = "/YomkPluginSystemBuilder/plugin";
 inline constexpr std::string_view pluginListInstances = "/YomkPluginSystemBuilder/instances";
 inline constexpr std::string_view pluginByInstance = "/YomkPluginSystemBuilder/plugin_by_instance";
-inline constexpr std::string_view pluginInstancesFile = "/YomkPluginSystemBuilder/instances_file";
+inline constexpr std::string_view pluginInstancesCfg = "/YomkPluginSystemBuilder/instances_cfg";
 inline constexpr std::string_view pluginUnload = "/YomkPluginSystemBuilder/unload";
 inline constexpr std::string_view pluginTryUnload = "/YomkPluginSystemBuilder/try_unload";
 }  // namespace yomk::url

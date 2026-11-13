@@ -47,7 +47,7 @@ int YomkPluginSystemBuilder::init()
     installFunc("/plugin", &YomkPluginSystemBuilder::plugin, yomk::msgs::String::kName);
     installFunc("/instances", &YomkPluginSystemBuilder::instances, yomk::msgs::String::kName);
     installFunc("/plugin_by_instance", &YomkPluginSystemBuilder::pluginByInstance, yomk::msgs::String::kName);
-    installFunc("/instances_file", &YomkPluginSystemBuilder::instancesFile, yomk::msgs::String::kName);
+    installFunc("/instances_cfg", &YomkPluginSystemBuilder::instancesCfg, yomk::msgs::String::kName);
     installFunc("/unload", &YomkPluginSystemBuilder::unload, yomk::msgs::String::kName);
     installFunc("/try_unload", &YomkPluginSystemBuilder::tryUnload, yomk::msgs::String::kName);
     return 0;
@@ -110,7 +110,7 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
         {
             continue;
         }
-        // 按 @ 切分，必须恰好三段：实例名@动态库相对路径@实例配置文件相对路径
+        // 按 @ 切分，必须恰好三段：实例名@动态库相对路径@实例配置相对路径
         size_t p1 = line.find('@');
         size_t p2 = (p1 == std::string::npos) ? std::string::npos : line.find('@', p1 + 1);
         size_t p3 = (p2 == std::string::npos) ? std::string::npos : line.find('@', p2 + 1);
@@ -118,14 +118,14 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
         {
             return {
                 yomk::payload::ResStatus::Failed,
-                "manifest line " + std::to_string(lineNo) + ": expect instanceName@libRelPath@instanceFileRelPath"};
+                "manifest line " + std::to_string(lineNo) + ": expect instanceName@libRelPath@instanceCfgRelPath"};
         }
         ManifestEntry entry;
         entry.lineNo = lineNo;
         entry.instanceName = trim(line.substr(0, p1));
         entry.libRelPath = trim(line.substr(p1 + 1, p2 - p1 - 1));
-        entry.instanceFile = trim(line.substr(p2 + 1));
-        if (entry.instanceName.empty() || entry.libRelPath.empty() || entry.instanceFile.empty())
+        entry.instanceCfg = trim(line.substr(p2 + 1));
+        if (entry.instanceName.empty() || entry.libRelPath.empty() || entry.instanceCfg.empty())
         {
             return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": empty segment"};
         }
@@ -134,10 +134,10 @@ yomk::payload::Response YomkPluginSystemBuilder::parseManifest(
         {
             return {yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": lib path must be relative"};
         }
-        if (entry.instanceFile[0] == '/')
+        if (entry.instanceCfg[0] == '/')
         {
             return {
-                yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": instance file path must be relative"};
+                yomk::payload::ResStatus::Failed, "manifest line " + std::to_string(lineNo) + ": instance config path must be relative"};
         }
         entries.push_back(entry);
     }
@@ -189,13 +189,13 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
         for (const auto& entry : entries)
         {
             const std::string lineTag = "manifest line " + std::to_string(entry.lineNo);
-            const std::string instancePath = workflowDir + "/" + entry.instanceFile;
+            const std::string instancePath = workflowDir + "/" + entry.instanceCfg;
             const std::string soPath = workflowDir + "/" + entry.libRelPath;
 
             if (!fs::is_regular_file(instancePath))
             {
                 std::string msg = lineTag;
-                msg += ": instance file not found: ";
+                msg += ": instance config not found: ";
                 msg += instancePath;
                 recordBuild(req->d.workflowPath, msg, loadedPlugins.size(), createdInstances, entryLines);
                 return {yomk::payload::ResStatus::Failed, msg};
@@ -238,11 +238,11 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
             }
             loadedPlugins.insert(pluginName);
 
-            // 实例文件路径作为 instanceFile 透传，不读取内容
+            // 实例配置路径作为 instanceCfg 透传，不读取内容
             yomk::payload::CreateReq createReq;
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
-            createReq.instanceFile = instancePath;
+            createReq.instanceCfg = instancePath;
             resp = request("/YomkPluginManager/create_instance", yomk::msgs::CreateReq::shared(createReq));
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
@@ -251,7 +251,7 @@ yomk::payload::Response YomkPluginSystemBuilder::build(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
-            entryLines.push_back(entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceFile);
+            entryLines.push_back(entry.instanceName + "@" + entry.libRelPath + "@" + entry.instanceCfg);
         }
 
         std::string summary =
@@ -378,19 +378,19 @@ yomk::payload::Response YomkPluginSystemBuilder::pluginByInstance(YomkMsgPtr pkg
     }
 }
 
-yomk::payload::Response YomkPluginSystemBuilder::instancesFile(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginSystemBuilder::instancesCfg(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/instances_file", pkg);
+        return request("/YomkPluginManager/instances_cfg", pkg);
     }
     catch (const std::exception& e)
     {
-        return {yomk::payload::ResStatus::Failed, std::string("instances_file exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("instances_cfg exception: ") + e.what()};
     }
     catch (...)
     {
-        return {yomk::payload::ResStatus::Failed, "instances_file exception"};
+        return {yomk::payload::ResStatus::Failed, "instances_cfg exception"};
     }
 }
 

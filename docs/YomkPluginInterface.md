@@ -6,7 +6,7 @@
 
 ✅ 适合：
 - 开发新的 so 插件（首次编写或对照契约复查）
-- 理解 `instance_name` / `instance_file` 两个工厂参数的语义
+- 理解 `instance_name` / `instance_cfg` 两个工厂参数的语义
 - 排查"插件加载失败 / 创建实例失败"的契约原因
 
 ❌ 不适合：
@@ -41,7 +41,7 @@ static const YomkPluginMeta g_meta = {
 
 static const YomkPluginMeta* metaFn() { return &g_meta; }
 
-static YomkPluginInterface* createFn(const char* instance_name, const char* instance_file)
+static YomkPluginInterface* createFn(const char* instance_name, const char* instance_cfg)
 {
     if (!instance_name || !*instance_name) return nullptr;   // 实例名必填，空名视为创建失败
     try { return new MyInstance(instance_name); }
@@ -90,7 +90,7 @@ meta 必须为静态存储（导出函数返回稳定指针，装载后宿主深
 
 ```cpp
 const YomkPluginMeta* yomk_plugin_meta();                     // 返回静态常量指针
-YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file);
+YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_cfg);
 void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 delete
 ```
 
@@ -101,7 +101,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 | 参数 | 语义 |
 |---|---|
 | `instance_name` | 宿主指定的实例限定名 `插件名.实例名`（全局唯一）；插件**必须**以传入名称作为实例名（`instanceName()` 返回它） |
-| `instance_file` | 透传参数：创建时指定的实例文件**绝对路径**；框架不读不解析，是否使用/如何解析由插件实现自行决定（直接请求时可为空，清单构建时必填且文件须存在）。内容可经内省接口按限定名回读 |
+| `instance_cfg` | 透传参数：创建时指定的实例配置**绝对路径**；框架不读不解析，是否使用/如何解析由插件实现自行决定（直接请求时可为空，清单构建时必填且文件须存在）。内容可经内省接口按限定名回读 |
 
 ## 注意事项
 
@@ -114,13 +114,13 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 
 - **加载失败的可能原因？** 符号缺失（未导出三件套）/ ABI 版本不符 / meta 为空或 `name` 为空 / 插件名含 `.` / 与已加载插件同名 / so 路径不存在——均返回 `Failed` 并带原因。
 - **一个 so 能出多个实例吗？** 能：工厂函数按调用反复创建；实例间共享插件级静态数据，须自行保证线程安全。
-- **instance_file 必须存在吗？** 只有清单构建会校验文件存在；直接 `create_instance` 请求不校验。内容一律不解析，读取行为由插件决定。
+- **instance_cfg 必须存在吗？** 只有清单构建会校验文件存在；直接 `create_instance` 请求不校验。内容一律不解析，读取行为由插件决定。
 - **插件能自己调插件系统的接口吗？** 能：插件作为进程内代码可直接用 `yomk::plugin()` 域入口（注意避免在构造/destruct 中递归创建同插件实例导致死锁）。
 
 ## 相关跳转
 
 - [插件生命周期](PluginLifecycle.md)：导出函数何时被调用、实例何时销毁
-- [清单格式](PluginManifest.md)：so 路径与实例文件如何随清单指定
+- [清单格式](PluginManifest.md)：so 路径与实例配置如何随清单指定
 - [门面服务](YomkPluginSystemBuilder.md)：装载后的内省与卸载
 
 ## 完整示例

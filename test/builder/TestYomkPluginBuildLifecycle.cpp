@@ -1,5 +1,5 @@
 // TestYomkPluginBuildLifecycle：构建生命周期端到端测试（闭环3）
-// 覆盖：合法构建与内省基线（实例元数据/instance_file 透传观测/插件 meta）、
+// 覆盖：合法构建与内省基线（实 例元数据/instance_cfg 透传观测/插件 meta）、
 // so 复用幂等与实例重名、destroy 重建（白盒 URL）、try_unload 拒绝与放行、
 // unload 强卸含存活实例、卸载后重载、缺文件行号错误。
 // 夹具模式同 TestYomkPluginManifest：<测试可执行目录>/manifest，与工作目录无关。
@@ -196,7 +196,7 @@ int main()
     yomk::payload::CreateReq dupReq;
     dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
-    dupReq.instanceFile = fp("inst.txt");
+    dupReq.instanceCfg = fp("inst.txt");
     expectNo(
         yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(dupReq)).request(),
         "duplicate instance name: s2-i1",
@@ -218,7 +218,7 @@ int main()
     yomk::payload::CreateReq reReq;
     reReq.pluginName = "TestPlugin";
     reReq.instanceName = "s1-i1";
-    reReq.instanceFile = fp("inst.txt");
+    reReq.instanceCfg = fp("inst.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(reReq)).request()),
         "S3 recreate after destroy ok");
@@ -255,9 +255,9 @@ int main()
     expectNo(yomk::plugin().manifest(fp("s7a.yomk")).build(), "manifest line 2: plugin lib not found", "S7 missing lib path error");
     writeManifest("s7b.yomk", "#! yomk_plugin_system\ns7-i2@libTestPlugin.so@missing_inst.txt\n");
     expectNo(
-        yomk::plugin().manifest(fp("s7b.yomk")).build(), "manifest line 2: instance file not found", "S7 missing instance file error");
+        yomk::plugin().manifest(fp("s7b.yomk")).build(), "manifest line 2: instance config not found", "S7 missing instance config error");
     writeManifest("s7c.yomk", "#! yomk_plugin_system\ns7-i3@no_such.so@missing_inst.txt\n");
-    expectNo(yomk::plugin().manifest(fp("s7c.yomk")).build(), "instance file not found", "S7 instance file checked before lib");
+    expectNo(yomk::plugin().manifest(fp("s7c.yomk")).build(), "instance config not found", "S7 instance config checked before lib");
 
     // ---------- 清理现场 ----------
     check(isOk(yomk::plugin().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");

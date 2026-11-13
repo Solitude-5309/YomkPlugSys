@@ -21,7 +21,7 @@ int YomkPluginManager::init()
     installFunc("/plugin", &YomkPluginManager::plugin, yomk::msgs::String::kName);
     installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName);
     installFunc("/plugin_by_instance", &YomkPluginManager::pluginByInstance, yomk::msgs::String::kName);
-    installFunc("/instances_file", &YomkPluginManager::instancesFile, yomk::msgs::String::kName);
+    installFunc("/instances_cfg", &YomkPluginManager::instancesCfg, yomk::msgs::String::kName);
     return 0;
 }
 
@@ -241,7 +241,7 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
             // 创建期间插件被卸载，inst 随响应销毁
             return {yomk::payload::ResStatus::Failed, "plugin unloaded during create: " + req->d.pluginName};
         }
-        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceFile}).second)
+        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceCfg}).second)
         {
             // 并发兜底：创建期间同名实例已被登记
             return {yomk::payload::ResStatus::Failed, "duplicate instance name: " + req->d.instanceName};
@@ -426,7 +426,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginManager::instancesCfg(YomkMsgPtr pkg)
 {
     try
     {
@@ -440,7 +440,7 @@ yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
         std::lock_guard<std::mutex> lock(m_mutex);
         // 输入为限定名：按插件组前缀 + 组内裸名查找
         bool found = false;
-        std::string instanceFile;
+        std::string instanceCfg;
         for (const auto& kv : m_instances)
         {
             const std::string prefix = kv.first + ".";
@@ -452,7 +452,7 @@ yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
             if (it != kv.second.end())
             {
                 found = true;
-                instanceFile = it->second.instanceFile;
+                instanceCfg = it->second.instanceCfg;
                 break;
             }
         }
@@ -460,25 +460,25 @@ yomk::payload::Response YomkPluginManager::instancesFile(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "instance not found: " + data->d};
         }
-        if (instanceFile.empty())
+        if (instanceCfg.empty())
         {
-            return {yomk::payload::ResStatus::Failed, "instance file not recorded: " + data->d};
+            return {yomk::payload::ResStatus::Failed, "instance config not recorded: " + data->d};
         }
-        std::ifstream in(instanceFile);
+        std::ifstream in(instanceCfg);
         if (!in)
         {
-            return {yomk::payload::ResStatus::Failed, "instance file not readable: " + instanceFile};
+            return {yomk::payload::ResStatus::Failed, "instance config not readable: " + instanceCfg};
         }
         std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(content)};
     }
     catch (const std::exception& e)
     {
-        return {yomk::payload::ResStatus::Failed, std::string("instances_file exception: ") + e.what()};
+        return {yomk::payload::ResStatus::Failed, std::string("instances_cfg exception: ") + e.what()};
     }
     catch (...)
     {
-        return {yomk::payload::ResStatus::Failed, "instances_file exception"};
+        return {yomk::payload::ResStatus::Failed, "instances_cfg exception"};
     }
 }
 

@@ -46,7 +46,7 @@
 - 实例名（裸名）由调用方指定，**同一插件内唯一**；Manager 拼接插件名为全局唯一限定名 `插件名.实例名`
 - 同插件内重名 → `Failed`；不同插件允许同名（限定名不同）
 - 实例由 `yomk_plugin_create_instance` 工厂函数创建：返回 `nullptr`（含工厂内部异常被捕获）→ `Failed`
-- `instanceFile`（实例文件绝对路径）原样透传插件工厂：框架不解析内容，但会记录路径供 `infoInstancesFile` 回读；清单构建时还会预校验文件存在
+- `instanceCfg`（实例配置绝对路径）原样透传插件工厂：框架不解析内容，但会记录路径供 `inst_cfg` 回读；清单构建时还会预校验文件存在
 
 ### 实例销毁（destroy_instance / force_unload 内部步骤）
 

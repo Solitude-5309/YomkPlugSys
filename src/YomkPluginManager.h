@@ -34,7 +34,7 @@ private:
     struct InstanceRecord
     {
         std::shared_ptr<YomkPluginInterface> inst;
-        std::string instanceFile;   // 创建时透传的实例文件路径（允许为空,内省用）
+        std::string instanceCfg;   // 创建时透传的实例配置路径（允许为空,内省用）
     };
 
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
@@ -47,7 +47,7 @@ private:
     yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
     yomk::payload::Response listInstances(YomkMsgPtr pkg);     // [String pluginName] -> InstanceInfoArray
     yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
-    yomk::payload::Response instancesFile(YomkMsgPtr pkg);     // String 限定名实例名 -> String 实例文件内容
+    yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
 
     // 不变量:限定名 = 插件名.实例名;插件名全局唯一且不含 '.',故限定名全局唯一
     static std::string qualifiedName(const std::string& pluginName, const std::string& instanceName);

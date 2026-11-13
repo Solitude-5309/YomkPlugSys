@@ -234,17 +234,17 @@ public:
     yomk::payload::Response instances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
 
     /**
-     * @brief Introspect the instance file content passed through when the instance was created
+     * @brief Read the instance configuration file content passed through when the instance was created
      * @param instanceName Fully qualified instance name (pluginName.instanceName)
      * @return Response carrying a String packet; an unknown instance or unreadable file yields a failed response
      */
-    // @zh: 内省实例创建时透传的实例文件内容。
+    // @zh: 读取实例创建时透传的实例配置内容。
     // @zh: param instanceName 限定名实例名（插件名.实例名）。
     // @zh: return Response，data 为 String 包；未知实例或文件不可读返回失败。
-    yomk::payload::Response infoInstancesFile(std::string_view instanceName)
+    yomk::payload::Response inst_cfg(std::string_view instanceName)
     {
         return yomk::server()
-            .url(yomk::url::pluginInstancesFile)
+            .url(yomk::url::pluginInstancesCfg)
             .msg(yomk::msgs::String::shared(std::string(instanceName)))
             .request();
     }

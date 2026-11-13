@@ -85,26 +85,26 @@ public:
 /**
  * @brief Export the three fixed C symbols a plugin must provide
  * @param MetaFn Function returning the static metadata pointer
- * @param CreateFn Function creating an instance from (instance_name, instance_file)
+ * @param CreateFn Function creating an instance from (instance_name, instance_cfg)
  * @param DeleteFn Function destroying an instance
  * @note The host resolves the symbols below through dlsym; plugins only use this macro:
  *       const YomkPluginMeta* yomk_plugin_meta();
- *       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file);
+ *       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_cfg);
  *       void yomk_plugin_delete_instance(YomkPluginInterface* instance);
  * @note instance_name is the fully qualified name chosen by the host and must be adopted as is;
- *       instance_file is an opaque pass-through parameter (may be empty) that the framework never reads.
+ *       instance_cfg is an opaque pass-through parameter (may be empty) that the framework never reads.
  * @warning All three functions must be exception-safe; catch on the plugin side and
  *          return nullptr from create on failure.
  */
 // @zh: 导出插件必须提供的三个固定 C 符号。
 // @zh: param MetaFn 返回静态元数据指针的函数。
-// @zh: param CreateFn 由（实例名，实例文件）创建实例的函数。
+// @zh: param CreateFn 由（实例名，实例配置）创建实例的函数。
 // @zh: param DeleteFn 销毁实例的函数。
 // @zh: note 宿主经 dlsym 解析下述符号，插件只需使用本宏：
 // @zh:       const YomkPluginMeta* yomk_plugin_meta();
-// @zh:       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file);
+// @zh:       YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_cfg);
 // @zh:       void yomk_plugin_delete_instance(YomkPluginInterface* instance);
-// @zh: note instance_name 为宿主指定的限定名，插件须原样采用；instance_file 为不透明透传参数
+// @zh: note instance_name 为宿主指定的限定名，插件须原样采用；instance_cfg 为不透明透传参数
 // @zh:      （可为空），框架不读取不解析。
 // @zh: warning 三个函数均须异常安全：插件侧自行捕获，创建失败返回空指针。
 #define YOMKPLUGIN_EXPORT(MetaFn, CreateFn, DeleteFn)                                                                 \
@@ -112,9 +112,9 @@ public:
     {                                                                                                                 \
         return MetaFn();                                                                                              \
     }                                                                                                                 \
-    extern "C" YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_file) \
+    extern "C" YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, const char* instance_cfg)  \
     {                                                                                                                 \
-        return CreateFn(instance_name, instance_file);                                                                \
+        return CreateFn(instance_name, instance_cfg);                                                                 \
     }                                                                                                                 \
     extern "C" void yomk_plugin_delete_instance(YomkPluginInterface* instance)                                        \
     {                                                                                                                 \

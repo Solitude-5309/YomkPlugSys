@@ -17,7 +17,7 @@ using namespace yomk;
 
 // 插件导出函数类型（dlsym 解析用）
 using YomkPluginMetaFunc = const YomkPluginMeta* (*)();
-using YomkPluginCreateInstanceFunc = YomkPluginInterface* (*)(const char* instance_name, const char* instance_file);
+using YomkPluginCreateInstanceFunc = YomkPluginInterface* (*)(const char* instance_name, const char* instance_cfg);
 using YomkPluginDeleteInstanceFunc = void (*)(YomkPluginInterface* instance);
 
 // YomkPluginLoader:插件加载机制层.

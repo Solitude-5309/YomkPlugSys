@@ -8,7 +8,7 @@
 class SecondInstance : public YomkPluginInterface
 {
 public:
-    SecondInstance(const std::string& name, const std::string& instanceFile) : m_name(name), m_instanceFile(instanceFile) {}
+    SecondInstance(const std::string& name, const std::string& instanceCfg) : m_name(name), m_instanceCfg(instanceCfg) {}
     virtual ~SecondInstance() {}
 
     virtual const char* instanceName() const override { return m_name.c_str(); }
@@ -17,8 +17,8 @@ public:
 private:
     // 宿主指定的实例限定名
     std::string m_name;
-    // 透传实例文件，插件自行决定是否使用
-    std::string m_instanceFile;
+    // 透传实例配置，插件自行决定是否使用
+    std::string m_instanceCfg;
 };
 
 static const YomkPluginMeta g_meta = {
@@ -29,7 +29,7 @@ static const YomkPluginMeta* metaFn()
     return &g_meta;
 }
 
-static YomkPluginInterface* createFn(const char* instance_name, const char* instance_file)
+static YomkPluginInterface* createFn(const char* instance_name, const char* instance_cfg)
 {
     try
     {
@@ -38,7 +38,7 @@ static YomkPluginInterface* createFn(const char* instance_name, const char* inst
             // 实例名由宿主指定，必填
             return nullptr;
         }
-        return new SecondInstance(instance_name, instance_file ? instance_file : "");
+        return new SecondInstance(instance_name, instance_cfg ? instance_cfg : "");
     }
     catch (...)
     {
