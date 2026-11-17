@@ -22,7 +22,7 @@ private:
 };
 
 static const YomkPluginMeta g_meta = {
-    YOMKPLUGIN_ABI_VERSION, "SecondPlugin", "demo", "0.0.1", "Yomk", "Second loadable plugin for cross-plugin tests"};
+    YOMK_PLUGIN_ABI_VERSION, "SecondPlugin", "demo", "0.0.1", "Yomk", "Second loadable plugin for cross-plugin tests"};
 
 static const YomkPluginMeta* metaFn()
 {
@@ -51,4 +51,4 @@ static void deleteFn(YomkPluginInterface* instance)
     delete instance;
 }
 
-YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
+YOMK_PLUGIN_EXPORT(metaFn, createFn, deleteFn)

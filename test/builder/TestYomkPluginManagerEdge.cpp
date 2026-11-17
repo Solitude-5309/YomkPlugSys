@@ -296,7 +296,7 @@ int main()
     if (isOk(resp))
     {
         auto m = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
-        metaOk = m->d.abi_version == YOMKPLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
+        metaOk = m->d.abi_version == YOMK_PLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
                  m->d.version == "0.0.1" && m->d.author == "Yomk";
     }
     check(metaOk, "M3 loader /meta deep-copied fields");

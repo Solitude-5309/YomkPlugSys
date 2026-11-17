@@ -1,5 +1,5 @@
 // TestYomkPluginManifest：清单解析全面测试（闭环2）
-// 经 YOMKPLUGIN_BUILD 触达 /YomkManifestParser 解析全分支：路径预检、首行格式标识、
+// 经 YOMK_PLUGIN_BUILD 触达 /YomkManifestParser 解析全分支：路径预检、首行格式标识、
 // 注释与空行、实例块与键值严格校验、绝对路径拒绝、块头行号计数、合法块接受，
 // 并对账 /builder（recordBuild 侧效：manifest 条目/path/result/计数）。
 // 清单夹具生成于 <测试可执行目录>/manifest（跟随测试程序，与工作目录无关，

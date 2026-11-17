@@ -22,7 +22,7 @@ extern "C"
  */
 // @zh: 宿主与插件共同约定的 ABI 契约版本。
 // @zh: note 独立于工程版本号，仅当 YomkPluginMeta 布局或导出符号签名变化时递增；不匹配则加载被拒绝。
-#define YOMKPLUGIN_ABI_VERSION 2
+#define YOMK_PLUGIN_ABI_VERSION 2
 
     /**
      * @brief Static plugin metadata returned by the meta export function
@@ -107,7 +107,7 @@ public:
 // @zh: note instance_name 为宿主指定的限定名，插件须原样采用；instance_cfg 为不透明透传参数
 // @zh:      （可为空），框架不读取不解析。
 // @zh: warning 三个函数均须异常安全：插件侧自行捕获，创建失败返回空指针。
-#define YOMKPLUGIN_EXPORT(MetaFn, CreateFn, DeleteFn)                                                                 \
+#define YOMK_PLUGIN_EXPORT(MetaFn, CreateFn, DeleteFn)                                                                 \
     extern "C" const YomkPluginMeta* yomk_plugin_meta()                                                               \
     {                                                                                                                 \
         return MetaFn();                                                                                              \

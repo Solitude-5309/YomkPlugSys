@@ -156,7 +156,7 @@ int main()
         "B4 empty meta name rejects");
 
     const std::string abiErr = "manifest line 2: load failed: abi version mismatch: plugin " +
-        std::to_string(YOMKPLUGIN_ABI_VERSION + 1) + ", host " + std::to_string(YOMKPLUGIN_ABI_VERSION);
+        std::to_string(YOMK_PLUGIN_ABI_VERSION + 1) + ", host " + std::to_string(YOMK_PLUGIN_ABI_VERSION);
     writeManifest("b5.yomk", "#! yomk_plug_sys\n[x1]\nlib = libBadAbi.so\nconfig = inst.txt\n");
     expectNo(yomk::plug_sys().manifest(fp("b5.yomk")).build(), abiErr, "B5 abi version mismatch rejects");
 

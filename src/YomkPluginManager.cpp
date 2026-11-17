@@ -311,7 +311,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
         for (const auto& kv : m_plugins)
         {
             yomk::payload::PluginMeta m;
-            m.abi_version = YOMKPLUGIN_ABI_VERSION;
+            m.abi_version = YOMK_PLUGIN_ABI_VERSION;
             m.name = kv.second.name;
             m.type = kv.second.type;
             m.version = kv.second.version;
@@ -351,7 +351,7 @@ yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + data->d};
         }
         yomk::payload::PluginMeta m;
-        m.abi_version = YOMKPLUGIN_ABI_VERSION;
+        m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
         m.version = it->second.version;
@@ -407,7 +407,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
         }
         yomk::payload::PluginMeta m;
-        m.abi_version = YOMKPLUGIN_ABI_VERSION;
+        m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
         m.version = it->second.version;

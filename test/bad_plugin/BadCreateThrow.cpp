@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 static const YomkPluginMeta k_meta = {
-    YOMKPLUGIN_ABI_VERSION, "BadCreateThrow", "bad", "0.0.1", "Yomk", "create throws",
+    YOMK_PLUGIN_ABI_VERSION, "BadCreateThrow", "bad", "0.0.1", "Yomk", "create throws",
 };
 
 static YomkPluginInterface* createThrow(const char*, const char*)
@@ -17,4 +17,4 @@ static void deleteNothing(YomkPluginInterface*)
 {
 }
 
-YOMKPLUGIN_EXPORT([] { return &k_meta; }, createThrow, deleteNothing)
+YOMK_PLUGIN_EXPORT([] { return &k_meta; }, createThrow, deleteNothing)

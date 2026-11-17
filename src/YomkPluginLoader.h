@@ -11,9 +11,9 @@
 using namespace yomk;
 
 // 宿主 dlsym 契约:符号名与函数类型仅宿主使用,插件侧导出契约见 YomkPluginInterface.h.
-#define YOMKPLUGIN_SYMBOL_META "yomk_plugin_meta"
-#define YOMKPLUGIN_SYMBOL_CREATE_INSTANCE "yomk_plugin_create_instance"
-#define YOMKPLUGIN_SYMBOL_DELETE_INSTANCE "yomk_plugin_delete_instance"
+#define YOMK_PLUGIN_SYMBOL_META "yomk_plugin_meta"
+#define YOMK_PLUGIN_SYMBOL_CREATE_INSTANCE "yomk_plugin_create_instance"
+#define YOMK_PLUGIN_SYMBOL_DELETE_INSTANCE "yomk_plugin_delete_instance"
 
 // 插件导出函数类型（dlsym 解析用）
 using YomkPluginMetaFunc = const YomkPluginMeta* (*)();

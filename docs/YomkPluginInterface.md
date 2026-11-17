@@ -1,6 +1,6 @@
 # 插件开发指南（YomkPluginInterface）
 
-面向插件开发者：编写一个可被 YomkPlugSys 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMKPLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plug_sys/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPlugSysApi.h`，便于一处引入）。
+面向插件开发者：编写一个可被 YomkPlugSys 装载的 so 插件，只需实现 ABI 契约三件套——`YomkPluginMeta` 元数据 C 结构体、`YomkPluginInterface` 实例抽象接口、三个 `extern "C"` 导出符号（或经 `YOMK_PLUGIN_EXPORT` 一键导出）。无需了解框架服务细节。插件侧最小依赖为 `<yomk/plug_sys/YomkPluginInterface.h>`（下文示例用聚合头 `YomkPlugSysApi.h`，便于一处引入）。
 
 ## 适用与不适用
 
@@ -36,7 +36,7 @@ private:
 };
 
 static const YomkPluginMeta g_meta = {
-    YOMKPLUGIN_ABI_VERSION, "MyPlugin", "demo", "0.0.1", "author", "description"
+    YOMK_PLUGIN_ABI_VERSION, "MyPlugin", "demo", "0.0.1", "author", "description"
 };
 
 static const YomkPluginMeta* metaFn() { return &g_meta; }
@@ -50,7 +50,7 @@ static YomkPluginInterface* createFn(const char* instance_name, const char* inst
 
 static void deleteFn(YomkPluginInterface* instance) { delete instance; }
 
-YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
+YOMK_PLUGIN_EXPORT(metaFn, createFn, deleteFn)
 ```
 
 编译为 SHARED 库（`YomkServer::YomkServer` 提供 `<yomk/plug_sys/...>` 所在的 include 根与 SDK 编译宏）：
@@ -70,7 +70,7 @@ target_link_libraries(MyPlugin PRIVATE YomkServer::YomkServer)
 
 | 字段 | 含义 |
 |---|---|
-| `abi_version` | 固定填 `YOMKPLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）；宿主装载时比对，不符拒绝 |
+| `abi_version` | 固定填 `YOMK_PLUGIN_ABI_VERSION`（独立常量，不随扩展版本变化）；宿主装载时比对，不符拒绝 |
 | `name` | 插件名（装载主键；同进程内重复即拒绝，见[生命周期](PluginLifecycle.md)） |
 | `type` | 插件类型描述（自由文本，供内省展示） |
 | `version` | 插件版本（自由文本） |
@@ -94,7 +94,7 @@ YomkPluginInterface* yomk_plugin_create_instance(const char* instance_name, cons
 void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 delete
 ```
 
-`YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)` 宏一键完成三个符号的导出声明，等价于手写 `extern "C"`。
+`YOMK_PLUGIN_EXPORT(metaFn, createFn, deleteFn)` 宏一键完成三个符号的导出声明，等价于手写 `extern "C"`。
 
 ## 工厂参数语义
 
@@ -105,7 +105,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 
 ## 注意事项
 
-- 插件与宿主须同编译器、共用本扩展安装的头文件（ABI 依赖 vtable 布局）；ABI 版本由 `YOMKPLUGIN_ABI_VERSION` 把关，不符即拒绝装载。
+- 插件与宿主须同编译器、共用本扩展安装的头文件（ABI 依赖 vtable 布局）；ABI 版本由 `YOMK_PLUGIN_ABI_VERSION` 把关，不符即拒绝装载。
 - 导出函数**不得让异常逃逸**：`create_instance` 内部须 catch 全部异常并返回 `nullptr`（宿主按创建失败处理）。
 - 不得在 `yomk_plugin_meta()` 中做耗时/有副作用操作：装载期实时调用；Loader 的 `meta` 接口每次请求都重新调用导出函数，不做缓存。
 - so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginPath` 指定（见[插件系统清单](PlugSysManifest.md)）。

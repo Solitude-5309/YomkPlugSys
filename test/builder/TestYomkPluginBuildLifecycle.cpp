@@ -158,7 +158,7 @@ int main()
         !metas.empty() && metas[0].name == "TestPlugin" && metas[0].type == "demo" && metas[0].version == "0.0.1",
         "S1 plugin meta name/type/version");
     check(
-        !metas.empty() && metas[0].author == "Yomk" && metas[0].abi_version == YOMKPLUGIN_ABI_VERSION,
+        !metas.empty() && metas[0].author == "Yomk" && metas[0].abi_version == YOMK_PLUGIN_ABI_VERSION,
         "S1 plugin meta author and abi version");
     check(!metas.empty() && metas[0].path == fp("libTestPlugin.so"), "S1 plugin meta path");
 

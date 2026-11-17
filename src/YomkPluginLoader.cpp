@@ -43,9 +43,9 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, std::string("dlopen failed: ") + dlerror()};
         }
-        metaFn = reinterpret_cast<YomkPluginMetaFunc>(dlsym(handle, YOMKPLUGIN_SYMBOL_META));
-        createFn = reinterpret_cast<YomkPluginCreateInstanceFunc>(dlsym(handle, YOMKPLUGIN_SYMBOL_CREATE_INSTANCE));
-        deleteFn = reinterpret_cast<YomkPluginDeleteInstanceFunc>(dlsym(handle, YOMKPLUGIN_SYMBOL_DELETE_INSTANCE));
+        metaFn = reinterpret_cast<YomkPluginMetaFunc>(dlsym(handle, YOMK_PLUGIN_SYMBOL_META));
+        createFn = reinterpret_cast<YomkPluginCreateInstanceFunc>(dlsym(handle, YOMK_PLUGIN_SYMBOL_CREATE_INSTANCE));
+        deleteFn = reinterpret_cast<YomkPluginDeleteInstanceFunc>(dlsym(handle, YOMK_PLUGIN_SYMBOL_DELETE_INSTANCE));
         if (!metaFn || !createFn || !deleteFn)
         {
             dlclose(handle);
@@ -58,7 +58,7 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
             dlclose(handle);
             return {yomk::payload::ResStatus::Failed, "invalid plugin meta"};
         }
-        if (meta->abi_version != YOMKPLUGIN_ABI_VERSION)
+        if (meta->abi_version != YOMK_PLUGIN_ABI_VERSION)
         {
             // meta 指向插件 so 内静态存储：必须先取值再 dlclose，否则悬垂解引用
             const int pluginAbi = meta->abi_version;
@@ -66,7 +66,7 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
             return {
                 yomk::payload::ResStatus::Failed,
                 "abi version mismatch: plugin " + std::to_string(pluginAbi) + ", host " +
-                    std::to_string(YOMKPLUGIN_ABI_VERSION)};
+                    std::to_string(YOMK_PLUGIN_ABI_VERSION)};
         }
         pluginName = meta->name;
 

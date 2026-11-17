@@ -3,7 +3,7 @@
 #include <yomk/plug_sys/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
-    YOMKPLUGIN_ABI_VERSION, "Bad.Dot.Name", "bad", "0.0.1", "Yomk", "plugin name contains dot",
+    YOMK_PLUGIN_ABI_VERSION, "Bad.Dot.Name", "bad", "0.0.1", "Yomk", "plugin name contains dot",
 };
 
 static YomkPluginInterface* createNull(const char*, const char*)
@@ -15,4 +15,4 @@ static void deleteNothing(YomkPluginInterface*)
 {
 }
 
-YOMKPLUGIN_EXPORT([] { return &k_meta; }, createNull, deleteNothing)
+YOMK_PLUGIN_EXPORT([] { return &k_meta; }, createNull, deleteNothing)

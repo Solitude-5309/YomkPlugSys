@@ -3,7 +3,7 @@
 #include <yomk/plug_sys/YomkPluginInterface.h>
 
 static const YomkPluginMeta k_meta = {
-    YOMKPLUGIN_ABI_VERSION,
+    YOMK_PLUGIN_ABI_VERSION,
     "BadNoSymbol",
     "bad",
     "0.0.1",

@@ -9,4 +9,4 @@ static YomkPluginInterface* createNull(const char*, const char*)
 
 static void deleteNothing(YomkPluginInterface*) {}
 
-YOMKPLUGIN_EXPORT([] { return static_cast<const YomkPluginMeta*>(nullptr); }, createNull, deleteNothing)
+YOMK_PLUGIN_EXPORT([] { return static_cast<const YomkPluginMeta*>(nullptr); }, createNull, deleteNothing)

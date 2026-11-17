@@ -20,7 +20,7 @@ private:
 };
 
 static const YomkPluginMeta g_meta = {
-    YOMKPLUGIN_ABI_VERSION,
+    YOMK_PLUGIN_ABI_VERSION,
     "WorkspaceService",
     "workflow",
     "1.0.0",
@@ -53,4 +53,4 @@ static void deleteFn(YomkPluginInterface* instance)
     delete instance;
 }
 
-YOMKPLUGIN_EXPORT(metaFn, createFn, deleteFn)
+YOMK_PLUGIN_EXPORT(metaFn, createFn, deleteFn)
