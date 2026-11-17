@@ -21,7 +21,7 @@ struct PluginPath
  * @brief Plugin metadata as registered by the manager
  */
 // @zh: Manager 登记后的插件元数据。
-struct PluginMeta
+struct PluginInfo
 {
     int abi_version = 0;   // ABI 契约版本
     std::string name;      // 插件名（全局唯一，不得含 '.'）
@@ -104,7 +104,7 @@ struct InstanceInfo
 // @zh: Builder 记录的最新一次构建状态。
 struct BuilderInfo
 {
-    std::vector<InstanceInfo> manifest;   // 最近构建成功创建的实例条目（插件名/限定名/库文件/配置文件）
+    std::vector<InstanceInfo> entries;   // 最近构建成功创建的实例条目（插件名/限定名/库文件/配置文件）
     std::string path;                     // 最近构建的清单路径（空 = 尚未构建）
     std::string result;                   // 最近构建结果："ok" 或失败原因（空 = 尚未构建）
     int plugins = 0;                      // 最近构建加载的插件数

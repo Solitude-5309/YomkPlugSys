@@ -76,10 +76,10 @@ public:
 
     /**
      * @brief Query the bound plugin, returning a single plugin record
-     * @return Response carrying a PluginMeta packet; an unknown name yields a failed response
+     * @return Response carrying a PluginInfo packet; an unknown name yields a failed response
      */
     // @zh: 查询绑定的插件，返回单条插件信息（与 plugins() 列表接口职责分离）。
-    // @zh: return Response，data 为 PluginMeta 包；未知插件返回失败。
+    // @zh: return Response，data 为 PluginInfo 包；未知插件返回失败。
     yomk::payload::Response get_info() const
     {
         return yomk::server().url(yomk::url::pluginByName).msg(yomk::msgs::String::shared(m_pluginName)).request();
@@ -87,10 +87,10 @@ public:
 
     /**
      * @brief List the instances of the bound plugin
-     * @return Response carrying an InstanceInfoArray packet; an unknown name yields a failed response
+     * @return Response carrying an InstanceInfoList packet; an unknown name yields a failed response
      */
     // @zh: 列举绑定插件下的实例（与 instances() 全量列表职责分离）。
-    // @zh: return Response，data 为 InstanceInfoArray 包；未知插件返回失败。
+    // @zh: return Response，data 为 InstanceInfoList 包；未知插件返回失败。
     yomk::payload::Response instances() const
     {
         return yomk::server()
@@ -146,10 +146,10 @@ public:
 
     /**
      * @brief Query the plugin owning the bound instance
-     * @return Response carrying a PluginMeta packet; an unknown instance yields a failed response
+     * @return Response carrying a PluginInfo packet; an unknown instance yields a failed response
      */
     // @zh: 查询绑定实例所属的插件，返回单条插件信息。
-    // @zh: return Response，data 为 PluginMeta 包；未知实例返回失败。
+    // @zh: return Response，data 为 PluginInfo 包；未知实例返回失败。
     yomk::payload::Response get_plg_info() const
     {
         return yomk::server()
@@ -221,18 +221,18 @@ public:
 
     /**
      * @brief Introspect all loaded plugins
-     * @return Response carrying a PluginMetaArray packet
+     * @return Response carrying a PluginInfoList packet
      */
     // @zh: 内省全部已加载插件。
-    // @zh: return Response，data 为 PluginMetaArray 包。
+    // @zh: return Response，data 为 PluginInfoList 包。
     yomk::payload::Response plugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
 
     /**
      * @brief Introspect all created instances
-     * @return Response carrying an InstanceInfoArray packet
+     * @return Response carrying an InstanceInfoList packet
      */
     // @zh: 内省全部已创建实例（与 plg_name(name).instances() 单插件实例职责分离）。
-    // @zh: return Response，data 为 InstanceInfoArray 包。
+    // @zh: return Response，data 为 InstanceInfoList 包。
     yomk::payload::Response instances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
 
     /**

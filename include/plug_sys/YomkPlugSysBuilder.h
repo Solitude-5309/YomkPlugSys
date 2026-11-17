@@ -71,10 +71,10 @@ private:
     yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> BuilderInfo 构建快照
     yomk::payload::Response version(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
     yomk::payload::Response infoBuilder(YomkMsgPtr pkg);       // 无 -> BuilderInfo 最近构建信息
-    yomk::payload::Response plugins(YomkMsgPtr pkg);           // 无 -> PluginMetaArray（全量列表）
-    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
-    yomk::payload::Response instances(YomkMsgPtr pkg);         // [String pluginName] -> InstanceInfoArray
-    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
+    yomk::payload::Response plugins(YomkMsgPtr pkg);           // 无 -> PluginInfoList（全量列表）
+    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
+    yomk::payload::Response instances(YomkMsgPtr pkg);         // [String pluginName] -> InstanceInfoList
+    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
     yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> 强制卸载
     yomk::payload::Response tryUnload(YomkMsgPtr pkg);         // String pluginName -> 有存活实例则拒绝

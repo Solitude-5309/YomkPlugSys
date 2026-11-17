@@ -82,13 +82,13 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
     }
 }
 
-static std::vector<yomk::payload::PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginMeta> out;
+    std::vector<yomk::payload::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -190,8 +190,8 @@ int main()
     const yomk::payload::BuilderInfo b12Info = builderInfo();
     const bool b12Kept =
         std::any_of(
-            b12Info.manifest.begin(),
-            b12Info.manifest.end(),
+            b12Info.entries.begin(),
+            b12Info.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.instanceName == "TestPlugin.tp1" && e.libFile == fp("libTestPlugin.so") &&
                        e.configFile == fp("inst.txt");
@@ -214,7 +214,7 @@ int main()
     bool instEmpty = false;
     if (isOk(inst))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(inst.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(inst.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unloads");

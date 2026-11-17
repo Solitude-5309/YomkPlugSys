@@ -57,7 +57,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
             request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
             return resp;
         }
-        auto metaPkg = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto metaPkg = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         if (!metaPkg)
         {
             return {yomk::payload::ResStatus::Failed, "load: invalid meta response"};
@@ -306,11 +306,11 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 {
     try
     {
-        std::vector<yomk::payload::PluginMeta> metas;
+        std::vector<yomk::payload::PluginInfo> metas;
         std::lock_guard<std::mutex> lock(m_mutex);
         for (const auto& kv : m_plugins)
         {
-            yomk::payload::PluginMeta m;
+            yomk::payload::PluginInfo m;
             m.abi_version = YOMK_PLUGIN_ABI_VERSION;
             m.name = kv.second.name;
             m.type = kv.second.type;
@@ -320,7 +320,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
             m.path = kv.second.path;
             metas.push_back(m);
         }
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMetaArray::shared(metas)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfoList::shared(metas)};
     }
     catch (const std::exception& e)
     {
@@ -332,7 +332,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
     }
 }
 
-// 按插件名查询单个插件：响应 data 为单条 PluginMeta，未加载返回 Failed
+// 按插件名查询单个插件：响应 data 为单条 PluginInfo，未加载返回 Failed
 yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
 {
     try
@@ -350,7 +350,7 @@ yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + data->d};
         }
-        yomk::payload::PluginMeta m;
+        yomk::payload::PluginInfo m;
         m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
@@ -358,7 +358,7 @@ yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
         m.author = it->second.author;
         m.description = it->second.description;
         m.path = it->second.path;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMeta::shared(m)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfo::shared(m)};
     }
     catch (const std::exception& e)
     {
@@ -406,7 +406,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
         }
-        yomk::payload::PluginMeta m;
+        yomk::payload::PluginInfo m;
         m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
@@ -414,7 +414,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
         m.author = it->second.author;
         m.description = it->second.description;
         m.path = it->second.path;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMeta::shared(m)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfo::shared(m)};
     }
     catch (const std::exception& e)
     {
@@ -539,7 +539,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                 }
             }
         }
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::InstanceInfoArray::shared(infos)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::InstanceInfoList::shared(infos)};
     }
     catch (const std::exception& e)
     {

@@ -94,13 +94,13 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
     }
 }
 
-static std::vector<yomk::payload::PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginMeta> out;
+    std::vector<yomk::payload::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -112,7 +112,7 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -181,7 +181,7 @@ int main()
     bool listOk = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         listOk = arr && arr->d.size() >= 2;
     }
     check(listOk, "M2 list returns all loaded plugins");
@@ -190,7 +190,7 @@ int main()
     bool hitOne = false;
     if (isOk(resp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         hitOne = meta && meta->d.name == "TestPlugin";
     }
     check(hitOne, "M2 plugin query returns single plugin meta");
@@ -203,7 +203,7 @@ int main()
     bool hitTwo = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         hitTwo = arr->d.size() == 2;
     }
     check(hitTwo, "M2 list_instances filter hit returns 2 instances");
@@ -215,7 +215,7 @@ int main()
     bool zeroOk = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         zeroOk = arr->d.empty();
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
@@ -228,7 +228,7 @@ int main()
     bool macroHitTwo = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         macroHitTwo = arr->d.size() == 2;
     }
     check(macroHitTwo, "M2 plg_name(name).instances() filter hit returns 2 instances");
@@ -242,7 +242,7 @@ int main()
     bool byInstOk = false;
     if (isOk(resp))
     {
-        auto pm = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto pm = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
     check(byInstOk, "M2 inst_name(name).get_plg_info() instance lookup returns owner plugin meta");
@@ -295,7 +295,7 @@ int main()
     bool metaOk = false;
     if (isOk(resp))
     {
-        auto m = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto m = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         metaOk = m->d.abi_version == YOMK_PLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
                  m->d.version == "0.0.1" && m->d.author == "Yomk";
     }
@@ -388,7 +388,7 @@ int main()
     bool ownerA = false;
     if (isOk(resp))
     {
-        auto pmA = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto pmA = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
@@ -396,7 +396,7 @@ int main()
     bool ownerB = false;
     if (isOk(resp))
     {
-        auto pmB = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto pmB = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         ownerB = pmB && pmB->d.name == "SecondPlugin";
     }
     check(ownerB, "M6 same bare name under second plugin resolves to SecondPlugin");

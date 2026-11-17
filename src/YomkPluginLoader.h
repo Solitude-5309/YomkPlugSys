@@ -43,7 +43,7 @@ private:
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
     yomk::payload::Response load(YomkMsgPtr pkg);              // PluginPath -> String pluginName
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> ok（有存活实例拒绝）
-    yomk::payload::Response meta(YomkMsgPtr pkg);              // String pluginName -> PluginMeta
+    yomk::payload::Response meta(YomkMsgPtr pkg);              // String pluginName -> PluginInfo
     yomk::payload::Response createInstance(YomkMsgPtr pkg);    // CreateReq -> PluginInstance
     yomk::payload::Response deleteInstance(YomkMsgPtr pkg);    // PluginInstance -> ok
 

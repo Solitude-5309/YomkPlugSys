@@ -100,20 +100,20 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginMeta> out;
+    std::vector<yomk::payload::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;

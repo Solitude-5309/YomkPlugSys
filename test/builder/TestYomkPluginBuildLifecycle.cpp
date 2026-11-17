@@ -94,20 +94,20 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginMeta> out;
+    std::vector<yomk::payload::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -133,12 +133,12 @@ int main()
     writeManifest("s1.yomk", "#! yomk_plug_sys\n[s1-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s1.yomk")).build(), "plugins:1 instances:1", "S1 build single entry ok");
 
-    // 按插件名查询（两段链 plg_name 绑定 + get_info 终结，返回单条 PluginMeta）
+    // 按插件名查询（两段链 plg_name 绑定 + get_info 终结，返回单条 PluginInfo）
     yomk::payload::Response infoResp = yomk::plug_sys().plg_name("TestPlugin").get_info();
     bool infoHit = false;
     if (isOk(infoResp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(infoResp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(infoResp.data);
         infoHit = meta && meta->d.name == "TestPlugin" && meta->d.version == "0.0.1";
     }
     check(infoHit, "S1 plg_name().get_info() returns single TestPlugin meta");
@@ -152,7 +152,7 @@ int main()
         "S1 instance pluginName and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
 
-    std::vector<yomk::payload::PluginMeta> metas = listPlugins();
+    std::vector<yomk::payload::PluginInfo> metas = listPlugins();
     check(metas.size() == 1, "S1 exactly one plugin listed");
     check(
         !metas.empty() && metas[0].name == "TestPlugin" && metas[0].type == "demo" && metas[0].version == "0.0.1",
@@ -167,7 +167,7 @@ int main()
     bool queried = false;
     if (isOk(resp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         queried = meta && meta->d.name == "TestPlugin";
     }
     check(queried, "S1 proxy /plugin returns single plugin meta");

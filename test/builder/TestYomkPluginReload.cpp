@@ -94,20 +94,20 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     yomk::payload::Response resp = yomk::plug_sys().instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginMeta> listPlugins()
+static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginMeta> out;
+    std::vector<yomk::payload::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -151,7 +151,7 @@ int main()
         "R1 load copy so with same meta rejects");
 
     // 失败路径无状态污染：插件表仍恰 1 条，实例仍 2 个
-    std::vector<yomk::payload::PluginMeta> names = listPlugins();
+    std::vector<yomk::payload::PluginInfo> names = listPlugins();
     check(
         names.size() == 1 && !names.empty() && names[0].name == "TestPlugin",
         "R1 manager list still exactly one TestPlugin after rejected loads");

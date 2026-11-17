@@ -261,8 +261,8 @@ int main()
         "H1 /builder shows manifest path and ok result");
     check(
         std::any_of(
-            dump.manifest.begin(),
-            dump.manifest.end(),
+            dump.entries.begin(),
+            dump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.pluginName == "TestPlugin" && e.instanceName == "TestPlugin.my inst" &&
                        e.libFile == fp("libTestPlugin.so") && e.configFile == fp("inst.txt");
@@ -275,7 +275,7 @@ int main()
     const yomk::payload::BuilderInfo hfail = builderInfo();
     check(
         hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: key outside instance block" &&
-            hfail.plugins == 0 && hfail.instances == 0 && hfail.manifest.empty(),
+            hfail.plugins == 0 && hfail.instances == 0 && hfail.entries.empty(),
         "H4 /builder records failure result");
 
     writeManifest(
@@ -293,8 +293,8 @@ int main()
         "H6 /builder records partial failure with partial counts");
     check(
         std::any_of(
-            partDump.manifest.begin(),
-            partDump.manifest.end(),
+            partDump.entries.begin(),
+            partDump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.instanceName == "TestPlugin.good1" && e.libFile == fp("libTestPlugin.so") &&
                        e.configFile == fp("inst.txt");
@@ -328,7 +328,7 @@ int main()
     bool instEmpty = false;
     if (isOk(inst))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(inst.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(inst.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unload");

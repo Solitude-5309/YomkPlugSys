@@ -83,7 +83,7 @@ int main()
     }
     std::cout << "builder" << std::endl;
     std::cout << "  manifest:" << std::endl;
-    for (const auto& line : builder->d.manifest)
+    for (const auto& line : builder->d.entries)
     {
         printManifestEntry(line);
     }
@@ -103,14 +103,14 @@ int main()
     // 3. 查询插件列表
     // 接口：yomk::plug_sys().plugins()
     // 输入：无
-    // 输出：PluginMetaArray，元数据来自插件导出的 yomk_plugin_meta
+    // 输出：PluginInfoList，元数据来自插件导出的 yomk_plugin_meta
     section("3. 插件列表 yomk::plug_sys().plugins()");
     resp = yomk::plug_sys().plugins();
     if (!isOk(resp))
     {
         fail("查询插件", resp.msg);
     }
-    auto metas = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+    auto metas = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
     if (!metas)
     {
         fail("查询插件", "响应数据缺失");
@@ -129,14 +129,14 @@ int main()
     // 4. 查询实例列表
     // 接口：yomk::plug_sys().instances()
     // 输入：无
-    // 输出：InstanceInfoArray（全量实例明细）
+    // 输出：InstanceInfoList（全量实例明细）
     section("4. 实例列表 yomk::plug_sys().instances()");
     resp = yomk::plug_sys().instances();
     if (!isOk(resp))
     {
         fail("查询实例", resp.msg);
     }
-    auto instances = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+    auto instances = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
     if (!instances)
     {
         fail("查询实例", "响应数据缺失");
@@ -149,14 +149,14 @@ int main()
     // 5. 按插件过滤实例
     // 接口：yomk::plug_sys().plg_name(pluginName).instances()
     // 输入：pluginName（未知插件返回失败，原因见 resp.msg）
-    // 输出：InstanceInfoArray（仅该插件下的实例）
+    // 输出：InstanceInfoList（仅该插件下的实例）
     section("5. 按插件过滤实例 yomk::plug_sys().plg_name(\"ConnectionService\").instances()");
     resp = yomk::plug_sys().plg_name("ConnectionService").instances();
     if (!isOk(resp))
     {
         fail("过滤实例", resp.msg);
     }
-    auto filtered = yomk::msgs::unpack<yomk::msgs::InstanceInfoArray>(resp.data);
+    auto filtered = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
     if (!filtered)
     {
         fail("过滤实例", "响应数据缺失");
@@ -169,14 +169,14 @@ int main()
     // 6. 按实例查所属插件
     // 接口：yomk::plug_sys().inst_name(instanceName).get_plg_info()
     // 输入：instanceName 为限定名 插件名.实例名，取步骤 4 列出的任一实例名；未知实例返回失败，原因见 resp.msg
-    // 输出：PluginMeta（该实例所属插件的元数据）
+    // 输出：PluginInfo（该实例所属插件的元数据）
     section("6. 按实例查插件 yomk::plug_sys().inst_name(\"ConnectionService.ConnectionServiceIns\").get_plg_info()");
     resp = yomk::plug_sys().inst_name("ConnectionService.ConnectionServiceIns").get_plg_info();
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.msg);
     }
-    auto instMeta = yomk::msgs::unpack<yomk::msgs::PluginMeta>(resp.data);
+    auto instMeta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
     if (!instMeta)
     {
         fail("按实例查插件", "响应数据缺失");

@@ -24,11 +24,11 @@ YomkPlugSys 的唯一用户门面服务：按插件系统清单（manifest.yomk�
 | 强制卸载 | `yomk::plug_sys().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plug_sys().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plug_sys().builder()` | → `Response`（data 为 `BuilderInfo`） |
-| 插件列表 | `yomk::plug_sys().plugins()` | → `Response`（data 为 `PluginMetaArray`） |
-| 插件信息 | `yomk::plug_sys().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginMeta` 单条插件信息；未知插件 `Failed`） |
-| 实例列表 | `yomk::plug_sys().instances()` | → `Response`（data 为 `InstanceInfoArray` 全量实例明细） |
-| 插件实例 | `yomk::plug_sys().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoArray`，仅该插件下的实例；未知插件 `Failed`） |
-| 实例查插件 | `yomk::plug_sys().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginMeta`；未知实例 `Failed`） |
+| 插件列表 | `yomk::plug_sys().plugins()` | → `Response`（data 为 `PluginInfoList`） |
+| 插件信息 | `yomk::plug_sys().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginInfo` 单条插件信息；未知插件 `Failed`） |
+| 实例列表 | `yomk::plug_sys().instances()` | → `Response`（data 为 `InstanceInfoList` 全量实例明细） |
+| 插件实例 | `yomk::plug_sys().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoList`，仅该插件下的实例；未知插件 `Failed`） |
+| 实例查插件 | `yomk::plug_sys().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginInfo`；未知实例 `Failed`） |
 | 实例配置 | `yomk::plug_sys().inst_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
 | 版本查询 | `yomk::plug_sys().version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
 
@@ -58,7 +58,7 @@ auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
 结果一律在 `Response.data` 中，按返回类型解包：
 
 ```cpp
-auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(plugins.data);
+auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(plugins.data);
 if (arr)
 {
     for (const auto& m : arr->d)

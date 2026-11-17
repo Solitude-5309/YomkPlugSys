@@ -162,14 +162,14 @@ yomk::payload::Response YomkPluginLoader::meta(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "invalid plugin meta"};
         }
-        yomk::payload::PluginMeta out;
+        yomk::payload::PluginInfo out;
         out.abi_version = meta->abi_version;
         out.name = meta->name ? meta->name : "";
         out.type = meta->type ? meta->type : "";
         out.version = meta->version ? meta->version : "";
         out.author = meta->author ? meta->author : "";
         out.description = meta->description ? meta->description : "";
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginMeta::shared(out)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfo::shared(out)};
     }
     catch (const std::exception& e)
     {

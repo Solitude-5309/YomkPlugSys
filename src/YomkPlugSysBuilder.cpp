@@ -96,7 +96,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         resp = request("/YomkPluginManager/list", nullptr);
         if (resp.status == yomk::payload::ResStatus::Succeeded)
         {
-            auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(resp.data);
+            auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
             if (!arr)
             {
                 recordBuild(req->d.manifestPath, "build: invalid plugin list response", 0, 0, {});
@@ -189,7 +189,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, builtEntries);
         yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.manifestPath, " ", summary);
         yomk::payload::BuilderInfo info;
-        info.manifest = builtEntries;
+        info.entries = builtEntries;
         info.path = req->d.manifestPath;
         info.result = "ok";
         info.plugins = static_cast<int>(loadedPlugins.size());
@@ -231,7 +231,7 @@ yomk::payload::Response YomkPlugSysBuilder::infoBuilder(YomkMsgPtr pkg)
     {
         yomk::payload::BuilderInfo info;
         std::lock_guard<std::mutex> lock(m_mutex);
-        info.manifest = m_lastEntries;
+        info.entries = m_lastEntries;
         info.path = m_lastManifest;
         info.result = m_lastResult;
         info.plugins = m_lastPlugins;
@@ -265,7 +265,7 @@ yomk::payload::Response YomkPlugSysBuilder::plugins(YomkMsgPtr pkg)
     }
 }
 
-// 代理接口：按插件名查询单个插件（与列表接口分离，响应 data 为单条 PluginMeta）
+// 代理接口：按插件名查询单个插件（与列表接口分离，响应 data 为单条 PluginInfo）
 yomk::payload::Response YomkPlugSysBuilder::plugin(YomkMsgPtr pkg)
 {
     try

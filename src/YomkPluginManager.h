@@ -43,10 +43,10 @@ private:
     yomk::payload::Response forceUnload(YomkMsgPtr pkg);       // String pluginName -> ok（先删全部实例）
     yomk::payload::Response createInstance(YomkMsgPtr pkg);    // CreateReq -> InstanceInfo
     yomk::payload::Response destroyInstance(YomkMsgPtr pkg);   // DestroyReq -> ok
-    yomk::payload::Response list(YomkMsgPtr pkg);              // 无 -> PluginMetaArray（全量列表）
-    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginMeta
-    yomk::payload::Response listInstances(YomkMsgPtr pkg);     // [String pluginName] -> InstanceInfoArray
-    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginMeta
+    yomk::payload::Response list(YomkMsgPtr pkg);              // 无 -> PluginInfoList（全量列表）
+    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
+    yomk::payload::Response listInstances(YomkMsgPtr pkg);     // [String pluginName] -> InstanceInfoList
+    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
     yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
 
     // 不变量:限定名 = 插件名.实例名;插件名全局唯一且不含 '.',故限定名全局唯一
