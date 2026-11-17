@@ -323,7 +323,7 @@ int main()
     expectNo(badParseResp, "manifest line 4: unknown key 'foo'", "I2 parse service reports line number");
 
     // ---------- 清理现场 ----------
-    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plug_sys().plugin_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     yomk::payload::Response inst = yomk::plug_sys().list_instances();
     bool instEmpty = false;
     if (isOk(inst))

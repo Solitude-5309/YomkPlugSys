@@ -21,14 +21,14 @@ YomkPlugSys 的唯一用户门面服务：按插件系统清单（manifest.yomk�
 | 场景 | 链 | 终结与返回 |
 |---|---|---|
 | 清单构建 | `yomk::plug_sys().manifest(manifestPath).build()` | → `Response`（data 为 `BuilderInfo`：清单条目/路径/结果/插件数/实例数） |
-| 强制卸载 | `yomk::plug_sys().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
-| 尝试卸载 | `yomk::plug_sys().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
+| 强制卸载 | `yomk::plug_sys().plugin_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
+| 尝试卸载 | `yomk::plug_sys().plugin_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plug_sys().get_info()` | → `Response`（data 为 `BuilderInfo`） |
 | 插件列表 | `yomk::plug_sys().list_plugins()` | → `Response`（data 为 `PluginInfoList`） |
-| 插件信息 | `yomk::plug_sys().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginInfo` 单条插件信息；未知插件 `Failed`） |
+| 插件信息 | `yomk::plug_sys().plugin_name(pluginName).get_info()` | → `Response`（data 为 `PluginInfo` 单条插件信息；未知插件 `Failed`） |
 | 实例列表 | `yomk::plug_sys().list_instances()` | → `Response`（data 为 `InstanceInfoList` 全量实例明细） |
-| 插件实例 | `yomk::plug_sys().plg_name(pluginName).list_instances()` | → `Response`（data 为 `InstanceInfoList`，仅该插件下的实例；未知插件 `Failed`） |
-| 实例查插件 | `yomk::plug_sys().inst_name(instanceName).get_info()` | → `Response`（data 为 `PluginInfo`；未知实例 `Failed`） |
+| 插件实例 | `yomk::plug_sys().plugin_name(pluginName).list_instances()` | → `Response`（data 为 `InstanceInfoList`，仅该插件下的实例；未知插件 `Failed`） |
+| 实例查插件 | `yomk::plug_sys().instance_name(instanceName).get_info()` | → `Response`（data 为 `PluginInfo`；未知实例 `Failed`） |
 | 实例配置 | `yomk::plug_sys().get_instance_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
 | 版本查询 | `yomk::plug_sys().get_version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
 
@@ -49,10 +49,10 @@ auto build = yomk::plug_sys().manifest("examples/workflow/manifest.yomk").build(
 // 内省：插件列表与实例列表
 auto plugins = yomk::plug_sys().list_plugins();
 auto instances = yomk::plug_sys().list_instances();                        // 全量实例明细
-auto one = yomk::plug_sys().plg_name("ConnectionService").list_instances(); // 仅该插件下的实例
+auto one = yomk::plug_sys().plugin_name("ConnectionService").list_instances(); // 仅该插件下的实例
 
 // 卸载（有存活实例时 try_unload 拒绝；unload 先清空实例表再卸载，外部引用未释放同样拒绝）
-auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
+auto r = yomk::plug_sys().plugin_name("ConnectionService").try_unload();
 ```
 
 结果一律在 `Response.data` 中，按返回类型解包：

@@ -147,11 +147,11 @@ int main()
     }
 
     // 5. 按插件过滤实例
-    // 接口：yomk::plug_sys().plg_name(pluginName).list_instances()
+    // 接口：yomk::plug_sys().plugin_name(pluginName).list_instances()
     // 输入：pluginName（未知插件返回失败，原因见 resp.msg）
     // 输出：InstanceInfoList（仅该插件下的实例）
-    section("5. 按插件过滤实例 yomk::plug_sys().plg_name(\"ConnectionService\").list_instances()");
-    resp = yomk::plug_sys().plg_name("ConnectionService").list_instances();
+    section("5. 按插件过滤实例 yomk::plug_sys().plugin_name(\"ConnectionService\").list_instances()");
+    resp = yomk::plug_sys().plugin_name("ConnectionService").list_instances();
     if (!isOk(resp))
     {
         fail("过滤实例", resp.msg);
@@ -167,11 +167,11 @@ int main()
     }
 
     // 6. 按实例查所属插件
-    // 接口：yomk::plug_sys().inst_name(instanceName).get_info()
+    // 接口：yomk::plug_sys().instance_name(instanceName).get_info()
     // 输入：instanceName 为限定名 插件名.实例名，取步骤 4 列出的任一实例名；未知实例返回失败，原因见 resp.msg
     // 输出：PluginInfo（该实例所属插件的元数据）
-    section("6. 按实例查插件 yomk::plug_sys().inst_name(\"ConnectionService.ConnectionServiceIns\").get_info()");
-    resp = yomk::plug_sys().inst_name("ConnectionService.ConnectionServiceIns").get_info();
+    section("6. 按实例查插件 yomk::plug_sys().instance_name(\"ConnectionService.ConnectionServiceIns\").get_info()");
+    resp = yomk::plug_sys().instance_name("ConnectionService.ConnectionServiceIns").get_info();
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.msg);
@@ -207,19 +207,19 @@ int main()
     std::cout << fileContent->d << std::endl;
 
     // 8. 卸载插件
-    // 接口：yomk::plug_sys().plg_name(pluginName).try_unload() 尝试卸载：有存活实例则拒绝
-    //       yomk::plug_sys().plg_name(pluginName).unload()    强制卸载：先清空实例表再卸载（外部仍有实例引用时同样拒绝）
+    // 接口：yomk::plug_sys().plugin_name(pluginName).try_unload() 尝试卸载：有存活实例则拒绝
+    //       yomk::plug_sys().plugin_name(pluginName).unload()    强制卸载：先清空实例表再卸载（外部仍有实例引用时同样拒绝）
     // 输入：pluginName；输出：String(ok/msg)
     section("8. 卸载插件（TRY_UNLOAD 引用保护 vs UNLOAD 强制）");
-    resp = yomk::plug_sys().plg_name("ConnectionService").try_unload();
+    resp = yomk::plug_sys().plugin_name("ConnectionService").try_unload();
     std::cout << "TRY_UNLOAD（实例存活中）: " << (isOk(resp) ? "ok" : resp.msg) << std::endl;
-    resp = yomk::plug_sys().plg_name("ConnectionService").unload();
+    resp = yomk::plug_sys().plugin_name("ConnectionService").unload();
     if (!isOk(resp))
     {
         fail("卸载 ConnectionService", resp.msg);
     }
     std::cout << "UNLOAD ConnectionService: ok" << std::endl;
-    resp = yomk::plug_sys().plg_name("WorkspaceService").unload();
+    resp = yomk::plug_sys().plugin_name("WorkspaceService").unload();
     if (!isOk(resp))
     {
         fail("卸载 WorkspaceService", resp.msg);

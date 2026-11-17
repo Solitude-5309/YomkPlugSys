@@ -133,17 +133,17 @@ int main()
     writeManifest("s1.yomk", "#! yomk_plug_sys\n[s1-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s1.yomk")).build(), "plugins:1 instances:1", "S1 build single entry ok");
 
-    // 按插件名查询（两段链 plg_name 绑定 + get_info 终结，返回单条 PluginInfo）
-    yomk::payload::Response infoResp = yomk::plug_sys().plg_name("TestPlugin").get_info();
+    // 按插件名查询（两段链 plugin_name 绑定 + get_info 终结，返回单条 PluginInfo）
+    yomk::payload::Response infoResp = yomk::plug_sys().plugin_name("TestPlugin").get_info();
     bool infoHit = false;
     if (isOk(infoResp))
     {
         auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(infoResp.data);
         infoHit = meta && meta->d.name == "TestPlugin" && meta->d.version == "0.0.1";
     }
-    check(infoHit, "S1 plg_name().get_info() returns single TestPlugin meta");
+    check(infoHit, "S1 plugin_name().get_info() returns single TestPlugin meta");
     expectNo(
-        yomk::plug_sys().plg_name("NoSuch").get_info(), "plugin not loaded: NoSuch", "S1 get_info unknown plugin rejects");
+        yomk::plug_sys().plugin_name("NoSuch").get_info(), "plugin not loaded: NoSuch", "S1 get_info unknown plugin rejects");
 
     std::vector<yomk::payload::InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
@@ -216,23 +216,23 @@ int main()
 
     // ---------- S4 try_unload 拒绝与放行 ----------
     expectNo(
-        yomk::plug_sys().plg_name("TestPlugin").try_unload(),
+        yomk::plug_sys().plugin_name("TestPlugin").try_unload(),
         "instances still alive: TestPlugin",
         "S4 try_unload rejected while instance alive");
     dreq.instanceName = "s1-i1";
     check(
         isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()),
         "S4 destroy for unload");
-    check(isOk(yomk::plug_sys().plg_name("TestPlugin").try_unload()), "S4 try_unload ok after destroy");
+    check(isOk(yomk::plug_sys().plugin_name("TestPlugin").try_unload()), "S4 try_unload ok after destroy");
     check(listPlugins().empty(), "S4 plugins empty after try_unload");
-    expectNo(yomk::plug_sys().plg_name("NoSuchLib").try_unload(), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
+    expectNo(yomk::plug_sys().plugin_name("NoSuchLib").try_unload(), "plugin not loaded: NoSuchLib", "S4 try_unload unknown plugin");
 
     // ---------- S5 unload 强卸含存活实例 ----------
     writeManifest("s5.yomk", "#! yomk_plug_sys\n[s5-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     expectOkSummary(yomk::plug_sys().manifest(fp("s5.yomk")).build(), "plugins:1 instances:1", "S5 rebuild for force unload");
-    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "S5 force unload with alive instance ok");
+    check(isOk(yomk::plug_sys().plugin_name("TestPlugin").unload()), "S5 force unload with alive instance ok");
     check(listInstances().empty(), "S5 instances destroyed by force unload");
-    expectNo(yomk::plug_sys().plg_name("NoSuchLib").unload(), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
+    expectNo(yomk::plug_sys().plugin_name("NoSuchLib").unload(), "plugin not loaded: NoSuchLib", "S5 unload unknown plugin");
 
     // ---------- S6 卸载后重载 ----------
     writeManifest("s6.yomk", "#! yomk_plug_sys\n[s6-i1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
@@ -250,7 +250,7 @@ int main()
     expectNo(yomk::plug_sys().manifest(fp("s7c.yomk")).build(), "instance config not found", "S7 instance config checked before lib");
 
     // ---------- 清理现场 ----------
-    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plug_sys().plugin_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listInstances().empty(), "cleanup: instances empty after unload");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

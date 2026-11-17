@@ -57,8 +57,8 @@
 
 | 接口 | 有存活实例 | 无存活实例 |
 |---|---|---|
-| `plg_name(n).try_unload()` | `Failed`（插件保持加载，实例不受影响） | 卸载成功 |
-| `plg_name(n).unload()` | 先清空该插件的实例表再卸载；实例引用全部释放后成功 | 卸载成功 |
+| `plugin_name(n).try_unload()` | `Failed`（插件保持加载，实例不受影响） | 卸载成功 |
+| `plugin_name(n).unload()` | 先清空该插件的实例表再卸载；实例引用全部释放后成功 | 卸载成功 |
 
 > `unload` 的"强制"仅指清空 Manager 实例表（不再等待实例自然销毁），**不夺走宿主已持有的引用**：Loader 卸载前仍按存活表统一判活，只要还有引用存在就返回 `Failed`（`instances still alive`）。此时插件保持已加载、实例表已被清空（半完成态），须释放全部引用后重新 `unload`，或重新 `build`/`create` 恢复实例。因为 dlclose 不会在有存活引用时发生，宿主持有的 shared_ptr 不会悬空——引用保护是双向的。
 

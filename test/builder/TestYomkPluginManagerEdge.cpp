@@ -223,33 +223,33 @@ int main()
     resp = yomk::server().url("/YomkPlugSysBuilder/get_plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
-    // ---------- M2.5 链式门面：plg_name(name).list_instances() 与直调 filter 等价 ----------
-    resp = yomk::plug_sys().plg_name("TestPlugin").list_instances();
+    // ---------- M2.5 链式门面：plugin_name(name).list_instances() 与直调 filter 等价 ----------
+    resp = yomk::plug_sys().plugin_name("TestPlugin").list_instances();
     bool macroHitTwo = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         macroHitTwo = arr->d.size() == 2;
     }
-    check(macroHitTwo, "M2 plg_name(name).list_instances() filter hit returns 2 instances");
+    check(macroHitTwo, "M2 plugin_name(name).list_instances() filter hit returns 2 instances");
     expectNo(
-        yomk::plug_sys().plg_name("NoSuch").list_instances(),
+        yomk::plug_sys().plugin_name("NoSuch").list_instances(),
         "plugin not loaded: NoSuch",
-        "M2 plg_name(name).list_instances() unknown plugin rejects");
+        "M2 plugin_name(name).list_instances() unknown plugin rejects");
 
-    // ---------- M2.6 链式门面：inst_name(name).get_info() 反查所属插件 ----------
-    resp = yomk::plug_sys().inst_name("TestPlugin.e-a").get_info();
+    // ---------- M2.6 链式门面：instance_name(name).get_info() 反查所属插件 ----------
+    resp = yomk::plug_sys().instance_name("TestPlugin.e-a").get_info();
     bool byInstOk = false;
     if (isOk(resp))
     {
         auto pm = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
-    check(byInstOk, "M2 inst_name(name).get_info() instance lookup returns owner plugin meta");
+    check(byInstOk, "M2 instance_name(name).get_info() instance lookup returns owner plugin meta");
     expectNo(
-        yomk::plug_sys().inst_name("no-inst").get_info(),
+        yomk::plug_sys().instance_name("no-inst").get_info(),
         "instance not found: no-inst",
-        "M2 inst_name(name).get_info() unknown instance rejects");
+        "M2 instance_name(name).get_info() unknown instance rejects");
 
     // ---------- M2.7 链式门面：get_instance_cfg(instanceName) 返回实例配置内容 ----------
     {
@@ -384,7 +384,7 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");
 
-    resp = yomk::plug_sys().inst_name("TestPlugin.shared-i").get_info();
+    resp = yomk::plug_sys().instance_name("TestPlugin.shared-i").get_info();
     bool ownerA = false;
     if (isOk(resp))
     {
@@ -392,7 +392,7 @@ int main()
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
-    resp = yomk::plug_sys().inst_name("SecondPlugin.shared-i").get_info();
+    resp = yomk::plug_sys().instance_name("SecondPlugin.shared-i").get_info();
     bool ownerB = false;
     if (isOk(resp))
     {
@@ -423,11 +423,11 @@ int main()
     check(
         isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dcrossB)).request()),
         "M6 destroy SecondPlugin/shared-i");
-    check(isOk(yomk::plug_sys().plg_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
+    check(isOk(yomk::plug_sys().plugin_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
 
     // ---------- M7 清理现场 ----------
-    check(isOk(yomk::plug_sys().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
-    check(isOk(yomk::plug_sys().plg_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
+    check(isOk(yomk::plug_sys().plugin_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
+    check(isOk(yomk::plug_sys().plugin_name("TestPlugin").unload()), "cleanup: force_unload TestPlugin");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
 
     std::cout << "\n========== Test Summary ==========" << std::endl;

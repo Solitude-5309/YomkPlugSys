@@ -55,7 +55,7 @@ int main()
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
 
     // 卸载（有存活实例拒绝；强制卸载用 unload）
-    auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
+    auto r = yomk::plug_sys().plugin_name("ConnectionService").try_unload();
     std::cout << "try_unload: " << r.msg << std::endl;
     return 0;
 }

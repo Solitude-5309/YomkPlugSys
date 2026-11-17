@@ -5,7 +5,7 @@
 // 设计取舍:
 // 1. 域入口 yomk::plug_sys() 只封装本模块业务终结方法:屏蔽裸 URL,不另造请求通道,
 //    url/msg/request 通用链归 yomk::server();调用方也可直连统一通道;带参数的终结方法
-//    统一走两段链 manifest(path)/plg_name(name)/inst_name(name) 绑定 -> 零参终结;
+//    统一走两段链 manifest(path)/plugin_name(name)/instance_name(name) 绑定 -> 零参终结;
 // 2. 分层单向:Interface(ABI 叶子) -> Url(常量叶子) -> Payload -> Msg -> Builder,
 //    本文件为聚合入口,无人反向依赖;
 // 3. 机制层 src/YomkPluginLoader.h 与数据层 src/YomkPluginManager.h 不随安装导出,
@@ -61,13 +61,13 @@ private:
 
 /**
  * @brief Intermediate chain node binding a plugin name, terminated by get_info(), list_instances(), unload() or try_unload()
- * Returned by PlugSysBuilder::plg_name(); every terminator shares the bound name and differs only
+ * Returned by PlugSysBuilder::plugin_name(); every terminator shares the bound name and differs only
  * in the action taken on it.
  * @note Holds a copy of the plugin name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
 // @zh: 中间链节点：绑定插件名，链以 get_info()、list_instances()、unload() 或 try_unload() 终结。
-// @zh: 由 PlugSysBuilder::plg_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
+// @zh: 由 PlugSysBuilder::plugin_name() 返回；各终结方法共用绑定的名字，仅在动作上不同。
 // @zh: note 持有插件名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class PluginNameBuilder
 {
@@ -131,18 +131,18 @@ private:
 
 /**
  * @brief Intermediate chain node binding an instance name, terminated by get_info()
- * Returned by PlugSysBuilder::inst_name(); the bound name is a fully qualified instance name
+ * Returned by PlugSysBuilder::instance_name(); the bound name is a fully qualified instance name
  * (pluginName.instanceName).
  * @note Holds a copy of the instance name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
 // @zh: 中间链节点：绑定实例名，链以 get_info() 终结。
-// @zh: 由 PlugSysBuilder::inst_name() 返回；绑定的名字为限定名实例名（插件名.实例名）。
+// @zh: 由 PlugSysBuilder::instance_name() 返回；绑定的名字为限定名实例名（插件名.实例名）。
 // @zh: note 持有实例名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
-class InstNameBuilder
+class InstanceNameBuilder
 {
 public:
-    explicit InstNameBuilder(std::string_view instanceName) : m_instanceName(instanceName) {}
+    explicit InstanceNameBuilder(std::string_view instanceName) : m_instanceName(instanceName) {}
 
     /**
      * @brief Query the plugin owning the bound instance
@@ -199,7 +199,7 @@ public:
     // @zh: 绑定插件名，链以 get_info()、list_instances()、unload() 或 try_unload() 终结。
     // @zh: param pluginName 插件名（meta 名，不得含 '.'）。
     // @zh: return 携带该名字的中间链节点；在其上调用终结方法。
-    PluginNameBuilder plg_name(std::string_view pluginName) { return PluginNameBuilder(pluginName); }
+    PluginNameBuilder plugin_name(std::string_view pluginName) { return PluginNameBuilder(pluginName); }
 
     /**
      * @brief Bind an instance name, terminating with get_info()
@@ -209,7 +209,7 @@ public:
     // @zh: 绑定实例名，链以 get_info() 终结。
     // @zh: param instanceName 限定名实例名（插件名.实例名）。
     // @zh: return 携带该名字的中间链节点；在其上调用 get_info()。
-    InstNameBuilder inst_name(std::string_view instanceName) { return InstNameBuilder(instanceName); }
+    InstanceNameBuilder instance_name(std::string_view instanceName) { return InstanceNameBuilder(instanceName); }
 
     /**
      * @brief Introspect the latest build performed by this builder
@@ -231,7 +231,7 @@ public:
      * @brief Introspect all created instances
      * @return Response carrying an InstanceInfoList packet
      */
-    // @zh: 内省全部已创建实例（与 plg_name(name).list_instances() 单插件实例职责分离）。
+    // @zh: 内省全部已创建实例（与 plugin_name(name).list_instances() 单插件实例职责分离）。
     // @zh: return Response，data 为 InstanceInfoList 包。
     yomk::payload::Response list_instances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
 
