@@ -50,11 +50,11 @@ int main()
     const std::string manifest = WORKFLOW_MANIFEST_PATH;
 
     // 1. 查询扩展版本
-    // 接口：yomk::plug_sys().version()
+    // 接口：yomk::plug_sys().get_version()
     // 输入：无
     // 输出：payload::Response，解包 String 后打印版本描述
-    section("1. 查询扩展版本 yomk::plug_sys().version()");
-    yomk::payload::Response verResp = yomk::plug_sys().version();
+    section("1. 查询扩展版本 yomk::plug_sys().get_version()");
+    yomk::payload::Response verResp = yomk::plug_sys().get_version();
     auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
     if (ver)
     {
@@ -62,7 +62,7 @@ int main()
     }
 
     // 2. 构建插件系统并查看构建信息
-    // 接口：yomk::plug_sys().manifest(manifestPath).build() + yomk::plug_sys().builder()
+    // 接口：yomk::plug_sys().manifest(manifestPath).build() + yomk::plug_sys().get_info()
     // 输入：清单文件路径。首行 #! yomk_plug_sys，之后按实例块书写：
     //       [实例名]
     //       lib = 动态库相对路径
@@ -92,13 +92,13 @@ int main()
     std::cout << "  plugins:" << builder->d.plugins << std::endl;
     std::cout << "  instances:" << builder->d.instances << std::endl;
 
-    // 内省接口 builder()：返回同一份最近构建快照（无需重复请求即可从 build 响应取得）
-    resp = yomk::plug_sys().builder();
+    // 内省接口 get_info()：返回同一份最近构建快照（无需重复请求即可从 build 响应取得）
+    resp = yomk::plug_sys().get_info();
     if (!isOk(resp))
     {
         fail("查询构建信息", resp.msg);
     }
-    std::cout << "  builder(): 与 build 返回同源快照" << std::endl;
+    std::cout << "  get_info(): 与 build 返回同源快照" << std::endl;
 
     // 3. 查询插件列表
     // 接口：yomk::plug_sys().list_plugins()
@@ -167,11 +167,11 @@ int main()
     }
 
     // 6. 按实例查所属插件
-    // 接口：yomk::plug_sys().inst_name(instanceName).get_plg_info()
+    // 接口：yomk::plug_sys().inst_name(instanceName).get_info()
     // 输入：instanceName 为限定名 插件名.实例名，取步骤 4 列出的任一实例名；未知实例返回失败，原因见 resp.msg
     // 输出：PluginInfo（该实例所属插件的元数据）
-    section("6. 按实例查插件 yomk::plug_sys().inst_name(\"ConnectionService.ConnectionServiceIns\").get_plg_info()");
-    resp = yomk::plug_sys().inst_name("ConnectionService.ConnectionServiceIns").get_plg_info();
+    section("6. 按实例查插件 yomk::plug_sys().inst_name(\"ConnectionService.ConnectionServiceIns\").get_info()");
+    resp = yomk::plug_sys().inst_name("ConnectionService.ConnectionServiceIns").get_info();
     if (!isOk(resp))
     {
         fail("按实例查插件", resp.msg);
@@ -190,11 +190,11 @@ int main()
     std::cout << "  description: " << instMeta->d.description << std::endl;
 
     // 7. 查看实例配置内容
-    // 接口：yomk::plug_sys().inst_cfg(instanceName)
+    // 接口：yomk::plug_sys().get_instance_cfg(instanceName)
     // 输入：instanceName 为限定名 插件名.实例名；未知实例返回失败，原因见 resp.msg
     // 输出：String（该实例创建时透传的实例配置内容）
-    section("7. 查看实例配置 yomk::plug_sys().inst_cfg(\"ConnectionService.ConnectionServiceIns\")");
-    resp = yomk::plug_sys().inst_cfg("ConnectionService.ConnectionServiceIns");
+    section("7. 查看实例配置 yomk::plug_sys().get_instance_cfg(\"ConnectionService.ConnectionServiceIns\")");
+    resp = yomk::plug_sys().get_instance_cfg("ConnectionService.ConnectionServiceIns");
     if (!isOk(resp))
     {
         fail("查看实例配置", resp.msg);

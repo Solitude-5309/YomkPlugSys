@@ -1,5 +1,5 @@
 // TestYomkPluginFacade：门面链式域入口契约冒烟测试
-// 覆盖门面服务注册、/version 契约与链式版本查询、空态内省默认值与未知实例拒绝、BUILD 不存在清单失败路径。
+// 覆盖门面服务注册、/get_version 契约与链式版本查询、空态内省默认值与未知实例拒绝、BUILD 不存在清单失败路径。
 #include <yomk/plug_sys/YomkPlugSysApi.h>
 #include <yomk/server/YomkServerApi.h>
 
@@ -54,13 +54,13 @@ int main()
     check(yomk::server().srv<YomkPlugSysBuilder>().create() == 0, "register YomkPlugSysBuilder");
 
     // ---------- 版本契约 ----------
-    yomk::payload::Response resp = yomk::server().url("/YomkPlugSysBuilder/version").msg(nullptr).request();
-    check(isOk(resp), "/version returns Succeeded");
+    yomk::payload::Response resp = yomk::server().url("/YomkPlugSysBuilder/get_version").msg(nullptr).request();
+    check(isOk(resp), "/get_version returns Succeeded");
     const std::string ver = respString(resp);
-    check(ver.rfind("YomkPlugSys v", 0) == 0, "/version prefix 'YomkPlugSys v'");
-    // 链式查询 /version 并解包打印（成功走 info，输出人工核对）
+    check(ver.rfind("YomkPlugSys v", 0) == 0, "/get_version prefix 'YomkPlugSys v'");
+    // 链式查询 /get_version 并解包打印（成功走 info，输出人工核对）
     {
-        auto verResp = yomk::plug_sys().version();
+        auto verResp = yomk::plug_sys().get_version();
         if (verResp.status == yomk::payload::ResStatus::Succeeded)
         {
             auto ver = yomk::msgs::unpack<yomk::msgs::String>(verResp.data);
@@ -76,24 +76,24 @@ int main()
     }
 
     // ---------- 空态内省契约 ----------
-    resp = yomk::plug_sys().builder();
-    check(isOk(resp), "builder() returns Succeeded");
+    resp = yomk::plug_sys().get_info();
+    check(isOk(resp), "get_info() returns Succeeded");
     auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
-    check(info != nullptr, "builder() unpacks BuilderInfo");
+    check(info != nullptr, "get_info() unpacks BuilderInfo");
     check(
         info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
             info->d.entries.empty(),
-        "builder() empty-state defaults (empty path/result, zero counts, no manifest lines)");
+        "get_info() empty-state defaults (empty path/result, zero counts, no manifest lines)");
 
-    resp = yomk::plug_sys().inst_name("no-inst").get_plg_info();
+    resp = yomk::plug_sys().inst_name("no-inst").get_info();
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
-        "inst_name(name).get_plg_info() empty-state rejects unknown instance");
+        "inst_name(name).get_info() empty-state rejects unknown instance");
 
-    resp = yomk::plug_sys().inst_cfg("no-inst");
+    resp = yomk::plug_sys().get_instance_cfg("no-inst");
     check(
         isNo(resp) && resp.msg == "instance not found: no-inst",
-        "inst_cfg(instanceName) empty-state rejects unknown instance");
+        "get_instance_cfg(instanceName) empty-state rejects unknown instance");
 
     resp = yomk::plug_sys().list_plugins();
     bool pluginsEmpty = false;

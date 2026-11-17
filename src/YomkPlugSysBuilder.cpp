@@ -35,13 +35,13 @@ int YomkPlugSysBuilder::init()
     }
 
     installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::BuildReq::kName);
-    installFunc("/version", &YomkPlugSysBuilder::version);
-    installFunc("/builder", &YomkPlugSysBuilder::infoBuilder);
+    installFunc("/get_version", &YomkPlugSysBuilder::getVersion);
+    installFunc("/get_build_info", &YomkPlugSysBuilder::getBuildInfo);
     installFunc("/list_plugins", &YomkPlugSysBuilder::listPlugins);
-    installFunc("/plugin", &YomkPlugSysBuilder::plugin, yomk::msgs::String::kName);
+    installFunc("/get_plugin", &YomkPlugSysBuilder::getPlugin, yomk::msgs::String::kName);
     installFunc("/list_instances", &YomkPlugSysBuilder::listInstances, yomk::msgs::String::kName);
-    installFunc("/plugin_by_instance", &YomkPlugSysBuilder::pluginByInstance, yomk::msgs::String::kName);
-    installFunc("/instances_cfg", &YomkPlugSysBuilder::instancesCfg, yomk::msgs::String::kName);
+    installFunc("/get_plugin_by_instance", &YomkPlugSysBuilder::getPluginByInstance, yomk::msgs::String::kName);
+    installFunc("/get_instance_cfg", &YomkPlugSysBuilder::getInstanceCfg, yomk::msgs::String::kName);
     installFunc("/unload", &YomkPlugSysBuilder::unload, yomk::msgs::String::kName);
     installFunc("/try_unload", &YomkPlugSysBuilder::tryUnload, yomk::msgs::String::kName);
     return 0;
@@ -207,8 +207,8 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 }
 
 // 扩展版本号：值由 CMake 编译期注入（EXTENSION_VERSION，单一来源 project(VERSION)），
-// 经 yomk::plug_sys().version() 对外
-yomk::payload::Response YomkPlugSysBuilder::version(YomkMsgPtr pkg)
+// 经 yomk::plug_sys().get_version() 对外
+yomk::payload::Response YomkPlugSysBuilder::getVersion(YomkMsgPtr pkg)
 {
     try
     {
@@ -225,7 +225,7 @@ yomk::payload::Response YomkPlugSysBuilder::version(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPlugSysBuilder::infoBuilder(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::getBuildInfo(YomkMsgPtr pkg)
 {
     try
     {
@@ -266,7 +266,7 @@ yomk::payload::Response YomkPlugSysBuilder::listPlugins(YomkMsgPtr pkg)
 }
 
 // 代理接口：按插件名查询单个插件（与列表接口分离，响应 data 为单条 PluginInfo）
-yomk::payload::Response YomkPlugSysBuilder::plugin(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::getPlugin(YomkMsgPtr pkg)
 {
     try
     {
@@ -298,7 +298,7 @@ yomk::payload::Response YomkPlugSysBuilder::listInstances(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPlugSysBuilder::pluginByInstance(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::getPluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
@@ -314,7 +314,7 @@ yomk::payload::Response YomkPlugSysBuilder::pluginByInstance(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPlugSysBuilder::instancesCfg(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::getInstanceCfg(YomkMsgPtr pkg)
 {
     try
     {

@@ -9,13 +9,13 @@ namespace yomk::url
 {
 // /YomkPlugSysBuilder/*
 inline constexpr std::string_view pluginBuild = "/YomkPlugSysBuilder/build";
-inline constexpr std::string_view pluginVersion = "/YomkPlugSysBuilder/version";
-inline constexpr std::string_view pluginBuilderInfo = "/YomkPlugSysBuilder/builder";
+inline constexpr std::string_view pluginGetVersion = "/YomkPlugSysBuilder/get_version";
+inline constexpr std::string_view pluginGetBuildInfo = "/YomkPlugSysBuilder/get_build_info";
 inline constexpr std::string_view pluginListPlugins = "/YomkPlugSysBuilder/list_plugins";
-inline constexpr std::string_view pluginByName = "/YomkPlugSysBuilder/plugin";
+inline constexpr std::string_view pluginGetPlugin = "/YomkPlugSysBuilder/get_plugin";
 inline constexpr std::string_view pluginListInstances = "/YomkPlugSysBuilder/list_instances";
-inline constexpr std::string_view pluginByInstance = "/YomkPlugSysBuilder/plugin_by_instance";
-inline constexpr std::string_view pluginInstancesCfg = "/YomkPlugSysBuilder/instances_cfg";
+inline constexpr std::string_view pluginGetPluginByInstance = "/YomkPlugSysBuilder/get_plugin_by_instance";
+inline constexpr std::string_view pluginGetInstanceCfg = "/YomkPlugSysBuilder/get_instance_cfg";
 inline constexpr std::string_view pluginUnload = "/YomkPlugSysBuilder/unload";
 inline constexpr std::string_view pluginTryUnload = "/YomkPlugSysBuilder/try_unload";
 }  // namespace yomk::url

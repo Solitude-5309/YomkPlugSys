@@ -163,7 +163,7 @@ int main()
     check(!metas.empty() && metas[0].path == fp("libTestPlugin.so"), "S1 plugin meta path");
 
     yomk::payload::Response resp =
-        yomk::server().url("/YomkPlugSysBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+        yomk::server().url("/YomkPlugSysBuilder/get_plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     bool queried = false;
     if (isOk(resp))
     {

@@ -220,7 +220,7 @@ int main()
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
 
-    resp = yomk::server().url("/YomkPlugSysBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    resp = yomk::server().url("/YomkPlugSysBuilder/get_plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
     // ---------- M2.5 链式门面：plg_name(name).list_instances() 与直调 filter 等价 ----------
@@ -237,21 +237,21 @@ int main()
         "plugin not loaded: NoSuch",
         "M2 plg_name(name).list_instances() unknown plugin rejects");
 
-    // ---------- M2.6 链式门面：inst_name(name).get_plg_info() 反查所属插件 ----------
-    resp = yomk::plug_sys().inst_name("TestPlugin.e-a").get_plg_info();
+    // ---------- M2.6 链式门面：inst_name(name).get_info() 反查所属插件 ----------
+    resp = yomk::plug_sys().inst_name("TestPlugin.e-a").get_info();
     bool byInstOk = false;
     if (isOk(resp))
     {
         auto pm = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
-    check(byInstOk, "M2 inst_name(name).get_plg_info() instance lookup returns owner plugin meta");
+    check(byInstOk, "M2 inst_name(name).get_info() instance lookup returns owner plugin meta");
     expectNo(
-        yomk::plug_sys().inst_name("no-inst").get_plg_info(),
+        yomk::plug_sys().inst_name("no-inst").get_info(),
         "instance not found: no-inst",
-        "M2 inst_name(name).get_plg_info() unknown instance rejects");
+        "M2 inst_name(name).get_info() unknown instance rejects");
 
-    // ---------- M2.7 链式门面：inst_cfg(instanceName) 返回实例配置内容 ----------
+    // ---------- M2.7 链式门面：get_instance_cfg(instanceName) 返回实例配置内容 ----------
     {
         std::ofstream f(fp("mfile.txt"));
         f << "line-one\nline-two";
@@ -263,8 +263,8 @@ int main()
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(mfileReq)).request()),
         "M2 create e-mfile for config introspection");
-    resp = yomk::plug_sys().inst_cfg("TestPlugin.e-mfile");
-    check(isOk(resp) && respString(resp) == "line-one\nline-two", "M2 inst_cfg(instanceName) returns config content");
+    resp = yomk::plug_sys().get_instance_cfg("TestPlugin.e-mfile");
+    check(isOk(resp) && respString(resp) == "line-one\nline-two", "M2 get_instance_cfg(instanceName) returns config content");
     yomk::payload::CreateReq nofileReq;
     nofileReq.pluginName = "TestPlugin";
     nofileReq.instanceName = "e-nofile";
@@ -272,13 +272,13 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(nofileReq)).request()),
         "M2 create e-nofile with empty instanceCfg");
     expectNo(
-        yomk::plug_sys().inst_cfg("TestPlugin.e-nofile"),
+        yomk::plug_sys().get_instance_cfg("TestPlugin.e-nofile"),
         "instance config not recorded: TestPlugin.e-nofile",
-        "M2 inst_cfg(instanceName) empty instanceCfg rejects");
+        "M2 get_instance_cfg(instanceName) empty instanceCfg rejects");
     expectNo(
-        yomk::plug_sys().inst_cfg("no-inst"),
+        yomk::plug_sys().get_instance_cfg("no-inst"),
         "instance not found: no-inst",
-        "M2 inst_cfg(instanceName) unknown instance rejects");
+        "M2 get_instance_cfg(instanceName) unknown instance rejects");
     yomk::payload::DestroyReq dr;
     dr.pluginName = "TestPlugin";
     dr.instanceName = "e-mfile";
@@ -384,7 +384,7 @@ int main()
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");
 
-    resp = yomk::plug_sys().inst_name("TestPlugin.shared-i").get_plg_info();
+    resp = yomk::plug_sys().inst_name("TestPlugin.shared-i").get_info();
     bool ownerA = false;
     if (isOk(resp))
     {
@@ -392,7 +392,7 @@ int main()
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
-    resp = yomk::plug_sys().inst_name("SecondPlugin.shared-i").get_plg_info();
+    resp = yomk::plug_sys().inst_name("SecondPlugin.shared-i").get_info();
     bool ownerB = false;
     if (isOk(resp))
     {

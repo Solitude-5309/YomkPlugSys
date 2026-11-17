@@ -192,7 +192,7 @@ int main()
         writeManifest("s200.yomk", oss.str());
     }
     check(isOk(yomk::plug_sys().manifest(fp("s200.yomk")).build()), "S0 build 200-entry manifest ok");
-    yomk::payload::Response s0Info = yomk::plug_sys().builder();
+    yomk::payload::Response s0Info = yomk::plug_sys().get_info();
     auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 

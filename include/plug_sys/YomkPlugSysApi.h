@@ -82,7 +82,7 @@ public:
     // @zh: return Response，data 为 PluginInfo 包；未知插件返回失败。
     yomk::payload::Response get_info() const
     {
-        return yomk::server().url(yomk::url::pluginByName).msg(yomk::msgs::String::shared(m_pluginName)).request();
+        return yomk::server().url(yomk::url::pluginGetPlugin).msg(yomk::msgs::String::shared(m_pluginName)).request();
     }
 
     /**
@@ -130,13 +130,13 @@ private:
 };
 
 /**
- * @brief Intermediate chain node binding an instance name, terminated by get_plg_info()
+ * @brief Intermediate chain node binding an instance name, terminated by get_info()
  * Returned by PlugSysBuilder::inst_name(); the bound name is a fully qualified instance name
  * (pluginName.instanceName).
  * @note Holds a copy of the instance name; use inline in a single chained expression only,
  *       never store or reuse it.
  */
-// @zh: 中间链节点：绑定实例名，链以 get_plg_info() 终结。
+// @zh: 中间链节点：绑定实例名，链以 get_info() 终结。
 // @zh: 由 PlugSysBuilder::inst_name() 返回；绑定的名字为限定名实例名（插件名.实例名）。
 // @zh: note 持有实例名的拷贝；仅用于单表达式链式调用，禁止存储或复用。
 class InstNameBuilder
@@ -150,10 +150,10 @@ public:
      */
     // @zh: 查询绑定实例所属的插件，返回单条插件信息。
     // @zh: return Response，data 为 PluginInfo 包；未知实例返回失败。
-    yomk::payload::Response get_plg_info() const
+    yomk::payload::Response get_info() const
     {
         return yomk::server()
-            .url(yomk::url::pluginByInstance)
+            .url(yomk::url::pluginGetPluginByInstance)
             .msg(yomk::msgs::String::shared(m_instanceName))
             .request();
     }
@@ -202,13 +202,13 @@ public:
     PluginNameBuilder plg_name(std::string_view pluginName) { return PluginNameBuilder(pluginName); }
 
     /**
-     * @brief Bind an instance name, terminating with get_plg_info()
+     * @brief Bind an instance name, terminating with get_info()
      * @param instanceName Fully qualified instance name (pluginName.instanceName)
-     * @return Intermediate chain node carrying the name; call get_plg_info() on it
+     * @return Intermediate chain node carrying the name; call get_info() on it
      */
-    // @zh: 绑定实例名，链以 get_plg_info() 终结。
+    // @zh: 绑定实例名，链以 get_info() 终结。
     // @zh: param instanceName 限定名实例名（插件名.实例名）。
-    // @zh: return 携带该名字的中间链节点；在其上调用 get_plg_info()。
+    // @zh: return 携带该名字的中间链节点；在其上调用 get_info()。
     InstNameBuilder inst_name(std::string_view instanceName) { return InstNameBuilder(instanceName); }
 
     /**
@@ -217,7 +217,7 @@ public:
      */
     // @zh: 内省最近一次构建：清单条目、清单路径、结果、插件数与实例数。
     // @zh: return Response，data 为 BuilderInfo 包。
-    yomk::payload::Response builder() { return yomk::server().url(yomk::url::pluginBuilderInfo).request(); }
+    yomk::payload::Response get_info() { return yomk::server().url(yomk::url::pluginGetBuildInfo).request(); }
 
     /**
      * @brief Introspect all loaded plugins
@@ -243,10 +243,10 @@ public:
     // @zh: 读取实例创建时透传的实例配置内容。
     // @zh: param instanceName 限定名实例名（插件名.实例名）。
     // @zh: return Response，data 为 String 包；未知实例或文件不可读返回失败。
-    yomk::payload::Response inst_cfg(std::string_view instanceName)
+    yomk::payload::Response get_instance_cfg(std::string_view instanceName)
     {
         return yomk::server()
-            .url(yomk::url::pluginInstancesCfg)
+            .url(yomk::url::pluginGetInstanceCfg)
             .msg(yomk::msgs::String::shared(std::string(instanceName)))
             .request();
     }
@@ -257,7 +257,7 @@ public:
      */
     // @zh: 查询扩展版本号。
     // @zh: return Response，data 为 String 包 "YomkPlugSys vX.Y.Z (WIP)"。
-    yomk::payload::Response version() { return yomk::server().url(yomk::url::pluginVersion).request(); }
+    yomk::payload::Response get_version() { return yomk::server().url(yomk::url::pluginGetVersion).request(); }
 };
 }  // namespace yomk::detail
 

@@ -69,13 +69,13 @@ private:
 
     // 请求接口:注释给出 入参消息 -> 响应 data 消息
     yomk::payload::Response build(YomkMsgPtr pkg);             // BuildReq -> BuilderInfo 构建快照
-    yomk::payload::Response version(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
-    yomk::payload::Response infoBuilder(YomkMsgPtr pkg);       // 无 -> BuilderInfo 最近构建信息
+    yomk::payload::Response getVersion(YomkMsgPtr pkg);           // 无 -> String 扩展版本号
+    yomk::payload::Response getBuildInfo(YomkMsgPtr pkg);       // 无 -> BuilderInfo 最近构建信息
     yomk::payload::Response listPlugins(YomkMsgPtr pkg);           // 无 -> PluginInfoList（全量列表）
-    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
+    yomk::payload::Response getPlugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
     yomk::payload::Response listInstances(YomkMsgPtr pkg);         // [String pluginName] -> InstanceInfoList
-    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
-    yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
+    yomk::payload::Response getPluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
+    yomk::payload::Response getInstanceCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
     yomk::payload::Response unload(YomkMsgPtr pkg);            // String pluginName -> 强制卸载
     yomk::payload::Response tryUnload(YomkMsgPtr pkg);         // String pluginName -> 有存活实例则拒绝
 
