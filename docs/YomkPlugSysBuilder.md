@@ -24,10 +24,10 @@ YomkPlugSys 的唯一用户门面服务：按插件系统清单（manifest.yomk�
 | 强制卸载 | `yomk::plug_sys().plg_name(pluginName).unload()` | → `Response`（先清空该插件实例表再卸载；外部引用未释放时 `Failed`） |
 | 尝试卸载 | `yomk::plug_sys().plg_name(pluginName).try_unload()` | → `Response`（有存活实例 `Failed`，插件保持加载） |
 | 最近构建 | `yomk::plug_sys().builder()` | → `Response`（data 为 `BuilderInfo`） |
-| 插件列表 | `yomk::plug_sys().plugins()` | → `Response`（data 为 `PluginInfoList`） |
+| 插件列表 | `yomk::plug_sys().list_plugins()` | → `Response`（data 为 `PluginInfoList`） |
 | 插件信息 | `yomk::plug_sys().plg_name(pluginName).get_info()` | → `Response`（data 为 `PluginInfo` 单条插件信息；未知插件 `Failed`） |
-| 实例列表 | `yomk::plug_sys().instances()` | → `Response`（data 为 `InstanceInfoList` 全量实例明细） |
-| 插件实例 | `yomk::plug_sys().plg_name(pluginName).instances()` | → `Response`（data 为 `InstanceInfoList`，仅该插件下的实例；未知插件 `Failed`） |
+| 实例列表 | `yomk::plug_sys().list_instances()` | → `Response`（data 为 `InstanceInfoList` 全量实例明细） |
+| 插件实例 | `yomk::plug_sys().plg_name(pluginName).list_instances()` | → `Response`（data 为 `InstanceInfoList`，仅该插件下的实例；未知插件 `Failed`） |
 | 实例查插件 | `yomk::plug_sys().inst_name(instanceName).get_plg_info()` | → `Response`（data 为 `PluginInfo`；未知实例 `Failed`） |
 | 实例配置 | `yomk::plug_sys().inst_cfg(instanceName)` | → `Response`（data 为 `String` 文件内容；未知实例/不可读 `Failed`） |
 | 版本查询 | `yomk::plug_sys().version()` | → `Response`（data 为 `String`：`YomkPlugSys vX.Y.Z (WIP)`） |
@@ -47,9 +47,9 @@ yomk::server().srv<YomkPlugSysBuilder>().create();
 auto build = yomk::plug_sys().manifest("examples/workflow/manifest.yomk").build();
 
 // 内省：插件列表与实例列表
-auto plugins = yomk::plug_sys().plugins();
-auto instances = yomk::plug_sys().instances();                        // 全量实例明细
-auto one = yomk::plug_sys().plg_name("ConnectionService").instances(); // 仅该插件下的实例
+auto plugins = yomk::plug_sys().list_plugins();
+auto instances = yomk::plug_sys().list_instances();                        // 全量实例明细
+auto one = yomk::plug_sys().plg_name("ConnectionService").list_instances(); // 仅该插件下的实例
 
 // 卸载（有存活实例时 try_unload 拒绝；unload 先清空实例表再卸载，外部引用未释放同样拒绝）
 auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();

@@ -97,7 +97,7 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
 static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
     std::vector<yomk::payload::PluginInfo> out;
-    yomk::payload::Response resp = yomk::plug_sys().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
@@ -109,7 +109,7 @@ static std::vector<yomk::payload::PluginInfo> listPlugins()
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plug_sys().instances();
+    yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
@@ -223,19 +223,19 @@ int main()
     resp = yomk::server().url("/YomkPlugSysBuilder/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     check(isOk(resp), "M2 builder proxy /plugin hit");
 
-    // ---------- M2.5 链式门面：plg_name(name).instances() 与直调 filter 等价 ----------
-    resp = yomk::plug_sys().plg_name("TestPlugin").instances();
+    // ---------- M2.5 链式门面：plg_name(name).list_instances() 与直调 filter 等价 ----------
+    resp = yomk::plug_sys().plg_name("TestPlugin").list_instances();
     bool macroHitTwo = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         macroHitTwo = arr->d.size() == 2;
     }
-    check(macroHitTwo, "M2 plg_name(name).instances() filter hit returns 2 instances");
+    check(macroHitTwo, "M2 plg_name(name).list_instances() filter hit returns 2 instances");
     expectNo(
-        yomk::plug_sys().plg_name("NoSuch").instances(),
+        yomk::plug_sys().plg_name("NoSuch").list_instances(),
         "plugin not loaded: NoSuch",
-        "M2 plg_name(name).instances() unknown plugin rejects");
+        "M2 plg_name(name).list_instances() unknown plugin rejects");
 
     // ---------- M2.6 链式门面：inst_name(name).get_plg_info() 反查所属插件 ----------
     resp = yomk::plug_sys().inst_name("TestPlugin.e-a").get_plg_info();

@@ -95,33 +95,33 @@ int main()
         isNo(resp) && resp.msg == "instance not found: no-inst",
         "inst_cfg(instanceName) empty-state rejects unknown instance");
 
-    resp = yomk::plug_sys().plugins();
+    resp = yomk::plug_sys().list_plugins();
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
         pluginsEmpty = arr->d.empty();
     }
-    check(pluginsEmpty, "plugins() Succeeded + empty array");
+    check(pluginsEmpty, "list_plugins() Succeeded + empty array");
 
     resp = yomk::plug_sys().plg_name("no-plugin").get_info();
     check(
         isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
         "plg_name(name).get_info() empty-state rejects unknown plugin");
 
-    resp = yomk::plug_sys().instances();
+    resp = yomk::plug_sys().list_instances();
     bool instEmpty = false;
     if (isOk(resp))
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
         instEmpty = arr->d.empty();
     }
-    check(instEmpty, "instances() Succeeded + empty array");
+    check(instEmpty, "list_instances() Succeeded + empty array");
 
-    resp = yomk::plug_sys().plg_name("no-plugin").instances();
+    resp = yomk::plug_sys().plg_name("no-plugin").list_instances();
     check(
         isNo(resp) && resp.msg == "plugin not loaded: no-plugin",
-        "plg_name(name).instances() empty-state rejects unknown plugin");
+        "plg_name(name).list_instances() empty-state rejects unknown plugin");
 
     // ---------- BUILD 失败路径 ----------
     resp = yomk::plug_sys().manifest("/nonexistent/no_such.yomk").build();

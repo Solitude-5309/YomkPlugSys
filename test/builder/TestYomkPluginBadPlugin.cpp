@@ -85,7 +85,7 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
 static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
     std::vector<yomk::payload::PluginInfo> out;
-    yomk::payload::Response resp = yomk::plug_sys().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
@@ -210,7 +210,7 @@ int main()
     check(isOk(yomk::plug_sys().plg_name("BadCreateNull").unload()), "cleanup: force_unload BadCreateNull");
     check(isOk(yomk::plug_sys().plg_name("BadCreateThrow").unload()), "cleanup: force_unload BadCreateThrow");
     check(listPlugins().empty(), "cleanup: plugins empty after unloads");
-    yomk::payload::Response inst = yomk::plug_sys().instances();
+    yomk::payload::Response inst = yomk::plug_sys().list_instances();
     bool instEmpty = false;
     if (isOk(inst))
     {

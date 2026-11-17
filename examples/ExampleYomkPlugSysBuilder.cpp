@@ -101,11 +101,11 @@ int main()
     std::cout << "  builder(): 与 build 返回同源快照" << std::endl;
 
     // 3. 查询插件列表
-    // 接口：yomk::plug_sys().plugins()
+    // 接口：yomk::plug_sys().list_plugins()
     // 输入：无
     // 输出：PluginInfoList，元数据来自插件导出的 yomk_plugin_meta
-    section("3. 插件列表 yomk::plug_sys().plugins()");
-    resp = yomk::plug_sys().plugins();
+    section("3. 插件列表 yomk::plug_sys().list_plugins()");
+    resp = yomk::plug_sys().list_plugins();
     if (!isOk(resp))
     {
         fail("查询插件", resp.msg);
@@ -127,11 +127,11 @@ int main()
     }
 
     // 4. 查询实例列表
-    // 接口：yomk::plug_sys().instances()
+    // 接口：yomk::plug_sys().list_instances()
     // 输入：无
     // 输出：InstanceInfoList（全量实例明细）
-    section("4. 实例列表 yomk::plug_sys().instances()");
-    resp = yomk::plug_sys().instances();
+    section("4. 实例列表 yomk::plug_sys().list_instances()");
+    resp = yomk::plug_sys().list_instances();
     if (!isOk(resp))
     {
         fail("查询实例", resp.msg);
@@ -147,11 +147,11 @@ int main()
     }
 
     // 5. 按插件过滤实例
-    // 接口：yomk::plug_sys().plg_name(pluginName).instances()
+    // 接口：yomk::plug_sys().plg_name(pluginName).list_instances()
     // 输入：pluginName（未知插件返回失败，原因见 resp.msg）
     // 输出：InstanceInfoList（仅该插件下的实例）
-    section("5. 按插件过滤实例 yomk::plug_sys().plg_name(\"ConnectionService\").instances()");
-    resp = yomk::plug_sys().plg_name("ConnectionService").instances();
+    section("5. 按插件过滤实例 yomk::plug_sys().plg_name(\"ConnectionService\").list_instances()");
+    resp = yomk::plug_sys().plg_name("ConnectionService").list_instances();
     if (!isOk(resp))
     {
         fail("过滤实例", resp.msg);

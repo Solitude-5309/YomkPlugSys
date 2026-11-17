@@ -37,9 +37,9 @@ int YomkPlugSysBuilder::init()
     installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::BuildReq::kName);
     installFunc("/version", &YomkPlugSysBuilder::version);
     installFunc("/builder", &YomkPlugSysBuilder::infoBuilder);
-    installFunc("/plugins", &YomkPlugSysBuilder::plugins);
+    installFunc("/list_plugins", &YomkPlugSysBuilder::listPlugins);
     installFunc("/plugin", &YomkPlugSysBuilder::plugin, yomk::msgs::String::kName);
-    installFunc("/instances", &YomkPlugSysBuilder::instances, yomk::msgs::String::kName);
+    installFunc("/list_instances", &YomkPlugSysBuilder::listInstances, yomk::msgs::String::kName);
     installFunc("/plugin_by_instance", &YomkPlugSysBuilder::pluginByInstance, yomk::msgs::String::kName);
     installFunc("/instances_cfg", &YomkPlugSysBuilder::instancesCfg, yomk::msgs::String::kName);
     installFunc("/unload", &YomkPlugSysBuilder::unload, yomk::msgs::String::kName);
@@ -249,7 +249,7 @@ yomk::payload::Response YomkPlugSysBuilder::infoBuilder(YomkMsgPtr pkg)
 }
 
 // 代理接口：透传入参包给 Manager，参数校验与响应语义归 Manager
-yomk::payload::Response YomkPlugSysBuilder::plugins(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::listPlugins(YomkMsgPtr pkg)
 {
     try
     {
@@ -282,7 +282,7 @@ yomk::payload::Response YomkPlugSysBuilder::plugin(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPlugSysBuilder::instances(YomkMsgPtr pkg)
+yomk::payload::Response YomkPlugSysBuilder::listInstances(YomkMsgPtr pkg)
 {
     try
     {

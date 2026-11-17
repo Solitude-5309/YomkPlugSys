@@ -88,11 +88,11 @@ static void writeManifest(const std::string& name, const std::string& content)
     f << content;
 }
 
-// instances() 解包；失败返回空表
+// list_instances() 解包；失败返回空表
 static std::vector<yomk::payload::InstanceInfo> listInstances()
 {
     std::vector<yomk::payload::InstanceInfo> out;
-    yomk::payload::Response resp = yomk::plug_sys().instances();
+    yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
@@ -101,11 +101,11 @@ static std::vector<yomk::payload::InstanceInfo> listInstances()
     return out;
 }
 
-// plugins() 解包；失败返回空表
+// list_plugins() 解包；失败返回空表
 static std::vector<yomk::payload::PluginInfo> listPlugins()
 {
     std::vector<yomk::payload::PluginInfo> out;
-    yomk::payload::Response resp = yomk::plug_sys().plugins();
+    yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
         auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
@@ -367,7 +367,7 @@ int main()
                     while (!c4Done.load())
                     {
                         // 门面内省三连：churn 期间恒 Succeeded
-                        if (!isOk(yomk::plug_sys().plugins()) || !isOk(yomk::plug_sys().instances()) ||
+                        if (!isOk(yomk::plug_sys().list_plugins()) || !isOk(yomk::plug_sys().list_instances()) ||
                             !isOk(yomk::plug_sys().builder()))
                         {
                             ++c4FacadeBad;

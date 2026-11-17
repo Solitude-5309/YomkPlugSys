@@ -48,7 +48,7 @@ int main()
               << (info ? info->d.instances : 0) << ")" << std::endl;
 
     // 内省：插件列表
-    auto plugins = yomk::plug_sys().plugins();
+    auto plugins = yomk::plug_sys().list_plugins();
     auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(plugins.data);
     if (arr)
         for (const auto& m : arr->d)
