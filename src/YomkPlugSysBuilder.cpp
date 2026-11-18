@@ -270,7 +270,7 @@ yomk::payload::Response YomkPlugSysBuilder::getPlugin(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/plugin", pkg);
+        return request("/YomkPluginManager/get_plugin", pkg);
     }
     catch (const std::exception& e)
     {
@@ -302,7 +302,7 @@ yomk::payload::Response YomkPlugSysBuilder::getPluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/plugin_by_instance", pkg);
+        return request("/YomkPluginManager/get_plugin_by_instance", pkg);
     }
     catch (const std::exception& e)
     {
@@ -318,7 +318,7 @@ yomk::payload::Response YomkPlugSysBuilder::getInstanceCfg(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/instances_cfg", pkg);
+        return request("/YomkPluginManager/get_instance_cfg", pkg);
     }
     catch (const std::exception& e)
     {

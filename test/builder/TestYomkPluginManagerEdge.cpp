@@ -186,7 +186,7 @@ int main()
     }
     check(listOk, "M2 list returns all loaded plugins");
 
-    resp = yomk::server().url("/YomkPluginManager/plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    resp = yomk::server().url("/YomkPluginManager/get_plugin").msg(yomk::msgs::String::shared("TestPlugin")).request();
     bool hitOne = false;
     if (isOk(resp))
     {
@@ -195,7 +195,7 @@ int main()
     }
     check(hitOne, "M2 plugin query returns single plugin meta");
     expectNo(
-        yomk::server().url("/YomkPluginManager/plugin").msg(yomk::msgs::String::shared("Nope")).request(),
+        yomk::server().url("/YomkPluginManager/get_plugin").msg(yomk::msgs::String::shared("Nope")).request(),
         "plugin not loaded: Nope",
         "M2 plugin query miss rejects");
 

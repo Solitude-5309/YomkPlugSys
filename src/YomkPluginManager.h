@@ -44,10 +44,10 @@ private:
     yomk::payload::Response createInstance(YomkMsgPtr pkg);    // CreateReq -> InstanceInfo
     yomk::payload::Response destroyInstance(YomkMsgPtr pkg);   // DestroyReq -> ok
     yomk::payload::Response list(YomkMsgPtr pkg);              // 无 -> PluginInfoList（全量列表）
-    yomk::payload::Response plugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
+    yomk::payload::Response getPlugin(YomkMsgPtr pkg);            // String pluginName -> PluginInfo
     yomk::payload::Response listInstances(YomkMsgPtr pkg);     // [String pluginName] -> InstanceInfoList
-    yomk::payload::Response pluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
-    yomk::payload::Response instancesCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
+    yomk::payload::Response getPluginByInstance(YomkMsgPtr pkg);  // String 限定名实例名 -> PluginInfo
+    yomk::payload::Response getInstanceCfg(YomkMsgPtr pkg);      // String 限定名实例名 -> String 实例配置内容
 
     // 不变量:限定名 = 插件名.实例名;插件名全局唯一且不含 '.',故限定名全局唯一
     static std::string qualifiedName(const std::string& pluginName, const std::string& instanceName);

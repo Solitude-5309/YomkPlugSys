@@ -18,10 +18,10 @@ int YomkPluginManager::init()
     installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::CreateReq::kName);
     installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::DestroyReq::kName);
     installFunc("/list", &YomkPluginManager::list);
-    installFunc("/plugin", &YomkPluginManager::plugin, yomk::msgs::String::kName);
+    installFunc("/get_plugin", &YomkPluginManager::getPlugin, yomk::msgs::String::kName);
     installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName);
-    installFunc("/plugin_by_instance", &YomkPluginManager::pluginByInstance, yomk::msgs::String::kName);
-    installFunc("/instances_cfg", &YomkPluginManager::instancesCfg, yomk::msgs::String::kName);
+    installFunc("/get_plugin_by_instance", &YomkPluginManager::getPluginByInstance, yomk::msgs::String::kName);
+    installFunc("/get_instance_cfg", &YomkPluginManager::getInstanceCfg, yomk::msgs::String::kName);
     return 0;
 }
 
@@ -333,7 +333,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 }
 
 // 按插件名查询单个插件：响应 data 为单条 PluginInfo，未加载返回 Failed
-yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginManager::getPlugin(YomkMsgPtr pkg)
 {
     try
     {
@@ -370,7 +370,7 @@ yomk::payload::Response YomkPluginManager::plugin(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginManager::getPluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
@@ -426,7 +426,7 @@ yomk::payload::Response YomkPluginManager::pluginByInstance(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginManager::instancesCfg(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginManager::getInstanceCfg(YomkMsgPtr pkg)
 {
     try
     {
