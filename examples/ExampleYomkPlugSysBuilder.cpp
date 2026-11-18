@@ -82,7 +82,7 @@ int main()
         fail("构建", "响应数据缺失");
     }
     std::cout << "builder" << std::endl;
-    std::cout << "  manifest:" << std::endl;
+    std::cout << "  entries:" << std::endl;
     for (const auto& line : builder->d.entries)
     {
         printManifestEntry(line);

@@ -38,14 +38,14 @@ int main()
     auto build = yomk::plug_sys().manifest("/abs/path/to/manifest.yomk").build();
 
     // 内省：插件列表
-    auto plugins = yomk::plug_sys().plugins();
-    auto arr = yomk::msgs::unpack<yomk::msgs::PluginMetaArray>(plugins.data);
+    auto plugins = yomk::plug_sys().list_plugins();
+    auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(plugins.data);
     if (arr)
         for (const auto& m : arr->d)
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;
 
     // 尝试卸载（有存活实例拒绝；强制卸载用 unload）
-    auto r = yomk::plug_sys().plg_name("ConnectionService").try_unload();
+    auto r = yomk::plug_sys().plugin_name("ConnectionService").try_unload();
     std::cout << "try_unload: " << r.msg << std::endl;
     return 0;
 }
@@ -76,8 +76,8 @@ YomkPlugSys/
 │   └── plug_sys/         # 扩展目录名（安装后对外引用统一 <yomk/plug_sys/...>，随 install 分发）
 │       ├── YomkPluginInterface.h     # ABI：插件侧契约（元数据 + 实例接口 + 导出宏）
 │       ├── YomkPlugSysUrl.h          # 模块 URL 常量（yomk::url，plugin 前缀）
-│       ├── YomkPlugSysPayload.h      # 模块专属载荷（yomk::payload 数据结构体）
-│       ├── YomkPlugSysMsg.h          # 模块专属消息包（YOMK_DEFINE_MSG 注册）
+│       ├── YomkPlugSysPayload.h      # 模块专属载荷（yomk::payload::plug_sys 数据结构体）
+│       ├── YomkPlugSysMsg.h          # 模块专属消息包（YOMK_DEFINE_MSG_NS 注册,yomk::msgs::plug_sys）
 │       ├── YomkPlugSysBuilder.h      # 编排层服务声明（唯一用户服务）
 │       └── YomkPlugSysApi.h          # 模块 API 聚合头（四件套之 Api：唯一对外入口，含 yomk::plug_sys() 域入口）
 ├── src/                          # 内部实现（不随 install 分发）
