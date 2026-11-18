@@ -20,7 +20,7 @@
 
 /* ------------------------- 模块域入口（yomk::plug_sys()） ------------------------- */
 
-namespace yomk::detail
+namespace yomk::detail::plug_sys
 {
 /**
  * @brief Intermediate chain node binding a manifest path, terminated by build()
@@ -50,8 +50,8 @@ public:
     yomk::payload::Response build() const
     {
         return yomk::server()
-            .url(yomk::url::pluginBuild)
-            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{m_manifestPath}))
+            .url(yomk::url::plug_sys::pluginBuild)
+            .msg(yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{m_manifestPath}))
             .request();
     }
 
@@ -82,7 +82,7 @@ public:
     // @zh: return Response，data 为 PluginInfo 包；未知插件返回失败。
     yomk::payload::Response get_info() const
     {
-        return yomk::server().url(yomk::url::pluginGetPlugin).msg(yomk::msgs::String::shared(m_pluginName)).request();
+        return yomk::server().url(yomk::url::plug_sys::pluginGetPlugin).msg(yomk::msgs::String::shared(m_pluginName)).request();
     }
 
     /**
@@ -94,7 +94,7 @@ public:
     yomk::payload::Response list_instances() const
     {
         return yomk::server()
-            .url(yomk::url::pluginListInstances)
+            .url(yomk::url::plug_sys::pluginListInstances)
             .msg(yomk::msgs::String::shared(m_pluginName))
             .request();
     }
@@ -111,7 +111,7 @@ public:
     // @zh: note 外部仍持有实例引用时库不会被关闭（判活拒绝）；此时实例表已清空、插件保持加载但无实例。
     yomk::payload::Response unload() const
     {
-        return yomk::server().url(yomk::url::pluginUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
+        return yomk::server().url(yomk::url::plug_sys::pluginUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
     }
 
     /**
@@ -122,7 +122,7 @@ public:
     // @zh: return Response，成功时 data 为 String 包 "ok"；实例存活时返回失败。
     yomk::payload::Response try_unload() const
     {
-        return yomk::server().url(yomk::url::pluginTryUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
+        return yomk::server().url(yomk::url::plug_sys::pluginTryUnload).msg(yomk::msgs::String::shared(m_pluginName)).request();
     }
 
 private:
@@ -153,7 +153,7 @@ public:
     yomk::payload::Response get_info() const
     {
         return yomk::server()
-            .url(yomk::url::pluginGetPluginByInstance)
+            .url(yomk::url::plug_sys::pluginGetPluginByInstance)
             .msg(yomk::msgs::String::shared(m_instanceName))
             .request();
     }
@@ -217,7 +217,7 @@ public:
      */
     // @zh: 内省最近一次构建：清单条目、清单路径、结果、插件数与实例数。
     // @zh: return Response，data 为 BuilderInfo 包。
-    yomk::payload::Response get_info() { return yomk::server().url(yomk::url::pluginGetBuildInfo).request(); }
+    yomk::payload::Response get_info() { return yomk::server().url(yomk::url::plug_sys::pluginGetBuildInfo).request(); }
 
     /**
      * @brief Introspect all loaded plugins
@@ -225,7 +225,7 @@ public:
      */
     // @zh: 内省全部已加载插件。
     // @zh: return Response，data 为 PluginInfoList 包。
-    yomk::payload::Response list_plugins() { return yomk::server().url(yomk::url::pluginListPlugins).request(); }
+    yomk::payload::Response list_plugins() { return yomk::server().url(yomk::url::plug_sys::pluginListPlugins).request(); }
 
     /**
      * @brief Introspect all created instances
@@ -233,7 +233,7 @@ public:
      */
     // @zh: 内省全部已创建实例（与 plugin_name(name).list_instances() 单插件实例职责分离）。
     // @zh: return Response，data 为 InstanceInfoList 包。
-    yomk::payload::Response list_instances() { return yomk::server().url(yomk::url::pluginListInstances).request(); }
+    yomk::payload::Response list_instances() { return yomk::server().url(yomk::url::plug_sys::pluginListInstances).request(); }
 
     /**
      * @brief Read the instance configuration file content passed through when the instance was created
@@ -246,7 +246,7 @@ public:
     yomk::payload::Response get_instance_cfg(std::string_view instanceName)
     {
         return yomk::server()
-            .url(yomk::url::pluginGetInstanceCfg)
+            .url(yomk::url::plug_sys::pluginGetInstanceCfg)
             .msg(yomk::msgs::String::shared(std::string(instanceName)))
             .request();
     }
@@ -257,9 +257,9 @@ public:
      */
     // @zh: 查询扩展版本号。
     // @zh: return Response，data 为 String 包 "YomkPlugSys vX.Y.Z (WIP)"。
-    yomk::payload::Response get_version() { return yomk::server().url(yomk::url::pluginGetVersion).request(); }
+    yomk::payload::Response get_version() { return yomk::server().url(yomk::url::plug_sys::pluginGetVersion).request(); }
 };
-}  // namespace yomk::detail
+}  // namespace yomk::detail::plug_sys
 
 namespace yomk
 {
@@ -269,8 +269,8 @@ namespace yomk
  */
 // @zh: 获取 YomkPlugSys 扩展的链式域入口。
 // @zh: return 按值返回的 PlugSysBuilder，仅用于单表达式内联链式调用。
-inline detail::PlugSysBuilder plug_sys()
+inline detail::plug_sys::PlugSysBuilder plug_sys()
 {
-    return detail::PlugSysBuilder{};
+    return detail::plug_sys::PlugSysBuilder{};
 }
 }  // namespace yomk

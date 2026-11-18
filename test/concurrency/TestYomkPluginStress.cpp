@@ -94,26 +94,26 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 // list_instances() 解包；失败返回空表
-static std::vector<yomk::payload::InstanceInfo> listInstances()
+static std::vector<yomk::payload::plug_sys::InstanceInfo> listInstances()
 {
-    std::vector<yomk::payload::InstanceInfo> out;
+    std::vector<yomk::payload::plug_sys::InstanceInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // list_plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginInfo> listPlugins()
+static std::vector<yomk::payload::plug_sys::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginInfo> out;
+    std::vector<yomk::payload::plug_sys::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -122,20 +122,20 @@ static std::vector<yomk::payload::PluginInfo> listPlugins()
 // 白盒：Manager create_instance 直调
 static yomk::payload::Response createInst(const std::string& name)
 {
-    yomk::payload::CreateReq req;
+    yomk::payload::plug_sys::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceCfgPath = fp("inst.txt");
-    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
+    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(req)).request();
 }
 
 // 白盒：Manager destroy_instance 直调
 static yomk::payload::Response destroyInst(const std::string& name)
 {
-    yomk::payload::DestroyReq req;
+    yomk::payload::plug_sys::DestroyReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
-    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(req)).request();
+    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(req)).request();
 }
 
 // S4 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层）
@@ -193,7 +193,7 @@ int main()
     }
     check(isOk(yomk::plug_sys().manifest(fp("s200.yomk")).build()), "S0 build 200-entry manifest ok");
     yomk::payload::Response s0Info = yomk::plug_sys().get_info();
-    auto s0Builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(s0Info.data);
+    auto s0Builder = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(s0Info.data);
     check(s0Builder && s0Builder->d.plugins == 1 && s0Builder->d.instances == 200, "S0 summary plugins:1 instances:200");
 
     // ---------- S1 大清单 churn：250 轮 UNLOAD -> BUILD ----------

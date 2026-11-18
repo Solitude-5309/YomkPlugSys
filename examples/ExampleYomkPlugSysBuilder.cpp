@@ -31,7 +31,7 @@ void fail(const std::string& what, const std::string& reason)
 }
 
 // 打印单个构建条目：实例限定名 + 插件库文件 + 实例配置文件
-void printManifestEntry(const yomk::payload::InstanceInfo& entry)
+void printManifestEntry(const yomk::payload::plug_sys::InstanceInfo& entry)
 {
     std::cout << "    [" << entry.instanceName << "]" << std::endl;
     std::cout << "      lib=" << entry.libPath << std::endl;
@@ -76,7 +76,7 @@ int main()
     {
         fail("构建", resp.msg);
     }
-    auto builder = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
+    auto builder = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(resp.data);
     if (!builder)
     {
         fail("构建", "响应数据缺失");
@@ -110,7 +110,7 @@ int main()
     {
         fail("查询插件", resp.msg);
     }
-    auto metas = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+    auto metas = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
     if (!metas)
     {
         fail("查询插件", "响应数据缺失");
@@ -136,7 +136,7 @@ int main()
     {
         fail("查询实例", resp.msg);
     }
-    auto instances = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+    auto instances = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
     if (!instances)
     {
         fail("查询实例", "响应数据缺失");
@@ -156,7 +156,7 @@ int main()
     {
         fail("过滤实例", resp.msg);
     }
-    auto filtered = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+    auto filtered = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
     if (!filtered)
     {
         fail("过滤实例", "响应数据缺失");
@@ -176,7 +176,7 @@ int main()
     {
         fail("按实例查插件", resp.msg);
     }
-    auto instMeta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+    auto instMeta = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
     if (!instMeta)
     {
         fail("按实例查插件", "响应数据缺失");

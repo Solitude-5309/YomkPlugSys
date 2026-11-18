@@ -5,7 +5,7 @@
 // 设计取舍: 沿用 SDK 内置模块风格（参考 yomk/fn_pool/YomkFunctionPoolUrl.h）——
 // inline constexpr std::string_view 编译期常量,请求链全程 string_view 透传零堆分配;
 // yomk::url 为开放命名空间,扩展常量按同风格直接追加,不做集中注册.
-namespace yomk::url
+namespace yomk::url::plug_sys
 {
 // /YomkPlugSysBuilder/*
 inline constexpr std::string_view pluginBuild = "/YomkPlugSysBuilder/build";
@@ -18,4 +18,4 @@ inline constexpr std::string_view pluginGetPluginByInstance = "/YomkPlugSysBuild
 inline constexpr std::string_view pluginGetInstanceCfg = "/YomkPlugSysBuilder/get_instance_cfg";
 inline constexpr std::string_view pluginUnload = "/YomkPlugSysBuilder/unload";
 inline constexpr std::string_view pluginTryUnload = "/YomkPlugSysBuilder/try_unload";
-}  // namespace yomk::url
+}  // namespace yomk::url::plug_sys

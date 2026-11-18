@@ -58,14 +58,14 @@ auto r = yomk::plug_sys().plugin_name("ConnectionService").try_unload();
 结果一律在 `Response.data` 中，按返回类型解包：
 
 ```cpp
-auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(plugins.data);
+auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(plugins.data);
 if (arr)
 {
     for (const auto& m : arr->d)
         std::cout << m.name << " v" << m.version << std::endl;
 }
 
-auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(build.data);
+auto info = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(build.data);
 if (info)
     std::cout << "built plugins:" << info->d.plugins << " instances:" << info->d.instances << std::endl;
 ```

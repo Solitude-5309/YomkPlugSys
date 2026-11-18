@@ -43,13 +43,13 @@ int main()
 
     // 按清单构建示例插件系统（清单见 examples/workflow/manifest.yomk）
     auto build = yomk::plug_sys().manifest(PLUGIN_MANIFEST).build();
-    auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(build.data);   // 构建快照在 data 的 BuilderInfo 包内
+    auto info = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(build.data);   // 构建快照在 data 的 BuilderInfo 包内
     std::cout << "build: " << build.msg << " (plugins:" << (info ? info->d.plugins : 0) << " instances:"
               << (info ? info->d.instances : 0) << ")" << std::endl;
 
     // 内省：插件列表
     auto plugins = yomk::plug_sys().list_plugins();
-    auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(plugins.data);
+    auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(plugins.data);
     if (arr)
         for (const auto& m : arr->d)
             std::cout << "plugin: " << m.name << " v" << m.version << std::endl;

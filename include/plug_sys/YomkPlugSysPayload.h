@@ -6,7 +6,7 @@
 // 设计取舍: 数据与消息分离——结构体只承载业务字段,同名的消息包类（见 YomkPlugSysMsg.h）
 // 负责跨请求传递;服务端与调用方共用同一结构体定义,字段语义即请求契约.
 
-namespace yomk::payload
+namespace yomk::payload::plug_sys
 {
 /**
  * @brief Plugin library load request
@@ -110,4 +110,4 @@ struct BuilderInfo
     int plugins = 0;                      // 最近构建加载的插件数
     int instances = 0;                    // 最近构建创建的实例数
 };
-}  // namespace yomk::payload
+}  // namespace yomk::payload::plug_sys

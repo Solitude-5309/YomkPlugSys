@@ -85,12 +85,12 @@ private:
         const std::string& result,
         size_t plugins,
         size_t instances,
-        const std::vector<yomk::payload::InstanceInfo>& entries);
+        const std::vector<yomk::payload::plug_sys::InstanceInfo>& entries);
 
     std::mutex m_mutex;
     std::string m_lastManifest;               // 最近一次构建的清单路径
     std::string m_lastResult;                 // 最近一次构建结果："ok" / 失败原因
     int m_lastPlugins = 0;                    // 最近一次构建加载的插件数
     int m_lastInstances = 0;                  // 最近一次构建创建的实例数
-    std::vector<yomk::payload::InstanceInfo> m_lastEntries;   // 成功创建的实例条目
+    std::vector<yomk::payload::plug_sys::InstanceInfo> m_lastEntries;   // 成功创建的实例条目
 };

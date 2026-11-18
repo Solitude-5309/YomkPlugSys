@@ -50,7 +50,7 @@ static void expectNo(const yomk::payload::Response& r, const std::string& substr
 // 组合断言：Succeeded 且 BuilderInfo 快照的汇总与期望一致
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
-    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::BuilderInfo>(r.data) : nullptr;
+    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(r.data) : nullptr;
     const std::string actual =
         info ? "plugins:" + std::to_string(info->d.plugins) + " instances:" + std::to_string(info->d.instances) : "";
     check(isOk(r) && actual == summary, desc + " (" + summary + ")");
@@ -88,26 +88,26 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 // list_instances() 解包；失败返回空表
-static std::vector<yomk::payload::InstanceInfo> listInstances()
+static std::vector<yomk::payload::plug_sys::InstanceInfo> listInstances()
 {
-    std::vector<yomk::payload::InstanceInfo> out;
+    std::vector<yomk::payload::plug_sys::InstanceInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // list_plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginInfo> listPlugins()
+static std::vector<yomk::payload::plug_sys::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginInfo> out;
+    std::vector<yomk::payload::plug_sys::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -137,34 +137,34 @@ int main()
     expectOkSummary(yomk::plug_sys().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
 
     // 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重
-    YomkMsgPtr samePath = yomk::msgs::PluginLoadReq::shared(yomk::payload::PluginLoadReq{fp("libTestPlugin.so")});
+    YomkMsgPtr samePath = yomk::msgs::plug_sys::PluginLoadReq::shared(yomk::payload::plug_sys::PluginLoadReq{fp("libTestPlugin.so")});
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(samePath).request(),
         "plugin already loaded: TestPlugin",
         "R1 load same path rejects");
 
     // 不同路径同 meta 的 so 副本：判重与路径无关，同样命中
-    YomkMsgPtr copyPath = yomk::msgs::PluginLoadReq::shared(yomk::payload::PluginLoadReq{fp("libTestPluginCopy.so")});
+    YomkMsgPtr copyPath = yomk::msgs::plug_sys::PluginLoadReq::shared(yomk::payload::plug_sys::PluginLoadReq{fp("libTestPluginCopy.so")});
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(copyPath).request(),
         "plugin already loaded: TestPlugin",
         "R1 load copy so with same meta rejects");
 
     // 失败路径无状态污染：插件表仍恰 1 条，实例仍 2 个
-    std::vector<yomk::payload::PluginInfo> names = listPlugins();
+    std::vector<yomk::payload::plug_sys::PluginInfo> names = listPlugins();
     check(
         names.size() == 1 && !names.empty() && names[0].name == "TestPlugin",
         "R1 manager list still exactly one TestPlugin after rejected loads");
     check(listInstances().size() == 2, "R1 instances still two after rejected loads");
 
     // ---------- R2 存活表递减：destroy 后引用保护随之解除 ----------
-    yomk::payload::DestroyReq dreq;
+    yomk::payload::plug_sys::DestroyReq dreq;
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "r-b";
-    check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-b ok");
+    check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()), "R2 destroy r-b ok");
     expectNo(yomk::plug_sys().plugin_name("TestPlugin").try_unload(), "instances still alive", "R2 try_unload rejects after destroy r-b");
     dreq.instanceName = "r-a";
-    check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "R2 destroy r-a ok");
+    check(isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()), "R2 destroy r-a ok");
     check(listInstances().empty(), "R2 instances empty after all destroys");
 
     // ---------- R3 空卸与重载循环 ----------
@@ -187,7 +187,7 @@ int main()
     // R4 前置清理：destroy 重载实例（插件保持已加载）
     dreq.instanceName = "r3-i1";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()),
         "R3 destroy r3-i1 for R4 prep");
 
     // ---------- R4 多实例强卸 ----------

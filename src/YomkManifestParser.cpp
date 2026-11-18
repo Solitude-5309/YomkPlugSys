@@ -117,7 +117,7 @@ yomk::payload::Response parseBlockKey(const std::string& line, const int lineNo,
 
 // 解析清单：格式标识 + 实例块（[实例名] + lib/config），输出清单目录与实例块表
 yomk::payload::Response parseManifestFile(
-    const std::string& manifestPath, std::string& manifestDir, std::vector<yomk::payload::ManifestEntry>& entries)
+    const std::string& manifestPath, std::string& manifestDir, std::vector<yomk::payload::plug_sys::ManifestEntry>& entries)
 {
     namespace fs = std::filesystem;
     std::error_code ec;
@@ -153,7 +153,7 @@ yomk::payload::Response parseManifestFile(
         {
             return manifestError(b.lineNo, "instance block [" + b.name + "] missing " + b.missing());
         }
-        yomk::payload::ManifestEntry entry;
+        yomk::payload::plug_sys::ManifestEntry entry;
         entry.lineNo = b.lineNo;
         entry.instanceName = b.name;
         entry.libRelPath = b.lib;
@@ -225,7 +225,7 @@ YomkManifestParser::YomkManifestParser(YomkServer* server) : YomkService(server)
 
 int YomkManifestParser::init()
 {
-    installFunc("/parse", &YomkManifestParser::parse, yomk::msgs::BuildReq::kName);
+    installFunc("/parse", &YomkManifestParser::parse, yomk::msgs::plug_sys::BuildReq::kName);
     return 0;
 }
 
@@ -233,14 +233,14 @@ yomk::payload::Response YomkManifestParser::parse(YomkMsgPtr pkg)
 {
     try
     {
-        auto req = yomk::msgs::unpack<yomk::msgs::BuildReq>(pkg);
+        auto req = yomk::msgs::unpack<yomk::msgs::plug_sys::BuildReq>(pkg);
         if (!req)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::BuildReq::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::plug_sys::BuildReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
-        yomk::payload::ManifestParseResult result;
+        yomk::payload::plug_sys::ManifestParseResult result;
         std::string manifestDir;
         yomk::payload::Response parsed = parseManifestFile(req->d.manifestPath, manifestDir, result.entries);
         if (parsed.status != yomk::payload::ResStatus::Succeeded)
@@ -248,7 +248,7 @@ yomk::payload::Response YomkManifestParser::parse(YomkMsgPtr pkg)
             return parsed;
         }
         result.dir = manifestDir;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::ManifestParseResult::shared(result)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::ManifestParseResult::shared(result)};
     }
     catch (const std::exception& e)
     {

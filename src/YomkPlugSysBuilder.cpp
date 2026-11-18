@@ -34,7 +34,7 @@ int YomkPlugSysBuilder::init()
         return -1;
     }
 
-    installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::BuildReq::kName);
+    installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::plug_sys::BuildReq::kName);
     installFunc("/get_version", &YomkPlugSysBuilder::getVersion);
     installFunc("/get_build_info", &YomkPlugSysBuilder::getBuildInfo);
     installFunc("/list_plugins", &YomkPlugSysBuilder::listPlugins);
@@ -65,30 +65,30 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 {
     try
     {
-        auto req = yomk::msgs::unpack<yomk::msgs::BuildReq>(pkg);
+        auto req = yomk::msgs::unpack<yomk::msgs::plug_sys::BuildReq>(pkg);
         if (!req)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::BuildReq::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::plug_sys::BuildReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
 
         // 清单解析委派给内部服务：本层只消费结构化结果（目录 + 实例块表）
         yomk::payload::Response resp = request(
-            "/YomkManifestParser/parse", yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{req->d.manifestPath}));
+            "/YomkManifestParser/parse", yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{req->d.manifestPath}));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             recordBuild(req->d.manifestPath, resp.msg, 0, 0, {});
             return resp;
         }
-        auto parsed = yomk::msgs::unpack<yomk::msgs::ManifestParseResult>(resp.data);
+        auto parsed = yomk::msgs::unpack<yomk::msgs::plug_sys::ManifestParseResult>(resp.data);
         if (!parsed)
         {
             recordBuild(req->d.manifestPath, "build: invalid parser response", 0, 0, {});
             return {yomk::payload::ResStatus::Failed, "build: invalid parser response"};
         }
         const std::string manifestDir = parsed->d.dir;
-        const std::vector<yomk::payload::ManifestEntry>& entries = parsed->d.entries;
+        const std::vector<yomk::payload::plug_sys::ManifestEntry>& entries = parsed->d.entries;
 
         namespace fs = std::filesystem;
         // 预查插件表：同一 so 已加载时幂等跳过
@@ -96,7 +96,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         resp = request("/YomkPluginManager/list", nullptr);
         if (resp.status == yomk::payload::ResStatus::Succeeded)
         {
-            auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+            auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
             if (!arr)
             {
                 recordBuild(req->d.manifestPath, "build: invalid plugin list response", 0, 0, {});
@@ -109,7 +109,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         }
 
         std::set<std::string> loadedPlugins;
-        std::vector<yomk::payload::InstanceInfo> builtEntries;
+        std::vector<yomk::payload::plug_sys::InstanceInfo> builtEntries;
         size_t createdInstances = 0;
         for (const auto& entry : entries)
         {
@@ -142,9 +142,9 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             }
             else
             {
-                yomk::payload::PluginLoadReq path;
+                yomk::payload::plug_sys::PluginLoadReq path;
                 path.path = soPath;
-                resp = request("/YomkPluginManager/load", yomk::msgs::PluginLoadReq::shared(path));
+                resp = request("/YomkPluginManager/load", yomk::msgs::plug_sys::PluginLoadReq::shared(path));
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
                     std::string msg = lineTag + ": load failed: " + resp.msg;
@@ -164,11 +164,11 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             loadedPlugins.insert(pluginName);
 
             // 实例配置路径作为 instanceCfgPath 透传，不读取内容
-            yomk::payload::CreateReq createReq;
+            yomk::payload::plug_sys::CreateReq createReq;
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
             createReq.instanceCfgPath = instancePath;
-            resp = request("/YomkPluginManager/create_instance", yomk::msgs::CreateReq::shared(createReq));
+            resp = request("/YomkPluginManager/create_instance", yomk::msgs::plug_sys::CreateReq::shared(createReq));
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
                 std::string msg = lineTag + ": create failed: " + resp.msg;
@@ -176,7 +176,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
                 return {yomk::payload::ResStatus::Failed, msg};
             }
             ++createdInstances;
-            yomk::payload::InstanceInfo built;
+            yomk::payload::plug_sys::InstanceInfo built;
             built.pluginName = pluginName;
             built.instanceName = pluginName + "." + entry.instanceName;
             built.libPath = soPath;
@@ -188,13 +188,13 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             "plugins:" + std::to_string(loadedPlugins.size()) + " instances:" + std::to_string(createdInstances);
         recordBuild(req->d.manifestPath, "ok", loadedPlugins.size(), createdInstances, builtEntries);
         yomk::log().tag("YomkPlugSysBuilder").info("build: ", req->d.manifestPath, " ", summary);
-        yomk::payload::BuilderInfo info;
+        yomk::payload::plug_sys::BuilderInfo info;
         info.entries = builtEntries;
         info.path = req->d.manifestPath;
         info.result = "ok";
         info.plugins = static_cast<int>(loadedPlugins.size());
         info.instances = static_cast<int>(createdInstances);
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::BuilderInfo::shared(info)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::BuilderInfo::shared(info)};
     }
     catch (const std::exception& e)
     {
@@ -229,14 +229,14 @@ yomk::payload::Response YomkPlugSysBuilder::getBuildInfo(YomkMsgPtr pkg)
 {
     try
     {
-        yomk::payload::BuilderInfo info;
+        yomk::payload::plug_sys::BuilderInfo info;
         std::lock_guard<std::mutex> lock(m_mutex);
         info.entries = m_lastEntries;
         info.path = m_lastManifest;
         info.result = m_lastResult;
         info.plugins = m_lastPlugins;
         info.instances = m_lastInstances;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::BuilderInfo::shared(info)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::BuilderInfo::shared(info)};
     }
     catch (const std::exception& e)
     {
@@ -367,7 +367,7 @@ void YomkPlugSysBuilder::recordBuild(
     const std::string& result,
     size_t plugins,
     size_t instances,
-    const std::vector<yomk::payload::InstanceInfo>& builtEntries)
+    const std::vector<yomk::payload::plug_sys::InstanceInfo>& builtEntries)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_lastManifest = manifest;

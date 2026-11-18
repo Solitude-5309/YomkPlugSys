@@ -51,7 +51,7 @@ static void expectNo(const yomk::payload::Response& r, const std::string& substr
 // 组合断言：Succeeded 且 BuilderInfo 快照的汇总与期望一致
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
-    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::BuilderInfo>(r.data) : nullptr;
+    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(r.data) : nullptr;
     const std::string actual =
         info ? "plugins:" + std::to_string(info->d.plugins) + " instances:" + std::to_string(info->d.instances) : "";
     check(isOk(r) && actual == summary, desc + " (" + summary + ")");
@@ -89,26 +89,26 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 // list_instances() 解包；失败返回空表
-static std::vector<yomk::payload::InstanceInfo> listInstances()
+static std::vector<yomk::payload::plug_sys::InstanceInfo> listInstances()
 {
-    std::vector<yomk::payload::InstanceInfo> out;
+    std::vector<yomk::payload::plug_sys::InstanceInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // list_plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginInfo> listPlugins()
+static std::vector<yomk::payload::plug_sys::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginInfo> out;
+    std::vector<yomk::payload::plug_sys::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -117,20 +117,20 @@ static std::vector<yomk::payload::PluginInfo> listPlugins()
 // 白盒：Manager create_instance 直调
 static yomk::payload::Response createInst(const std::string& name)
 {
-    yomk::payload::CreateReq req;
+    yomk::payload::plug_sys::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
     req.instanceCfgPath = fp("inst.txt");
-    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
+    return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(req)).request();
 }
 
 // 白盒：Manager destroy_instance 直调
 static yomk::payload::Response destroyInst(const std::string& name)
 {
-    yomk::payload::DestroyReq req;
+    yomk::payload::plug_sys::DestroyReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
-    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(req)).request();
+    return yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(req)).request();
 }
 
 // C3 create 结果文案白名单：ok 或竞争窗口的合法失败文案（Manager 层 + Loader 层）

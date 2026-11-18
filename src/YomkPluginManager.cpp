@@ -12,11 +12,11 @@ YomkPluginManager::YomkPluginManager(YomkServer* server) : YomkService(server)
 
 int YomkPluginManager::init()
 {
-    installFunc("/load", &YomkPluginManager::load, yomk::msgs::PluginLoadReq::kName);
+    installFunc("/load", &YomkPluginManager::load, yomk::msgs::plug_sys::PluginLoadReq::kName);
     installFunc("/try_unload", &YomkPluginManager::tryUnload, yomk::msgs::String::kName);
     installFunc("/force_unload", &YomkPluginManager::forceUnload, yomk::msgs::String::kName);
-    installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::CreateReq::kName);
-    installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::DestroyReq::kName);
+    installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::plug_sys::CreateReq::kName);
+    installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::plug_sys::DestroyReq::kName);
     installFunc("/list", &YomkPluginManager::list);
     installFunc("/get_plugin", &YomkPluginManager::getPlugin, yomk::msgs::String::kName);
     installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName);
@@ -29,16 +29,16 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
 {
     try
     {
-        auto data = yomk::msgs::unpack<yomk::msgs::PluginLoadReq>(pkg);
+        auto data = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginLoadReq>(pkg);
         if (!data)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginLoadReq::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::plug_sys::PluginLoadReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
 
         // 跨服务请求一律在锁外：避免本服务锁与 Loader 锁形成嵌套
-        yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::PluginLoadReq::shared(data->d));
+        yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::plug_sys::PluginLoadReq::shared(data->d));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;
@@ -57,7 +57,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
             request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
             return resp;
         }
-        auto metaPkg = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto metaPkg = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         if (!metaPkg)
         {
             return {yomk::payload::ResStatus::Failed, "load: invalid meta response"};
@@ -192,11 +192,11 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
 {
     try
     {
-        auto req = yomk::msgs::unpack<yomk::msgs::CreateReq>(pkg);
+        auto req = yomk::msgs::unpack<yomk::msgs::plug_sys::CreateReq>(pkg);
         if (!req)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::CreateReq::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::plug_sys::CreateReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
         if (req->d.instanceName.empty())
@@ -217,14 +217,14 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
         }
 
         // 传限定名（插件名.实例名，全局唯一），插件以此作为实例身份
-        yomk::payload::CreateReq loaderReq = req->d;
+        yomk::payload::plug_sys::CreateReq loaderReq = req->d;
         loaderReq.instanceName = qualifiedName(req->d.pluginName, req->d.instanceName);
-        yomk::payload::Response resp = request("/YomkPluginLoader/create", yomk::msgs::CreateReq::shared(loaderReq));
+        yomk::payload::Response resp = request("/YomkPluginLoader/create", yomk::msgs::plug_sys::CreateReq::shared(loaderReq));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;
         }
-        auto instPkg = yomk::msgs::unpack<yomk::msgs::PluginInstance>(resp.data);
+        auto instPkg = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInstance>(resp.data);
         if (!instPkg)
         {
             return {yomk::payload::ResStatus::Failed, "create_instance: invalid loader response"};
@@ -262,11 +262,11 @@ yomk::payload::Response YomkPluginManager::destroyInstance(YomkMsgPtr pkg)
 {
     try
     {
-        auto req = yomk::msgs::unpack<yomk::msgs::DestroyReq>(pkg);
+        auto req = yomk::msgs::unpack<yomk::msgs::plug_sys::DestroyReq>(pkg);
         if (!req)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::DestroyReq::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::plug_sys::DestroyReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
         std::shared_ptr<YomkPluginInterface> inst;
@@ -306,11 +306,11 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
 {
     try
     {
-        std::vector<yomk::payload::PluginInfo> metas;
+        std::vector<yomk::payload::plug_sys::PluginInfo> metas;
         std::lock_guard<std::mutex> lock(m_mutex);
         for (const auto& kv : m_plugins)
         {
-            yomk::payload::PluginInfo m;
+            yomk::payload::plug_sys::PluginInfo m;
             m.abi_version = YOMK_PLUGIN_ABI_VERSION;
             m.name = kv.second.name;
             m.type = kv.second.type;
@@ -320,7 +320,7 @@ yomk::payload::Response YomkPluginManager::list(YomkMsgPtr pkg)
             m.path = kv.second.path;
             metas.push_back(m);
         }
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfoList::shared(metas)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::PluginInfoList::shared(metas)};
     }
     catch (const std::exception& e)
     {
@@ -350,7 +350,7 @@ yomk::payload::Response YomkPluginManager::getPlugin(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + data->d};
         }
-        yomk::payload::PluginInfo m;
+        yomk::payload::plug_sys::PluginInfo m;
         m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
@@ -358,7 +358,7 @@ yomk::payload::Response YomkPluginManager::getPlugin(YomkMsgPtr pkg)
         m.author = it->second.author;
         m.description = it->second.description;
         m.path = it->second.path;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfo::shared(m)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::PluginInfo::shared(m)};
     }
     catch (const std::exception& e)
     {
@@ -406,7 +406,7 @@ yomk::payload::Response YomkPluginManager::getPluginByInstance(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "plugin not loaded: " + pluginName};
         }
-        yomk::payload::PluginInfo m;
+        yomk::payload::plug_sys::PluginInfo m;
         m.abi_version = YOMK_PLUGIN_ABI_VERSION;
         m.name = it->second.name;
         m.type = it->second.type;
@@ -414,7 +414,7 @@ yomk::payload::Response YomkPluginManager::getPluginByInstance(YomkMsgPtr pkg)
         m.author = it->second.author;
         m.description = it->second.description;
         m.path = it->second.path;
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::PluginInfo::shared(m)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::PluginInfo::shared(m)};
     }
     catch (const std::exception& e)
     {
@@ -497,7 +497,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             }
         }
 
-        std::vector<yomk::payload::InstanceInfo> infos;
+        std::vector<yomk::payload::plug_sys::InstanceInfo> infos;
         std::lock_guard<std::mutex> lock(m_mutex);
         if (!filter.empty())
         {
@@ -511,7 +511,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                 const std::string libPath = m_plugins.find(filter)->second.path;
                 for (const auto& instKv : it->second)
                 {
-                    yomk::payload::InstanceInfo info;
+                    yomk::payload::plug_sys::InstanceInfo info;
                     info.pluginName = filter;
                     info.instanceName = qualifiedName(filter, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
@@ -529,7 +529,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                 const std::string libPath = pluginIt != m_plugins.end() ? pluginIt->second.path : "";
                 for (const auto& instKv : kv.second)
                 {
-                    yomk::payload::InstanceInfo info;
+                    yomk::payload::plug_sys::InstanceInfo info;
                     info.pluginName = kv.first;
                     info.instanceName = qualifiedName(kv.first, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
@@ -539,7 +539,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                 }
             }
         }
-        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::InstanceInfoList::shared(infos)};
+        return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::plug_sys::InstanceInfoList::shared(infos)};
     }
     catch (const std::exception& e)
     {

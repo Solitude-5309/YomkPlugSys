@@ -50,7 +50,7 @@ static void expectNo(const yomk::payload::Response& r, const std::string& substr
 // 组合断言：Succeeded 且 BuilderInfo 快照的汇总与期望一致
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
-    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::BuilderInfo>(r.data) : nullptr;
+    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(r.data) : nullptr;
     const std::string actual =
         info ? "plugins:" + std::to_string(info->d.plugins) + " instances:" + std::to_string(info->d.instances) : "";
     check(isOk(r) && actual == summary, desc + " (" + summary + ")");
@@ -88,26 +88,26 @@ static void writeManifest(const std::string& name, const std::string& content)
 }
 
 // list_instances() 解包；失败返回空表
-static std::vector<yomk::payload::InstanceInfo> listInstances()
+static std::vector<yomk::payload::plug_sys::InstanceInfo> listInstances()
 {
-    std::vector<yomk::payload::InstanceInfo> out;
+    std::vector<yomk::payload::plug_sys::InstanceInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
 // list_plugins() 解包；失败返回空表
-static std::vector<yomk::payload::PluginInfo> listPlugins()
+static std::vector<yomk::payload::plug_sys::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginInfo> out;
+    std::vector<yomk::payload::plug_sys::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -138,21 +138,21 @@ int main()
     bool infoHit = false;
     if (isOk(infoResp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(infoResp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(infoResp.data);
         infoHit = meta && meta->d.name == "TestPlugin" && meta->d.version == "0.0.1";
     }
     check(infoHit, "S1 plugin_name().get_info() returns single TestPlugin meta");
     expectNo(
         yomk::plug_sys().plugin_name("NoSuch").get_info(), "plugin not loaded: NoSuch", "S1 get_info unknown plugin rejects");
 
-    std::vector<yomk::payload::InstanceInfo> insts = listInstances();
+    std::vector<yomk::payload::plug_sys::InstanceInfo> insts = listInstances();
     check(insts.size() == 1, "S1 exactly one instance listed");
     check(
         !insts.empty() && insts[0].pluginName == "TestPlugin" && insts[0].instanceName == "TestPlugin.s1-i1",
         "S1 instance pluginName and name");
     check(!insts.empty() && insts[0].instanceType == "demo", "S1 instance type from plugin");
 
-    std::vector<yomk::payload::PluginInfo> metas = listPlugins();
+    std::vector<yomk::payload::plug_sys::PluginInfo> metas = listPlugins();
     check(metas.size() == 1, "S1 exactly one plugin listed");
     check(
         !metas.empty() && metas[0].name == "TestPlugin" && metas[0].type == "demo" && metas[0].version == "0.0.1",
@@ -167,7 +167,7 @@ int main()
     bool queried = false;
     if (isOk(resp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         queried = meta && meta->d.name == "TestPlugin";
     }
     check(queried, "S1 proxy /plugin returns single plugin meta");
@@ -183,34 +183,34 @@ int main()
     check(listInstances().size() == 2, "S2 two instances alive after dup-build failure");
 
     // ---------- S3 create 重名与 destroy 重建（白盒 URL） ----------
-    yomk::payload::CreateReq dupReq;
+    yomk::payload::plug_sys::CreateReq dupReq;
     dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
     dupReq.instanceCfgPath = fp("inst.txt");
     expectNo(
-        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(dupReq)).request(),
+        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(dupReq)).request(),
         "duplicate instance name: s2-i1",
         "S3 direct create duplicate rejects");
 
-    yomk::payload::DestroyReq dreq;
+    yomk::payload::plug_sys::DestroyReq dreq;
     dreq.pluginName = "TestPlugin";
     dreq.instanceName = "s2-i1";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "S3 destroy s2-i1 ok");
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()), "S3 destroy s2-i1 ok");
     dreq.instanceName = "s1-i1";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()), "S3 destroy s1-i1 ok");
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()), "S3 destroy s1-i1 ok");
     check(listInstances().empty(), "S3 instances empty after destroys");
     expectNo(
-        yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request(),
+        yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request(),
         "instance not found: TestPlugin/s1-i1",
         "S3 destroy nonexistent rejects");
-    yomk::payload::CreateReq reReq;
+    yomk::payload::plug_sys::CreateReq reReq;
     reReq.pluginName = "TestPlugin";
     reReq.instanceName = "s1-i1";
     reReq.instanceCfgPath = fp("inst.txt");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(reReq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(reReq)).request()),
         "S3 recreate after destroy ok");
     check(listInstances().size() == 1, "S3 instance back after recreate");
 
@@ -221,7 +221,7 @@ int main()
         "S4 try_unload rejected while instance alive");
     dreq.instanceName = "s1-i1";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dreq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dreq)).request()),
         "S4 destroy for unload");
     check(isOk(yomk::plug_sys().plugin_name("TestPlugin").try_unload()), "S4 try_unload ok after destroy");
     check(listPlugins().empty(), "S4 plugins empty after try_unload");

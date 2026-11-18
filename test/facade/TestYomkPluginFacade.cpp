@@ -78,7 +78,7 @@ int main()
     // ---------- 空态内省契约 ----------
     resp = yomk::plug_sys().get_info();
     check(isOk(resp), "get_info() returns Succeeded");
-    auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
+    auto info = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(resp.data);
     check(info != nullptr, "get_info() unpacks BuilderInfo");
     check(
         info && info->d.path.empty() && info->d.result.empty() && info->d.plugins == 0 && info->d.instances == 0 &&
@@ -99,7 +99,7 @@ int main()
     bool pluginsEmpty = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         pluginsEmpty = arr->d.empty();
     }
     check(pluginsEmpty, "list_plugins() Succeeded + empty array");
@@ -113,7 +113,7 @@ int main()
     bool instEmpty = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "list_instances() Succeeded + empty array");

@@ -51,7 +51,7 @@ static void expectNo(const yomk::payload::Response& r, const std::string& substr
 // 组合断言：Succeeded 且 BuilderInfo 快照的汇总与期望一致
 static void expectOkSummary(const yomk::payload::Response& r, const std::string& summary, const std::string& desc)
 {
-    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::BuilderInfo>(r.data) : nullptr;
+    auto info = isOk(r) ? yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(r.data) : nullptr;
     const std::string actual =
         info ? "plugins:" + std::to_string(info->d.plugins) + " instances:" + std::to_string(info->d.instances) : "";
     check(isOk(r) && actual == summary, desc + " (" + summary + ")");
@@ -109,18 +109,18 @@ static void linkPlugin()
 }
 
 // 最近构建信息（对账 recordBuild 侧效）
-static yomk::payload::BuilderInfo builderInfo()
+static yomk::payload::plug_sys::BuilderInfo builderInfo()
 {
     yomk::payload::Response resp = yomk::plug_sys().get_info();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto info = yomk::msgs::unpack<yomk::msgs::BuilderInfo>(resp.data);
+        auto info = yomk::msgs::unpack<yomk::msgs::plug_sys::BuilderInfo>(resp.data);
         if (info)
         {
             return info->d;
         }
     }
-    return yomk::payload::BuilderInfo{};
+    return yomk::payload::plug_sys::BuilderInfo{};
 }
 
 int main()
@@ -255,7 +255,7 @@ int main()
     expectOkSummary(yomk::plug_sys().manifest(fp("m-g5.yomk")).build(), "plugins:1 instances:1", "G5 space in block name accepts");
 
     // ---------- H /builder 对账（recordBuild 侧效） ----------
-    const yomk::payload::BuilderInfo dump = builderInfo();
+    const yomk::payload::plug_sys::BuilderInfo dump = builderInfo();
     check(
         dump.path == fp("m-g5.yomk") && dump.result == "ok" && dump.plugins == 1 && dump.instances == 1,
         "H1 /builder shows manifest path and ok result");
@@ -263,7 +263,7 @@ int main()
         std::any_of(
             dump.entries.begin(),
             dump.entries.end(),
-            [](const yomk::payload::InstanceInfo& e) {
+            [](const yomk::payload::plug_sys::InstanceInfo& e) {
                 return e.pluginName == "TestPlugin" && e.instanceName == "TestPlugin.my inst" &&
                        e.libPath == fp("libTestPlugin.so") && e.configPath == fp("inst.txt");
             }),
@@ -272,7 +272,7 @@ int main()
     writeManifest("m-hfail.yomk", "#! yomk_plug_sys\nlib = libTestPlugin.so\n");
     expectNo(
         yomk::plug_sys().manifest(fp("m-hfail.yomk")).build(), "key outside instance block", "H3 failure build Failed");
-    const yomk::payload::BuilderInfo hfail = builderInfo();
+    const yomk::payload::plug_sys::BuilderInfo hfail = builderInfo();
     check(
         hfail.path == fp("m-hfail.yomk") && hfail.result == "manifest line 2: key outside instance block" &&
             hfail.plugins == 0 && hfail.instances == 0 && hfail.entries.empty(),
@@ -285,7 +285,7 @@ int main()
     expectNo(
         yomk::plug_sys().manifest(fp("m-part.yomk")).build(), "manifest line 5: instance config not found",
         "H5 partial build fails on second block");
-    const yomk::payload::BuilderInfo partDump = builderInfo();
+    const yomk::payload::plug_sys::BuilderInfo partDump = builderInfo();
     check(
         partDump.path == fp("m-part.yomk") &&
             partDump.result == "manifest line 5: instance config not found: " + fp("missing_inst.txt") &&
@@ -295,7 +295,7 @@ int main()
         std::any_of(
             partDump.entries.begin(),
             partDump.entries.end(),
-            [](const yomk::payload::InstanceInfo& e) {
+            [](const yomk::payload::plug_sys::InstanceInfo& e) {
                 return e.instanceName == "TestPlugin.good1" && e.libPath == fp("libTestPlugin.so") &&
                        e.configPath == fp("inst.txt");
             }),
@@ -305,9 +305,9 @@ int main()
     writeManifest("m-i1.yomk", "#! yomk_plug_sys\n[p1]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     auto parseResp = yomk::server()
                          .url("/YomkManifestParser/parse")
-                         .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{fp("m-i1.yomk")}))
+                         .msg(yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{fp("m-i1.yomk")}))
                          .request();
-    auto parseDump = isOk(parseResp) ? yomk::msgs::unpack<yomk::msgs::ManifestParseResult>(parseResp.data) : nullptr;
+    auto parseDump = isOk(parseResp) ? yomk::msgs::unpack<yomk::msgs::plug_sys::ManifestParseResult>(parseResp.data) : nullptr;
     check(
         parseDump && parseDump->d.dir == fixtureDir().string() && parseDump->d.entries.size() == 1 &&
             parseDump->d.entries[0].lineNo == 2 && parseDump->d.entries[0].instanceName == "p1" &&
@@ -318,7 +318,7 @@ int main()
     writeManifest("m-i2.yomk", "#! yomk_plug_sys\n# c\n[p2]\nfoo = bar\n");
     auto badParseResp = yomk::server()
                             .url("/YomkManifestParser/parse")
-                            .msg(yomk::msgs::BuildReq::shared(yomk::payload::BuildReq{fp("m-i2.yomk")}))
+                            .msg(yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{fp("m-i2.yomk")}))
                             .request();
     expectNo(badParseResp, "manifest line 4: unknown key 'foo'", "I2 parse service reports line number");
 
@@ -328,7 +328,7 @@ int main()
     bool instEmpty = false;
     if (isOk(inst))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(inst.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(inst.data);
         instEmpty = arr->d.empty();
     }
     check(instEmpty, "cleanup: instances empty after unload");

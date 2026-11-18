@@ -94,25 +94,25 @@ static void linkLib(const char* compileTimePath, const std::string& linkName)
     }
 }
 
-static std::vector<yomk::payload::PluginInfo> listPlugins()
+static std::vector<yomk::payload::plug_sys::PluginInfo> listPlugins()
 {
-    std::vector<yomk::payload::PluginInfo> out;
+    std::vector<yomk::payload::plug_sys::PluginInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_plugins();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         out = arr->d;
     }
     return out;
 }
 
-static std::vector<yomk::payload::InstanceInfo> listInstances()
+static std::vector<yomk::payload::plug_sys::InstanceInfo> listInstances()
 {
-    std::vector<yomk::payload::InstanceInfo> out;
+    std::vector<yomk::payload::plug_sys::InstanceInfo> out;
     yomk::payload::Response resp = yomk::plug_sys().list_instances();
     if (resp.status == yomk::payload::ResStatus::Succeeded)
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         out = arr->d;
     }
     return out;
@@ -139,40 +139,40 @@ int main()
     // 基线：TestPlugin 双实例 + BadCreateNull 注册（0 实例）
     writeManifest("base.yomk", "#! yomk_plug_sys\n[e-a]\nlib = libTestPlugin.so\nconfig = inst.txt\n[e-b]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     check(isOk(yomk::plug_sys().manifest(fp("base.yomk")).build()), "build baseline with two instances");
-    yomk::payload::PluginLoadReq badPath;
+    yomk::payload::plug_sys::PluginLoadReq badPath;
     badPath.path = fp("libBadCreateNull.so");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginLoadReq::shared(badPath)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::plug_sys::PluginLoadReq::shared(badPath)).request()),
         "whitebox load BadCreateNull (registers with 0 instances)");
 
     // ---------- M1 create/destroy 入参边界 ----------
-    yomk::payload::CreateReq emptyName;
+    yomk::payload::plug_sys::CreateReq emptyName;
     emptyName.pluginName = "TestPlugin";
     emptyName.instanceName = "";
     emptyName.instanceCfgPath = fp("inst.txt");
     expectNo(
-        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(emptyName)).request(),
+        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(emptyName)).request(),
         "instance name required",
         "M1 create with empty name rejects");
-    yomk::payload::CreateReq emptyLib;
+    yomk::payload::plug_sys::CreateReq emptyLib;
     emptyLib.pluginName = "";
     emptyLib.instanceName = "e-x";
     expectNo(
-        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(emptyLib)).request(),
+        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(emptyLib)).request(),
         "plugin not loaded: ",
         "M1 create with empty pluginName rejects");
-    yomk::payload::CreateReq unknownLib;
+    yomk::payload::plug_sys::CreateReq unknownLib;
     unknownLib.pluginName = "NoSuch";
     unknownLib.instanceName = "e-x";
     expectNo(
-        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(unknownLib)).request(),
+        yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(unknownLib)).request(),
         "plugin not loaded: NoSuch",
         "M1 create with unknown pluginName rejects");
-    yomk::payload::DestroyReq emptyDestroy;
+    yomk::payload::plug_sys::DestroyReq emptyDestroy;
     emptyDestroy.pluginName = "";
     emptyDestroy.instanceName = "";
     expectNo(
-        yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(emptyDestroy)).request(),
+        yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(emptyDestroy)).request(),
         "instance not found: /",
         "M1 destroy with empty req rejects");
 
@@ -181,7 +181,7 @@ int main()
     bool listOk = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::PluginInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
         listOk = arr && arr->d.size() >= 2;
     }
     check(listOk, "M2 list returns all loaded plugins");
@@ -190,7 +190,7 @@ int main()
     bool hitOne = false;
     if (isOk(resp))
     {
-        auto meta = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto meta = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         hitOne = meta && meta->d.name == "TestPlugin";
     }
     check(hitOne, "M2 plugin query returns single plugin meta");
@@ -203,7 +203,7 @@ int main()
     bool hitTwo = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         hitTwo = arr->d.size() == 2;
     }
     check(hitTwo, "M2 list_instances filter hit returns 2 instances");
@@ -215,7 +215,7 @@ int main()
     bool zeroOk = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         zeroOk = arr->d.empty();
     }
     check(zeroOk, "M2 list_instances registered-but-zero returns ok empty");
@@ -228,7 +228,7 @@ int main()
     bool macroHitTwo = false;
     if (isOk(resp))
     {
-        auto arr = yomk::msgs::unpack<yomk::msgs::InstanceInfoList>(resp.data);
+        auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::InstanceInfoList>(resp.data);
         macroHitTwo = arr->d.size() == 2;
     }
     check(macroHitTwo, "M2 plugin_name(name).list_instances() filter hit returns 2 instances");
@@ -242,7 +242,7 @@ int main()
     bool byInstOk = false;
     if (isOk(resp))
     {
-        auto pm = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto pm = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         byInstOk = pm && pm->d.name == "TestPlugin" && pm->d.type == "demo" && pm->d.path == fp("libTestPlugin.so");
     }
     check(byInstOk, "M2 instance_name(name).get_info() instance lookup returns owner plugin meta");
@@ -256,20 +256,20 @@ int main()
         std::ofstream f(fp("mfile.txt"));
         f << "line-one\nline-two";
     }
-    yomk::payload::CreateReq mfileReq;
+    yomk::payload::plug_sys::CreateReq mfileReq;
     mfileReq.pluginName = "TestPlugin";
     mfileReq.instanceName = "e-mfile";
     mfileReq.instanceCfgPath = fp("mfile.txt");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(mfileReq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(mfileReq)).request()),
         "M2 create e-mfile for config introspection");
     resp = yomk::plug_sys().get_instance_cfg("TestPlugin.e-mfile");
     check(isOk(resp) && respString(resp) == "line-one\nline-two", "M2 get_instance_cfg(instanceName) returns config content");
-    yomk::payload::CreateReq nofileReq;
+    yomk::payload::plug_sys::CreateReq nofileReq;
     nofileReq.pluginName = "TestPlugin";
     nofileReq.instanceName = "e-nofile";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(nofileReq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(nofileReq)).request()),
         "M2 create e-nofile with empty instanceCfgPath");
     expectNo(
         yomk::plug_sys().get_instance_cfg("TestPlugin.e-nofile"),
@@ -279,15 +279,15 @@ int main()
         yomk::plug_sys().get_instance_cfg("no-inst"),
         "instance not found: no-inst",
         "M2 get_instance_cfg(instanceName) unknown instance rejects");
-    yomk::payload::DestroyReq dr;
+    yomk::payload::plug_sys::DestroyReq dr;
     dr.pluginName = "TestPlugin";
     dr.instanceName = "e-mfile";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dr)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dr)).request()),
         "M2 cleanup e-mfile");
     dr.instanceName = "e-nofile";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dr)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dr)).request()),
         "M2 cleanup e-nofile");
 
     // ---------- M3 内省格式与列表 ----------
@@ -295,7 +295,7 @@ int main()
     bool metaOk = false;
     if (isOk(resp))
     {
-        auto m = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto m = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         metaOk = m->d.abi_version == YOMK_PLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
                  m->d.version == "0.0.1" && m->d.author == "Yomk";
     }
@@ -318,12 +318,12 @@ int main()
 
     // ---------- M5 超长输入边界 ----------
     const std::string longName(4096, 'x');
-    yomk::payload::CreateReq longNameReq;
+    yomk::payload::plug_sys::CreateReq longNameReq;
     longNameReq.pluginName = "TestPlugin";
     longNameReq.instanceName = longName;
     longNameReq.instanceCfgPath = fp("inst.txt");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(longNameReq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(longNameReq)).request()),
         "M5 create with 4096-char name ok");
     bool longVisible = false;
     for (const auto& i : listInstances())
@@ -334,26 +334,26 @@ int main()
         }
     }
     check(longVisible, "M5 4096-char name visible in list");
-    yomk::payload::DestroyReq dn;
+    yomk::payload::plug_sys::DestroyReq dn;
     dn.pluginName = "TestPlugin";
     dn.instanceName = longName;
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dn)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dn)).request()),
         "M5 destroy 4096-char name ok");
 
     const std::string longFile = fp(std::string(8000, 'f') + ".txt");
-    yomk::payload::CreateReq longFileReq;
+    yomk::payload::plug_sys::CreateReq longFileReq;
     longFileReq.pluginName = "TestPlugin";
     longFileReq.instanceName = "e-longfile";
     longFileReq.instanceCfgPath = longFile;
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(longFileReq)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(longFileReq)).request()),
         "M5 create with ~8KB instance cfg path ok");
-    yomk::payload::DestroyReq df;
+    yomk::payload::plug_sys::DestroyReq df;
     df.pluginName = "TestPlugin";
     df.instanceName = "e-longfile";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(df)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(df)).request()),
         "M5 destroy long-file-path instance ok");
 
     // ---------- M5.5 错误类型消息请求（闭环10 回归）：解包校验失败返回 Failed 而非崩溃 ----------
@@ -365,30 +365,30 @@ int main()
           "wrong-type msg to /YomkPlugSysBuilder/build returns Failed (no crash)");
 
     // ---------- M6 跨插件同名实例（限定名 = 插件名.实例名，全局唯一） ----------
-    yomk::payload::PluginLoadReq secondPath;
+    yomk::payload::plug_sys::PluginLoadReq secondPath;
     secondPath.path = fp("libSecondPlugin.so");
-    check(isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginLoadReq::shared(secondPath)).request()), "M6 load SecondPlugin");
+    check(isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::plug_sys::PluginLoadReq::shared(secondPath)).request()), "M6 load SecondPlugin");
 
-    yomk::payload::CreateReq crossA;
+    yomk::payload::plug_sys::CreateReq crossA;
     crossA.pluginName = "TestPlugin";
     crossA.instanceName = "shared-i";
     crossA.instanceCfgPath = fp("inst.txt");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossA)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(crossA)).request()),
         "M6 create shared-i in TestPlugin");
-    yomk::payload::CreateReq crossB;
+    yomk::payload::plug_sys::CreateReq crossB;
     crossB.pluginName = "SecondPlugin";
     crossB.instanceName = "shared-i";
     crossB.instanceCfgPath = fp("inst.txt");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::plug_sys::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");
 
     resp = yomk::plug_sys().instance_name("TestPlugin.shared-i").get_info();
     bool ownerA = false;
     if (isOk(resp))
     {
-        auto pmA = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto pmA = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         ownerA = pmA && pmA->d.name == "TestPlugin";
     }
     check(ownerA, "M6 qualified name resolves to TestPlugin");
@@ -396,7 +396,7 @@ int main()
     bool ownerB = false;
     if (isOk(resp))
     {
-        auto pmB = yomk::msgs::unpack<yomk::msgs::PluginInfo>(resp.data);
+        auto pmB = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
         ownerB = pmB && pmB->d.name == "SecondPlugin";
     }
     check(ownerB, "M6 same bare name under second plugin resolves to SecondPlugin");
@@ -411,17 +411,17 @@ int main()
     }
     check(qualifiedHits == 2, "M6 list shows both qualified names");
 
-    yomk::payload::DestroyReq dcrossA;
+    yomk::payload::plug_sys::DestroyReq dcrossA;
     dcrossA.pluginName = "TestPlugin";
     dcrossA.instanceName = "shared-i";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dcrossA)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dcrossA)).request()),
         "M6 destroy TestPlugin/shared-i");
-    yomk::payload::DestroyReq dcrossB;
+    yomk::payload::plug_sys::DestroyReq dcrossB;
     dcrossB.pluginName = "SecondPlugin";
     dcrossB.instanceName = "shared-i";
     check(
-        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::DestroyReq::shared(dcrossB)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/destroy_instance").msg(yomk::msgs::plug_sys::DestroyReq::shared(dcrossB)).request()),
         "M6 destroy SecondPlugin/shared-i");
     check(isOk(yomk::plug_sys().plugin_name("SecondPlugin").unload()), "M6 cleanup: force_unload SecondPlugin");
 
