@@ -179,7 +179,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             yomk::payload::InstanceInfo built;
             built.pluginName = pluginName;
             built.instanceName = pluginName + "." + entry.instanceName;
-            built.libFile = soPath;
+            built.libPath = soPath;
             built.configPath = instancePath;
             builtEntries.push_back(built);
         }

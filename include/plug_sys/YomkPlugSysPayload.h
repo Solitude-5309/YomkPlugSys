@@ -94,7 +94,7 @@ struct InstanceInfo
     std::string pluginName;     // 所属插件名
     std::string instanceName;   // 限定名实例名（插件名.实例名）
     std::string instanceType;   // 实例类型
-    std::string libFile;        // 实例所属插件库文件路径
+    std::string libPath;   // 实例所属插件库文件路径(= 清单 lib 值解析后的绝对路径)
     std::string configPath;   // 实例配置路径（= 创建时透传的 instanceCfgPath，可为空）
 };
 

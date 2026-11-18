@@ -265,7 +265,7 @@ int main()
             dump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.pluginName == "TestPlugin" && e.instanceName == "TestPlugin.my inst" &&
-                       e.libFile == fp("libTestPlugin.so") && e.configPath == fp("inst.txt");
+                       e.libPath == fp("libTestPlugin.so") && e.configPath == fp("inst.txt");
             }),
         "H2 /builder keeps built instance entries");
 
@@ -296,7 +296,7 @@ int main()
             partDump.entries.begin(),
             partDump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
-                return e.instanceName == "TestPlugin.good1" && e.libFile == fp("libTestPlugin.so") &&
+                return e.instanceName == "TestPlugin.good1" && e.libPath == fp("libTestPlugin.so") &&
                        e.configPath == fp("inst.txt");
             }),
         "H7 /builder keeps completed instance entries");

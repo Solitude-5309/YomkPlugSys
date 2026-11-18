@@ -34,7 +34,7 @@ void fail(const std::string& what, const std::string& reason)
 void printManifestEntry(const yomk::payload::InstanceInfo& entry)
 {
     std::cout << "    [" << entry.instanceName << "]" << std::endl;
-    std::cout << "      lib=" << entry.libFile << std::endl;
+    std::cout << "      lib=" << entry.libPath << std::endl;
     std::cout << "      config=" << entry.configPath << std::endl;
 }
 }  // namespace

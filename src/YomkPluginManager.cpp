@@ -508,14 +508,14 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             auto it = m_instances.find(filter);
             if (it != m_instances.end())
             {
-                const std::string libFile = m_plugins.find(filter)->second.path;
+                const std::string libPath = m_plugins.find(filter)->second.path;
                 for (const auto& instKv : it->second)
                 {
                     yomk::payload::InstanceInfo info;
                     info.pluginName = filter;
                     info.instanceName = qualifiedName(filter, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
-                    info.libFile = libFile;
+                    info.libPath = libPath;
                     info.configPath = instKv.second.instanceCfgPath;
                     infos.push_back(info);
                 }
@@ -526,14 +526,14 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
             for (const auto& kv : m_instances)
             {
                 auto pluginIt = m_plugins.find(kv.first);
-                const std::string libFile = pluginIt != m_plugins.end() ? pluginIt->second.path : "";
+                const std::string libPath = pluginIt != m_plugins.end() ? pluginIt->second.path : "";
                 for (const auto& instKv : kv.second)
                 {
                     yomk::payload::InstanceInfo info;
                     info.pluginName = kv.first;
                     info.instanceName = qualifiedName(kv.first, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
-                    info.libFile = libFile;
+                    info.libPath = libPath;
                     info.configPath = instKv.second.instanceCfgPath;
                     infos.push_back(info);
                 }
