@@ -51,7 +51,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         const std::string pluginName = pluginNamePkg->d;
 
         // meta 由 Loader 实时调用导出函数，不缓存
-        resp = request("/YomkPluginLoader/meta", yomk::msgs::String::shared(pluginName));
+        resp = request("/YomkPluginLoader/get_meta", yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));

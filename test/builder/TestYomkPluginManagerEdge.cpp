@@ -291,7 +291,7 @@ int main()
         "M2 cleanup e-nofile");
 
     // ---------- M3 内省格式与列表 ----------
-    resp = yomk::server().url("/YomkPluginLoader/meta").msg(yomk::msgs::String::shared("TestPlugin")).request();
+    resp = yomk::server().url("/YomkPluginLoader/get_meta").msg(yomk::msgs::String::shared("TestPlugin")).request();
     bool metaOk = false;
     if (isOk(resp))
     {
@@ -299,7 +299,7 @@ int main()
         metaOk = m->d.abi_version == YOMK_PLUGIN_ABI_VERSION && m->d.name == "TestPlugin" && m->d.type == "demo" &&
                  m->d.version == "0.0.1" && m->d.author == "Yomk";
     }
-    check(metaOk, "M3 loader /meta deep-copied fields");
+    check(metaOk, "M3 loader /get_meta deep-copied fields");
 
     bool hasTest = false;
     bool hasBad = false;

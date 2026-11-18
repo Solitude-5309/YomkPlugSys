@@ -15,7 +15,7 @@ int YomkPluginLoader::init()
 {
     installFunc("/load", &YomkPluginLoader::load, yomk::msgs::PluginLoadReq::kName);
     installFunc("/unload", &YomkPluginLoader::unload, yomk::msgs::String::kName);
-    installFunc("/meta", &YomkPluginLoader::meta, yomk::msgs::String::kName);
+    installFunc("/get_meta", &YomkPluginLoader::getMeta, yomk::msgs::String::kName);
     installFunc("/create", &YomkPluginLoader::createInstance, yomk::msgs::CreateReq::kName);
     installFunc("/delete", &YomkPluginLoader::deleteInstance, yomk::msgs::PluginInstance::kName);
     return 0;
@@ -140,7 +140,7 @@ yomk::payload::Response YomkPluginLoader::unload(YomkMsgPtr pkg)
     }
 }
 
-yomk::payload::Response YomkPluginLoader::meta(YomkMsgPtr pkg)
+yomk::payload::Response YomkPluginLoader::getMeta(YomkMsgPtr pkg)
 {
     try
     {
