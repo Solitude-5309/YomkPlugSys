@@ -114,7 +114,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         for (const auto& entry : entries)
         {
             const std::string lineTag = "manifest line " + std::to_string(entry.lineNo);
-            const std::string instancePath = manifestDir + "/" + entry.instanceCfg;
+            const std::string instancePath = manifestDir + "/" + entry.configRelPath;
             const std::string soPath = manifestDir + "/" + entry.libRelPath;
 
             if (!fs::is_regular_file(instancePath))
@@ -163,11 +163,11 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             }
             loadedPlugins.insert(pluginName);
 
-            // 实例配置路径作为 instanceCfg 透传，不读取内容
+            // 实例配置路径作为 instanceCfgPath 透传，不读取内容
             yomk::payload::CreateReq createReq;
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
-            createReq.instanceCfg = instancePath;
+            createReq.instanceCfgPath = instancePath;
             resp = request("/YomkPluginManager/create_instance", yomk::msgs::CreateReq::shared(createReq));
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
@@ -180,7 +180,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             built.pluginName = pluginName;
             built.instanceName = pluginName + "." + entry.instanceName;
             built.libFile = soPath;
-            built.configFile = instancePath;
+            built.configPath = instancePath;
             builtEntries.push_back(built);
         }
 

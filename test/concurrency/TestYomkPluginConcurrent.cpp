@@ -120,7 +120,7 @@ static yomk::payload::Response createInst(const std::string& name)
     yomk::payload::CreateReq req;
     req.pluginName = "TestPlugin";
     req.instanceName = name;
-    req.instanceCfg = fp("inst.txt");
+    req.instanceCfgPath = fp("inst.txt");
     return yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(req)).request();
 }
 

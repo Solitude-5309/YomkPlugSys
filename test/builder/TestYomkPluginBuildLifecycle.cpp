@@ -186,7 +186,7 @@ int main()
     yomk::payload::CreateReq dupReq;
     dupReq.pluginName = "TestPlugin";
     dupReq.instanceName = "s2-i1";
-    dupReq.instanceCfg = fp("inst.txt");
+    dupReq.instanceCfgPath = fp("inst.txt");
     expectNo(
         yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(dupReq)).request(),
         "duplicate instance name: s2-i1",
@@ -208,7 +208,7 @@ int main()
     yomk::payload::CreateReq reReq;
     reReq.pluginName = "TestPlugin";
     reReq.instanceName = "s1-i1";
-    reReq.instanceCfg = fp("inst.txt");
+    reReq.instanceCfgPath = fp("inst.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(reReq)).request()),
         "S3 recreate after destroy ok");

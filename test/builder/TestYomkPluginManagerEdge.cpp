@@ -149,7 +149,7 @@ int main()
     yomk::payload::CreateReq emptyName;
     emptyName.pluginName = "TestPlugin";
     emptyName.instanceName = "";
-    emptyName.instanceCfg = fp("inst.txt");
+    emptyName.instanceCfgPath = fp("inst.txt");
     expectNo(
         yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(emptyName)).request(),
         "instance name required",
@@ -259,7 +259,7 @@ int main()
     yomk::payload::CreateReq mfileReq;
     mfileReq.pluginName = "TestPlugin";
     mfileReq.instanceName = "e-mfile";
-    mfileReq.instanceCfg = fp("mfile.txt");
+    mfileReq.instanceCfgPath = fp("mfile.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(mfileReq)).request()),
         "M2 create e-mfile for config introspection");
@@ -270,11 +270,11 @@ int main()
     nofileReq.instanceName = "e-nofile";
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(nofileReq)).request()),
-        "M2 create e-nofile with empty instanceCfg");
+        "M2 create e-nofile with empty instanceCfgPath");
     expectNo(
         yomk::plug_sys().get_instance_cfg("TestPlugin.e-nofile"),
         "instance config not recorded: TestPlugin.e-nofile",
-        "M2 get_instance_cfg(instanceName) empty instanceCfg rejects");
+        "M2 get_instance_cfg(instanceName) empty instanceCfgPath rejects");
     expectNo(
         yomk::plug_sys().get_instance_cfg("no-inst"),
         "instance not found: no-inst",
@@ -321,7 +321,7 @@ int main()
     yomk::payload::CreateReq longNameReq;
     longNameReq.pluginName = "TestPlugin";
     longNameReq.instanceName = longName;
-    longNameReq.instanceCfg = fp("inst.txt");
+    longNameReq.instanceCfgPath = fp("inst.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(longNameReq)).request()),
         "M5 create with 4096-char name ok");
@@ -345,7 +345,7 @@ int main()
     yomk::payload::CreateReq longFileReq;
     longFileReq.pluginName = "TestPlugin";
     longFileReq.instanceName = "e-longfile";
-    longFileReq.instanceCfg = longFile;
+    longFileReq.instanceCfgPath = longFile;
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(longFileReq)).request()),
         "M5 create with ~8KB instance cfg path ok");
@@ -372,14 +372,14 @@ int main()
     yomk::payload::CreateReq crossA;
     crossA.pluginName = "TestPlugin";
     crossA.instanceName = "shared-i";
-    crossA.instanceCfg = fp("inst.txt");
+    crossA.instanceCfgPath = fp("inst.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossA)).request()),
         "M6 create shared-i in TestPlugin");
     yomk::payload::CreateReq crossB;
     crossB.pluginName = "SecondPlugin";
     crossB.instanceName = "shared-i";
-    crossB.instanceCfg = fp("inst.txt");
+    crossB.instanceCfgPath = fp("inst.txt");
     check(
         isOk(yomk::server().url("/YomkPluginManager/create_instance").msg(yomk::msgs::CreateReq::shared(crossB)).request()),
         "M6 create same bare name in SecondPlugin (cross-plugin dup allowed)");

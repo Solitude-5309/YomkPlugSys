@@ -35,7 +35,7 @@ void printManifestEntry(const yomk::payload::InstanceInfo& entry)
 {
     std::cout << "    [" << entry.instanceName << "]" << std::endl;
     std::cout << "      lib=" << entry.libFile << std::endl;
-    std::cout << "      config=" << entry.configFile << std::endl;
+    std::cout << "      config=" << entry.configPath << std::endl;
 }
 }  // namespace
 

@@ -241,7 +241,7 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
             // 创建期间插件被卸载，inst 随响应销毁
             return {yomk::payload::ResStatus::Failed, "plugin unloaded during create: " + req->d.pluginName};
         }
-        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceCfg}).second)
+        if (!m_instances[req->d.pluginName].emplace(req->d.instanceName, InstanceRecord{inst, req->d.instanceCfgPath}).second)
         {
             // 并发兜底：创建期间同名实例已被登记
             return {yomk::payload::ResStatus::Failed, "duplicate instance name: " + req->d.instanceName};
@@ -440,7 +440,7 @@ yomk::payload::Response YomkPluginManager::instancesCfg(YomkMsgPtr pkg)
         std::lock_guard<std::mutex> lock(m_mutex);
         // 输入为限定名：按插件组前缀 + 组内裸名查找
         bool found = false;
-        std::string instanceCfg;
+        std::string instanceCfgPath;
         for (const auto& kv : m_instances)
         {
             const std::string prefix = kv.first + ".";
@@ -452,7 +452,7 @@ yomk::payload::Response YomkPluginManager::instancesCfg(YomkMsgPtr pkg)
             if (it != kv.second.end())
             {
                 found = true;
-                instanceCfg = it->second.instanceCfg;
+                instanceCfgPath = it->second.instanceCfgPath;
                 break;
             }
         }
@@ -460,14 +460,14 @@ yomk::payload::Response YomkPluginManager::instancesCfg(YomkMsgPtr pkg)
         {
             return {yomk::payload::ResStatus::Failed, "instance not found: " + data->d};
         }
-        if (instanceCfg.empty())
+        if (instanceCfgPath.empty())
         {
             return {yomk::payload::ResStatus::Failed, "instance config not recorded: " + data->d};
         }
-        std::ifstream in(instanceCfg);
+        std::ifstream in(instanceCfgPath);
         if (!in)
         {
-            return {yomk::payload::ResStatus::Failed, "instance config not readable: " + instanceCfg};
+            return {yomk::payload::ResStatus::Failed, "instance config not readable: " + instanceCfgPath};
         }
         std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
         return {yomk::payload::ResStatus::Succeeded, "ok", yomk::msgs::String::shared(content)};
@@ -516,7 +516,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                     info.instanceName = qualifiedName(filter, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     info.libFile = libFile;
-                    info.configFile = instKv.second.instanceCfg;
+                    info.configPath = instKv.second.instanceCfgPath;
                     infos.push_back(info);
                 }
             }
@@ -534,7 +534,7 @@ yomk::payload::Response YomkPluginManager::listInstances(YomkMsgPtr pkg)
                     info.instanceName = qualifiedName(kv.first, instKv.first);
                     info.instanceType = instKv.second.inst->instanceType() ? instKv.second.inst->instanceType() : "";
                     info.libFile = libFile;
-                    info.configFile = instKv.second.instanceCfg;
+                    info.configPath = instKv.second.instanceCfgPath;
                     infos.push_back(info);
                 }
             }

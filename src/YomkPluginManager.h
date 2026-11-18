@@ -34,7 +34,7 @@ private:
     struct InstanceRecord
     {
         std::shared_ptr<YomkPluginInterface> inst;
-        std::string instanceCfg;   // 创建时透传的实例配置路径（允许为空,内省用）
+        std::string instanceCfgPath;   // 创建时透传的实例配置路径（允许为空,内省用）
     };
 
     // 请求接口:注释给出 入参消息 -> 响应 data 消息

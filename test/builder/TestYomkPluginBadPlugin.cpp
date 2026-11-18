@@ -194,7 +194,7 @@ int main()
             b12Info.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.instanceName == "TestPlugin.tp1" && e.libFile == fp("libTestPlugin.so") &&
-                       e.configFile == fp("inst.txt");
+                       e.configPath == fp("inst.txt");
             });
     check(b12Kept, "B12 builder info keeps earlier successful entries");
 

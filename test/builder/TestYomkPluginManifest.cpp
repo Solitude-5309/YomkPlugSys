@@ -265,7 +265,7 @@ int main()
             dump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.pluginName == "TestPlugin" && e.instanceName == "TestPlugin.my inst" &&
-                       e.libFile == fp("libTestPlugin.so") && e.configFile == fp("inst.txt");
+                       e.libFile == fp("libTestPlugin.so") && e.configPath == fp("inst.txt");
             }),
         "H2 /builder keeps built instance entries");
 
@@ -297,7 +297,7 @@ int main()
             partDump.entries.end(),
             [](const yomk::payload::InstanceInfo& e) {
                 return e.instanceName == "TestPlugin.good1" && e.libFile == fp("libTestPlugin.so") &&
-                       e.configFile == fp("inst.txt");
+                       e.configPath == fp("inst.txt");
             }),
         "H7 /builder keeps completed instance entries");
 
@@ -312,7 +312,7 @@ int main()
         parseDump && parseDump->d.dir == fixtureDir().string() && parseDump->d.entries.size() == 1 &&
             parseDump->d.entries[0].lineNo == 2 && parseDump->d.entries[0].instanceName == "p1" &&
             parseDump->d.entries[0].libRelPath == "libTestPlugin.so" &&
-            parseDump->d.entries[0].instanceCfg == "inst.txt",
+            parseDump->d.entries[0].configRelPath == "inst.txt",
         "I1 parse service returns manifest dir and instance entries");
 
     writeManifest("m-i2.yomk", "#! yomk_plug_sys\n# c\n[p2]\nfoo = bar\n");

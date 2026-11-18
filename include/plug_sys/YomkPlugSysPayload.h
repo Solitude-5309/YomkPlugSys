@@ -41,7 +41,7 @@ struct CreateReq
     std::string pluginName;   // 插件名
     // 调用方指定的实例裸名（同一插件内唯一）；Manager 拼接限定名 插件名.实例名 后传给插件
     std::string instanceName;
-    std::string instanceCfg;   // 不透明透传参数（实例配置绝对路径）：允许为空，插件系统不读取不解析
+    std::string instanceCfgPath;   // 创建透传路径（绝对路径/调用方自定，可空）：创建链路不读取不解析；仅 /get_instance_cfg 内省读取文件内容
 };
 
 /**
@@ -72,7 +72,7 @@ struct ManifestEntry
     int lineNo = 0;            // 块头行号（报错定位用）
     std::string instanceName;  // 实例裸名（同一插件内唯一）
     std::string libRelPath;    // 动态库相对清单目录的路径
-    std::string instanceCfg;   // 实例配置相对清单目录的路径
+    std::string configRelPath;   // 清单 config 原样值（相对清单目录的路径，写绝对路径则原样保留）
 };
 
 /**
@@ -95,7 +95,7 @@ struct InstanceInfo
     std::string instanceName;   // 限定名实例名（插件名.实例名）
     std::string instanceType;   // 实例类型
     std::string libFile;        // 实例所属插件库文件路径
-    std::string configFile;     // 实例配置文件路径（创建时透传，可为空）
+    std::string configPath;   // 实例配置路径（= 创建时透传的 instanceCfgPath，可为空）
 };
 
 /**

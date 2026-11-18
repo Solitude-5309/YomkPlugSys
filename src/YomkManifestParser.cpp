@@ -157,7 +157,7 @@ yomk::payload::Response parseManifestFile(
         entry.lineNo = b.lineNo;
         entry.instanceName = b.name;
         entry.libRelPath = b.lib;
-        entry.instanceCfg = b.cfg;
+        entry.configRelPath = b.cfg;
         entries.push_back(entry);
         return {yomk::payload::ResStatus::Succeeded, "ok"};
     };
