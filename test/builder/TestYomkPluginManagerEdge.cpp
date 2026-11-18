@@ -139,10 +139,10 @@ int main()
     // 基线：TestPlugin 双实例 + BadCreateNull 注册（0 实例）
     writeManifest("base.yomk", "#! yomk_plug_sys\n[e-a]\nlib = libTestPlugin.so\nconfig = inst.txt\n[e-b]\nlib = libTestPlugin.so\nconfig = inst.txt\n");
     check(isOk(yomk::plug_sys().manifest(fp("base.yomk")).build()), "build baseline with two instances");
-    yomk::payload::PluginPath badPath;
+    yomk::payload::PluginLoadReq badPath;
     badPath.path = fp("libBadCreateNull.so");
     check(
-        isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginPath::shared(badPath)).request()),
+        isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginLoadReq::shared(badPath)).request()),
         "whitebox load BadCreateNull (registers with 0 instances)");
 
     // ---------- M1 create/destroy 入参边界 ----------
@@ -365,9 +365,9 @@ int main()
           "wrong-type msg to /YomkPlugSysBuilder/build returns Failed (no crash)");
 
     // ---------- M6 跨插件同名实例（限定名 = 插件名.实例名，全局唯一） ----------
-    yomk::payload::PluginPath secondPath;
+    yomk::payload::PluginLoadReq secondPath;
     secondPath.path = fp("libSecondPlugin.so");
-    check(isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginPath::shared(secondPath)).request()), "M6 load SecondPlugin");
+    check(isOk(yomk::server().url("/YomkPluginManager/load").msg(yomk::msgs::PluginLoadReq::shared(secondPath)).request()), "M6 load SecondPlugin");
 
     yomk::payload::CreateReq crossA;
     crossA.pluginName = "TestPlugin";

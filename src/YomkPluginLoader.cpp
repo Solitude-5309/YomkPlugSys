@@ -13,7 +13,7 @@ YomkPluginLoader::YomkPluginLoader(YomkServer* server) : YomkService(server)
 
 int YomkPluginLoader::init()
 {
-    installFunc("/load", &YomkPluginLoader::load, yomk::msgs::PluginPath::kName);
+    installFunc("/load", &YomkPluginLoader::load, yomk::msgs::PluginLoadReq::kName);
     installFunc("/unload", &YomkPluginLoader::unload, yomk::msgs::String::kName);
     installFunc("/meta", &YomkPluginLoader::meta, yomk::msgs::String::kName);
     installFunc("/create", &YomkPluginLoader::createInstance, yomk::msgs::CreateReq::kName);
@@ -25,11 +25,11 @@ yomk::payload::Response YomkPluginLoader::load(YomkMsgPtr pkg)
 {
     try
     {
-        auto data = yomk::msgs::unpack<yomk::msgs::PluginPath>(pkg);
+        auto data = yomk::msgs::unpack<yomk::msgs::PluginLoadReq>(pkg);
         if (!data)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginPath::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginLoadReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
         void* handle = nullptr;

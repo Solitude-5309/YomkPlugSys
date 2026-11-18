@@ -137,14 +137,14 @@ int main()
     expectOkSummary(yomk::plug_sys().manifest(fp("r1.yomk")).build(), "plugins:1 instances:2", "R1 build two instances baseline");
 
     // 同路径重复 load：Manager /load 透传 Loader 按 pluginName 判重
-    YomkMsgPtr samePath = yomk::msgs::PluginPath::shared(yomk::payload::PluginPath{fp("libTestPlugin.so")});
+    YomkMsgPtr samePath = yomk::msgs::PluginLoadReq::shared(yomk::payload::PluginLoadReq{fp("libTestPlugin.so")});
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(samePath).request(),
         "plugin already loaded: TestPlugin",
         "R1 load same path rejects");
 
     // 不同路径同 meta 的 so 副本：判重与路径无关，同样命中
-    YomkMsgPtr copyPath = yomk::msgs::PluginPath::shared(yomk::payload::PluginPath{fp("libTestPluginCopy.so")});
+    YomkMsgPtr copyPath = yomk::msgs::PluginLoadReq::shared(yomk::payload::PluginLoadReq{fp("libTestPluginCopy.so")});
     expectNo(
         yomk::server().url("/YomkPluginManager/load").msg(copyPath).request(),
         "plugin already loaded: TestPlugin",

@@ -16,7 +16,7 @@
 // 2. 数组消息直接以 std::vector 为 DataType,同框架内置 StringArray 风格;
 // 3. PluginInstance 经 shared_ptr 在进程内直接传递,无序列化,仅限同进程请求.
 // clang-format off
-YOMK_DEFINE_MSG(yomk::payload::PluginPath, PluginPath, d)
+YOMK_DEFINE_MSG(yomk::payload::PluginLoadReq, PluginLoadReq, d)
 YOMK_DEFINE_MSG(yomk::payload::PluginInfo, PluginInfo, d)
 YOMK_DEFINE_MSG(yomk::payload::CreateReq, CreateReq, d)
 YOMK_DEFINE_MSG(yomk::payload::DestroyReq, DestroyReq, d)

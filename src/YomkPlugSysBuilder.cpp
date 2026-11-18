@@ -142,9 +142,9 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             }
             else
             {
-                yomk::payload::PluginPath path;
+                yomk::payload::PluginLoadReq path;
                 path.path = soPath;
-                resp = request("/YomkPluginManager/load", yomk::msgs::PluginPath::shared(path));
+                resp = request("/YomkPluginManager/load", yomk::msgs::PluginLoadReq::shared(path));
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
                     std::string msg = lineTag + ": load failed: " + resp.msg;

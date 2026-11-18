@@ -108,7 +108,7 @@ void yomk_plugin_delete_instance(YomkPluginInterface* instance);   // 内部 del
 - 插件与宿主须同编译器、共用本扩展安装的头文件（ABI 依赖 vtable 布局）；ABI 版本由 `YOMK_PLUGIN_ABI_VERSION` 把关，不符即拒绝装载。
 - 导出函数**不得让异常逃逸**：`create_instance` 内部须 catch 全部异常并返回 `nullptr`（宿主按创建失败处理）。
 - 不得在 `yomk_plugin_meta()` 中做耗时/有副作用操作：装载期实时调用；Loader 的 `meta` 接口每次请求都重新调用导出函数，不做缓存。
-- so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginPath` 指定（见[插件系统清单](PlugSysManifest.md)）。
+- so 文件名须含平台相关全名（Linux `libX.so` / macOS `libX.dylib`），由清单或 `PluginLoadReq` 指定（见[插件系统清单](PlugSysManifest.md)）。
 
 ## 常见问题 FAQ
 

@@ -12,7 +12,7 @@ YomkPluginManager::YomkPluginManager(YomkServer* server) : YomkService(server)
 
 int YomkPluginManager::init()
 {
-    installFunc("/load", &YomkPluginManager::load, yomk::msgs::PluginPath::kName);
+    installFunc("/load", &YomkPluginManager::load, yomk::msgs::PluginLoadReq::kName);
     installFunc("/try_unload", &YomkPluginManager::tryUnload, yomk::msgs::String::kName);
     installFunc("/force_unload", &YomkPluginManager::forceUnload, yomk::msgs::String::kName);
     installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::CreateReq::kName);
@@ -29,16 +29,16 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
 {
     try
     {
-        auto data = yomk::msgs::unpack<yomk::msgs::PluginPath>(pkg);
+        auto data = yomk::msgs::unpack<yomk::msgs::PluginLoadReq>(pkg);
         if (!data)
         {
             return {yomk::payload::ResStatus::Failed,
-                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginPath::kName +
+                    std::string("invalid request msg type: expect ") + yomk::msgs::PluginLoadReq::kName +
                         ", got " + yomk::msgs::typeOf(pkg)};
         }
 
         // 跨服务请求一律在锁外：避免本服务锁与 Loader 锁形成嵌套
-        yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::PluginPath::shared(data->d));
+        yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::PluginLoadReq::shared(data->d));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;

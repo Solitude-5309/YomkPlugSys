@@ -9,7 +9,7 @@ manifest.yomk 是插件系统（PlugSys）的装载清单：描述该系统要�
 - 排查 `build` 返回的清单行号报错
 
 ❌ 不适合：
-- 单插件编程式装载（走 `PluginPath` 请求，不经清单）
+- 单插件编程式装载（走 `PluginLoadReq` 请求，不经清单）
 - 插件本体的开发（见[插件开发指南](YomkPluginInterface.md)）
 
 > 前置概念：清单实例块中的实例名是**裸名**（同插件内唯一），系统登记后自动拼接为限定名 `插件名.实例名`（见[插件生命周期](PluginLifecycle.md)）。

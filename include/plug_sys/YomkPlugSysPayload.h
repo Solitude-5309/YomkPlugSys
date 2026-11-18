@@ -12,7 +12,7 @@ namespace yomk::payload
  * @brief Plugin library load request
  */
 // @zh: 插件库加载请求。
-struct PluginPath
+struct PluginLoadReq
 {
     std::string path;   // 动态库文件路径
 };
