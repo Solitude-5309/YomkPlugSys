@@ -203,12 +203,12 @@ yomk::server().shutdown();
 
 ### 服务内省（调试）
 
-框架内置 `/YomkServerInfo` 服务（随 `.init()` 自动启动），提供调试内省：服务列表、函数列表、单函数类型查询。功能函数安装时用第三参声明期望消息类型、第四参追加函数说明（仅作内省元数据，不参与运行时校验）：
+框架内置 `/YomkServerInfo` 服务（随 `.init()` 自动启动），提供调试内省：服务列表、函数列表、单函数类型查询。功能函数安装时用第三参声明期望消息类型、第四参追加函数说明（一律引用 `T::kName`、禁止手写消息名字符串；仅作内省元数据，不参与运行时校验）：
 
 ```cpp
 int XxxService::init() {
-    installFunc("/my_func", &XxxService::myFunc, "MyData");  // 内省可见类型 MyData
-    installFunc("/my_desc", &XxxService::myFunc, "MyData", "对函数的说明");  // 四参：内省可见类型 + 说明（内容自定义）
+    installFunc("/my_func", &XxxService::myFunc, yomk::msgs::MyData::kName);  // 内省可见类型 MyData
+    installFunc("/my_desc", &XxxService::myFunc, yomk::msgs::MyData::kName, "对函数的说明");  // 四参：内省可见类型 + 说明（内容自定义）
     return 0;
 }
 
@@ -301,11 +301,11 @@ ExtensionName/
 YOMK_DEFINE_MSG(数据类, 消息名称, 成员名);  // 在命名空间外定义
 ```
 消息名称由用户自定义（PascalCase），无固定前缀要求，可与数据类同名（如 `YOMK_DEFINE_MSG(MyData, MyData, d)`）。
-- **命名空间策略**：工程自有消息（`msgs/YomkMsg.h`，工程本地头）用根级 `YOMK_DEFINE_MSG`，消息落 `yomk::msgs` 根；扩展库消息（共享 include 根，须与其他扩展隔离）用 `YOMK_DEFINE_MSG_NS(ext, 数据类, 消息名称, d)`，消息类落 `yomk::msgs::ext` 子命名空间、kName 全限定
+- **命名空间策略**：工程自有消息（`msgs/YomkMsg.h`，工程本地头）用根级 `YOMK_DEFINE_MSG`，消息落 `yomk::msgs` 根（kName 同为全限定 `"yomk::msgs::MsgName"`）；扩展库消息（共享 include 根，须与其他扩展隔离）用 `YOMK_DEFINE_MSG_NS(ext, 数据类, 消息名称, d)`，消息类落 `yomk::msgs::ext` 子命名空间；两种形式下声明期望消息类型名一律引用 `T::kName`、禁止手写字符串
 - `yomk::msgs::消息名称::shared(数据类实例)` — 创建消息包（类内静态工厂）
 - `yomk::msgs::unpack<yomk::msgs::消息名称>(pkg)` — 解包模板，返回 shared_ptr，失败返回 nullptr（不自动 return，需手动判空处理）
 
-注意：`YOMK_DEFINE_MSG` 展开生成的真实类型是独立命名空间中的 `yomk::msgs::消息名称` 与 `yomk::msgs::消息名称Ptr`，与 `yomk` 中的载荷/框架类型隔离以避免重名；引用须写全名，裸写消息名会报 not declared；消息名称作为字符串字面量仍用于 `installFunc` 第三参；解包由 `yomk::msgs::unpack<yomk::msgs::消息名称>` 模板实参承担（类型即名字，无需字符串）。
+注意：`YOMK_DEFINE_MSG` 展开生成的真实类型是独立命名空间中的 `yomk::msgs::消息名称` 与 `yomk::msgs::消息名称Ptr`，与 `yomk` 中的载荷/框架类型隔离以避免重名；引用须写全名，裸写消息名会报 not declared；`installFunc` 第三参声明期望消息类型一律引用 `yomk::msgs::消息名称::kName`、禁止手写字符串；解包由 `yomk::msgs::unpack<yomk::msgs::消息名称>` 模板实参承担（类型即名字）。
 `shared()` 无法从花括号初始化列表推导模板参数，聚合体入参须显式构造：`shared(MyData{...})`。
 
 内置标准类型（成员名均为 `d`）：`Bool`, `Char`, `UChar`, `Byte`, `Int8`, `Uint8`, `Int16`, `Uint16`, `Int32`, `Uint32`, `Int64`, `Uint64`, `Float32`, `Float64`, `String` 及对应 `XxxArray` 类型（完整清单见 SDK `<yomk/msg/YomkStdMsg.h>` 末段；模块专属消息包见各 `Yomk{Module}Msg.h`）。
