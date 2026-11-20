@@ -9,6 +9,7 @@
 #include "YomkManifestParser.h"
 #include "YomkPluginLoader.h"
 #include "YomkPluginManager.h"
+#include "plug_sys/YomkPlugSysUrl.h"
 
 YomkPlugSysBuilder::YomkPlugSysBuilder(YomkServer* server) : YomkService(server), m_server(server)
 {
@@ -34,16 +35,16 @@ int YomkPlugSysBuilder::init()
         return -1;
     }
 
-    installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::plug_sys::BuildReq::kName);
-    installFunc("/get_version", &YomkPlugSysBuilder::getVersion);
-    installFunc("/get_build_info", &YomkPlugSysBuilder::getBuildInfo);
-    installFunc("/list_plugins", &YomkPlugSysBuilder::listPlugins);
-    installFunc("/get_plugin", &YomkPlugSysBuilder::getPlugin, yomk::msgs::String::kName);
-    installFunc("/list_instances", &YomkPlugSysBuilder::listInstances, yomk::msgs::String::kName);
-    installFunc("/get_plugin_by_instance", &YomkPlugSysBuilder::getPluginByInstance, yomk::msgs::String::kName);
-    installFunc("/get_instance_cfg", &YomkPlugSysBuilder::getInstanceCfg, yomk::msgs::String::kName);
-    installFunc("/unload", &YomkPlugSysBuilder::unload, yomk::msgs::String::kName);
-    installFunc("/try_unload", &YomkPlugSysBuilder::tryUnload, yomk::msgs::String::kName);
+    installFunc("/build", &YomkPlugSysBuilder::build, yomk::msgs::plug_sys::BuildReq::kName, yomk::url::plug_sys::pluginBuildDesc);
+    installFunc("/get_version", &YomkPlugSysBuilder::getVersion, "", yomk::url::plug_sys::pluginGetVersionDesc);
+    installFunc("/get_build_info", &YomkPlugSysBuilder::getBuildInfo, "", yomk::url::plug_sys::pluginGetBuildInfoDesc);
+    installFunc("/list_plugins", &YomkPlugSysBuilder::listPlugins, "", yomk::url::plug_sys::pluginListPluginsDesc);
+    installFunc("/get_plugin", &YomkPlugSysBuilder::getPlugin, yomk::msgs::String::kName, yomk::url::plug_sys::pluginGetPluginDesc);
+    installFunc("/list_instances", &YomkPlugSysBuilder::listInstances, yomk::msgs::String::kName, yomk::url::plug_sys::pluginListInstancesDesc);
+    installFunc("/get_plugin_by_instance", &YomkPlugSysBuilder::getPluginByInstance, yomk::msgs::String::kName, yomk::url::plug_sys::pluginGetPluginByInstanceDesc);
+    installFunc("/get_instance_cfg", &YomkPlugSysBuilder::getInstanceCfg, yomk::msgs::String::kName, yomk::url::plug_sys::pluginGetInstanceCfgDesc);
+    installFunc("/unload", &YomkPlugSysBuilder::unload, yomk::msgs::String::kName, yomk::url::plug_sys::pluginUnloadDesc);
+    installFunc("/try_unload", &YomkPlugSysBuilder::tryUnload, yomk::msgs::String::kName, yomk::url::plug_sys::pluginTryUnloadDesc);
     return 0;
 }
 
@@ -75,7 +76,8 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
 
         // 清单解析委派给内部服务：本层只消费结构化结果（目录 + 实例块表）
         yomk::payload::Response resp = request(
-            "/YomkManifestParser/parse", yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{req->d.manifestPath}));
+            yomk::url::plug_sys::parserParse,
+            yomk::msgs::plug_sys::BuildReq::shared(yomk::payload::plug_sys::BuildReq{req->d.manifestPath}));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             recordBuild(req->d.manifestPath, resp.msg, 0, 0, {});
@@ -93,7 +95,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
         namespace fs = std::filesystem;
         // 预查插件表：同一 so 已加载时幂等跳过
         std::map<std::string, std::string> pathToPlugin;
-        resp = request("/YomkPluginManager/list", nullptr);
+        resp = request(yomk::url::plug_sys::mgrList, nullptr);
         if (resp.status == yomk::payload::ResStatus::Succeeded)
         {
             auto arr = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfoList>(resp.data);
@@ -144,7 +146,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             {
                 yomk::payload::plug_sys::PluginLoadReq path;
                 path.path = soPath;
-                resp = request("/YomkPluginManager/load", yomk::msgs::plug_sys::PluginLoadReq::shared(path));
+                resp = request(yomk::url::plug_sys::mgrLoad, yomk::msgs::plug_sys::PluginLoadReq::shared(path));
                 if (resp.status != yomk::payload::ResStatus::Succeeded)
                 {
                     std::string msg = lineTag + ": load failed: " + resp.msg;
@@ -168,7 +170,7 @@ yomk::payload::Response YomkPlugSysBuilder::build(YomkMsgPtr pkg)
             createReq.pluginName = pluginName;
             createReq.instanceName = entry.instanceName;
             createReq.instanceCfgPath = instancePath;
-            resp = request("/YomkPluginManager/create_instance", yomk::msgs::plug_sys::CreateReq::shared(createReq));
+            resp = request(yomk::url::plug_sys::mgrCreateInstance, yomk::msgs::plug_sys::CreateReq::shared(createReq));
             if (resp.status != yomk::payload::ResStatus::Succeeded)
             {
                 std::string msg = lineTag + ": create failed: " + resp.msg;
@@ -253,7 +255,7 @@ yomk::payload::Response YomkPlugSysBuilder::listPlugins(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/list", nullptr);
+        return request(yomk::url::plug_sys::mgrList, nullptr);
     }
     catch (const std::exception& e)
     {
@@ -270,7 +272,7 @@ yomk::payload::Response YomkPlugSysBuilder::getPlugin(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/get_plugin", pkg);
+        return request(yomk::url::plug_sys::mgrGetPlugin, pkg);
     }
     catch (const std::exception& e)
     {
@@ -286,7 +288,7 @@ yomk::payload::Response YomkPlugSysBuilder::listInstances(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/list_instances", pkg);
+        return request(yomk::url::plug_sys::mgrListInstances, pkg);
     }
     catch (const std::exception& e)
     {
@@ -302,7 +304,7 @@ yomk::payload::Response YomkPlugSysBuilder::getPluginByInstance(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/get_plugin_by_instance", pkg);
+        return request(yomk::url::plug_sys::mgrGetPluginByInstance, pkg);
     }
     catch (const std::exception& e)
     {
@@ -318,7 +320,7 @@ yomk::payload::Response YomkPlugSysBuilder::getInstanceCfg(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/get_instance_cfg", pkg);
+        return request(yomk::url::plug_sys::mgrGetInstanceCfg, pkg);
     }
     catch (const std::exception& e)
     {
@@ -334,7 +336,7 @@ yomk::payload::Response YomkPlugSysBuilder::unload(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/force_unload", pkg);
+        return request(yomk::url::plug_sys::mgrForceUnload, pkg);
     }
     catch (const std::exception& e)
     {
@@ -350,7 +352,7 @@ yomk::payload::Response YomkPlugSysBuilder::tryUnload(YomkMsgPtr pkg)
 {
     try
     {
-        return request("/YomkPluginManager/try_unload", pkg);
+        return request(yomk::url::plug_sys::mgrTryUnload, pkg);
     }
     catch (const std::exception& e)
     {

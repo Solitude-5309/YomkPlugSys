@@ -1,5 +1,7 @@
 #include "YomkPluginLoader.h"
 
+#include "plug_sys/YomkPlugSysUrl.h"
+
 #include <dlfcn.h>
 
 #include <yomk/log/YomkLoggerApi.h>
@@ -13,11 +15,11 @@ YomkPluginLoader::YomkPluginLoader(YomkServer* server) : YomkService(server)
 
 int YomkPluginLoader::init()
 {
-    installFunc("/load", &YomkPluginLoader::load, yomk::msgs::plug_sys::PluginLoadReq::kName);
-    installFunc("/unload", &YomkPluginLoader::unload, yomk::msgs::String::kName);
-    installFunc("/get_meta", &YomkPluginLoader::getMeta, yomk::msgs::String::kName);
-    installFunc("/create", &YomkPluginLoader::createInstance, yomk::msgs::plug_sys::CreateReq::kName);
-    installFunc("/delete", &YomkPluginLoader::deleteInstance, yomk::msgs::plug_sys::PluginInstance::kName);
+    installFunc("/load", &YomkPluginLoader::load, yomk::msgs::plug_sys::PluginLoadReq::kName, yomk::url::plug_sys::loaderLoadDesc);
+    installFunc("/unload", &YomkPluginLoader::unload, yomk::msgs::String::kName, yomk::url::plug_sys::loaderUnloadDesc);
+    installFunc("/get_meta", &YomkPluginLoader::getMeta, yomk::msgs::String::kName, yomk::url::plug_sys::loaderGetMetaDesc);
+    installFunc("/create", &YomkPluginLoader::createInstance, yomk::msgs::plug_sys::CreateReq::kName, yomk::url::plug_sys::loaderCreateDesc);
+    installFunc("/delete", &YomkPluginLoader::deleteInstance, yomk::msgs::plug_sys::PluginInstance::kName, yomk::url::plug_sys::loaderDeleteDesc);
     return 0;
 }
 

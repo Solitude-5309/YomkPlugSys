@@ -1,5 +1,7 @@
 #include "YomkPluginManager.h"
 
+#include "plug_sys/YomkPlugSysUrl.h"
+
 #include <fstream>
 #include <iterator>
 
@@ -12,16 +14,16 @@ YomkPluginManager::YomkPluginManager(YomkServer* server) : YomkService(server)
 
 int YomkPluginManager::init()
 {
-    installFunc("/load", &YomkPluginManager::load, yomk::msgs::plug_sys::PluginLoadReq::kName);
-    installFunc("/try_unload", &YomkPluginManager::tryUnload, yomk::msgs::String::kName);
-    installFunc("/force_unload", &YomkPluginManager::forceUnload, yomk::msgs::String::kName);
-    installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::plug_sys::CreateReq::kName);
-    installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::plug_sys::DestroyReq::kName);
-    installFunc("/list", &YomkPluginManager::list);
-    installFunc("/get_plugin", &YomkPluginManager::getPlugin, yomk::msgs::String::kName);
-    installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName);
-    installFunc("/get_plugin_by_instance", &YomkPluginManager::getPluginByInstance, yomk::msgs::String::kName);
-    installFunc("/get_instance_cfg", &YomkPluginManager::getInstanceCfg, yomk::msgs::String::kName);
+    installFunc("/load", &YomkPluginManager::load, yomk::msgs::plug_sys::PluginLoadReq::kName, yomk::url::plug_sys::mgrLoadDesc);
+    installFunc("/try_unload", &YomkPluginManager::tryUnload, yomk::msgs::String::kName, yomk::url::plug_sys::mgrTryUnloadDesc);
+    installFunc("/force_unload", &YomkPluginManager::forceUnload, yomk::msgs::String::kName, yomk::url::plug_sys::mgrForceUnloadDesc);
+    installFunc("/create_instance", &YomkPluginManager::createInstance, yomk::msgs::plug_sys::CreateReq::kName, yomk::url::plug_sys::mgrCreateInstanceDesc);
+    installFunc("/destroy_instance", &YomkPluginManager::destroyInstance, yomk::msgs::plug_sys::DestroyReq::kName, yomk::url::plug_sys::mgrDestroyInstanceDesc);
+    installFunc("/list", &YomkPluginManager::list, "", yomk::url::plug_sys::mgrListDesc);
+    installFunc("/get_plugin", &YomkPluginManager::getPlugin, yomk::msgs::String::kName, yomk::url::plug_sys::mgrGetPluginDesc);
+    installFunc("/list_instances", &YomkPluginManager::listInstances, yomk::msgs::String::kName, yomk::url::plug_sys::mgrListInstancesDesc);
+    installFunc("/get_plugin_by_instance", &YomkPluginManager::getPluginByInstance, yomk::msgs::String::kName, yomk::url::plug_sys::mgrGetPluginByInstanceDesc);
+    installFunc("/get_instance_cfg", &YomkPluginManager::getInstanceCfg, yomk::msgs::String::kName, yomk::url::plug_sys::mgrGetInstanceCfgDesc);
     return 0;
 }
 
@@ -38,7 +40,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         }
 
         // 跨服务请求一律在锁外：避免本服务锁与 Loader 锁形成嵌套
-        yomk::payload::Response resp = request("/YomkPluginLoader/load", yomk::msgs::plug_sys::PluginLoadReq::shared(data->d));
+        yomk::payload::Response resp = request(yomk::url::plug_sys::loaderLoad, yomk::msgs::plug_sys::PluginLoadReq::shared(data->d));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;
@@ -51,10 +53,10 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         const std::string pluginName = pluginNamePkg->d;
 
         // meta 由 Loader 实时调用导出函数，不缓存
-        resp = request("/YomkPluginLoader/get_meta", yomk::msgs::String::shared(pluginName));
+        resp = request(yomk::url::plug_sys::loaderGetMeta, yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
-            request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
+            request(yomk::url::plug_sys::loaderUnload, yomk::msgs::String::shared(pluginName));
             return resp;
         }
         auto metaPkg = yomk::msgs::unpack<yomk::msgs::plug_sys::PluginInfo>(resp.data);
@@ -65,7 +67,7 @@ yomk::payload::Response YomkPluginManager::load(YomkMsgPtr pkg)
         if (metaPkg->d.name.find('.') != std::string::npos)
         {
             // 限定名 = 插件名.实例名；插件名含 '.' 会破坏限定名的全局唯一性
-            request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
+            request(yomk::url::plug_sys::loaderUnload, yomk::msgs::String::shared(pluginName));
             return {yomk::payload::ResStatus::Failed, "plugin name must not contain '.'"};
         }
 
@@ -118,7 +120,7 @@ yomk::payload::Response YomkPluginManager::tryUnload(YomkMsgPtr pkg)
             }
         }
         // 尝试卸载：委托 Loader /unload 以 weak 存活表做全局判活（覆盖 Manager 之外的持有者）
-        yomk::payload::Response resp = request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
+        yomk::payload::Response resp = request(yomk::url::plug_sys::loaderUnload, yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;
@@ -168,7 +170,7 @@ yomk::payload::Response YomkPluginManager::forceUnload(YomkMsgPtr pkg)
         // 锁外析构全部实例（触发 delete_instance，其代码在 so 中，必须先于 dlclose）
         group.clear();
 
-        yomk::payload::Response resp = request("/YomkPluginLoader/unload", yomk::msgs::String::shared(pluginName));
+        yomk::payload::Response resp = request(yomk::url::plug_sys::loaderUnload, yomk::msgs::String::shared(pluginName));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;
@@ -219,7 +221,7 @@ yomk::payload::Response YomkPluginManager::createInstance(YomkMsgPtr pkg)
         // 传限定名（插件名.实例名，全局唯一），插件以此作为实例身份
         yomk::payload::plug_sys::CreateReq loaderReq = req->d;
         loaderReq.instanceName = qualifiedName(req->d.pluginName, req->d.instanceName);
-        yomk::payload::Response resp = request("/YomkPluginLoader/create", yomk::msgs::plug_sys::CreateReq::shared(loaderReq));
+        yomk::payload::Response resp = request(yomk::url::plug_sys::loaderCreate, yomk::msgs::plug_sys::CreateReq::shared(loaderReq));
         if (resp.status != yomk::payload::ResStatus::Succeeded)
         {
             return resp;

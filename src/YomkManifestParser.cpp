@@ -1,5 +1,7 @@
 #include "YomkManifestParser.h"
 
+#include "plug_sys/YomkPlugSysUrl.h"
+
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -225,7 +227,7 @@ YomkManifestParser::YomkManifestParser(YomkServer* server) : YomkService(server)
 
 int YomkManifestParser::init()
 {
-    installFunc("/parse", &YomkManifestParser::parse, yomk::msgs::plug_sys::BuildReq::kName);
+    installFunc("/parse", &YomkManifestParser::parse, yomk::msgs::plug_sys::BuildReq::kName, yomk::url::plug_sys::parserParseDesc);
     return 0;
 }
 
